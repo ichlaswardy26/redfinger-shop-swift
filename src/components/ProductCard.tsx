@@ -49,7 +49,7 @@ const ProductCard = ({
       </CardContent>
       <CardFooter className="flex items-center justify-between pt-6 border-t">
         <div className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          ${price.toFixed(2)}
+          Rp {price.toLocaleString('id-ID')}
         </div>
         <Button 
           variant="hero" 
