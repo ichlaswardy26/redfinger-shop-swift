@@ -16,31 +16,46 @@ export type Database = {
     Tables: {
       orders: {
         Row: {
+          admin_notes: string | null
           created_at: string
           expires_at: string
           id: string
+          payment_proof: string | null
+          payment_status: string
           product_id: string
-          redeem_code: string
+          redeem_code: string | null
           status: string
           user_id: string
+          verified_at: string | null
+          verified_by: string | null
         }
         Insert: {
+          admin_notes?: string | null
           created_at?: string
           expires_at: string
           id?: string
+          payment_proof?: string | null
+          payment_status?: string
           product_id: string
-          redeem_code: string
+          redeem_code?: string | null
           status?: string
           user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Update: {
+          admin_notes?: string | null
           created_at?: string
           expires_at?: string
           id?: string
+          payment_proof?: string | null
+          payment_status?: string
           product_id?: string
-          redeem_code?: string
+          redeem_code?: string | null
           status?: string
           user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {

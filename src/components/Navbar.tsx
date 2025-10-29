@@ -44,11 +44,24 @@ const Navbar = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast({
-      title: "Logged out successfully",
-    });
-    navigate("/");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      setUser(null);
+      setIsAdmin(false);
+      
+      toast({
+        title: "Logged out successfully",
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Logout failed",
+        description: error instanceof Error ? error.message : "An error occurred",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -81,7 +94,7 @@ const Navbar = () => {
                 </Button>
               </>
             ) : (
-              <Button onClick={() => navigate("/auth")}>
+              <Button onClick={() => navigate("/auth/signin")}>
                 Sign In
               </Button>
             )}

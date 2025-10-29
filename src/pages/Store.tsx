@@ -68,7 +68,7 @@ const Store = () => {
         description: "Please sign in to purchase",
         variant: "destructive",
       });
-      navigate("/auth");
+      navigate("/auth/signin");
       return;
     }
 
@@ -83,42 +83,32 @@ const Store = () => {
         return;
       }
 
-      // Generate redeem code
-      const redeemCode = `RF-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + product.duration_days);
 
-      // Create order
+      // Create pending order (without redeem code - admin will add after verification)
       const { error: orderError } = await supabase
         .from("orders")
         .insert({
           user_id: user.id,
           product_id: productId,
-          redeem_code: redeemCode,
           expires_at: expiresAt.toISOString(),
-          status: "active",
+          status: "pending",
+          payment_status: "pending",
         });
 
       if (orderError) throw orderError;
 
-      // Update stock
-      const { error: updateError } = await supabase
-        .from("products")
-        .update({ stock: product.stock - 1 })
-        .eq("id", productId);
-
-      if (updateError) throw updateError;
-
       toast({
-        title: "Purchase successful!",
-        description: `Your redeem code: ${redeemCode}`,
+        title: "Order created!",
+        description: "Please upload your payment proof to complete the order.",
       });
 
       fetchProducts();
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to complete purchase",
+        description: error instanceof Error ? error.message : "Failed to create order",
         variant: "destructive",
       });
     }
@@ -152,7 +142,7 @@ const Store = () => {
                   Browse Products
                 </Button>
                 {!user && (
-                  <Button variant="outline" size="lg" onClick={() => navigate("/auth")}>
+                  <Button variant="outline" size="lg" onClick={() => navigate("/auth/signup")}>
                     Sign Up Free
                   </Button>
                 )}
