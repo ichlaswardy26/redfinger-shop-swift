@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
-import { ShoppingBag, LogOut, LayoutDashboard } from "lucide-react";
+import { ShoppingBag, LogOut, LayoutDashboard, Receipt } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Navbar = () => {
@@ -76,6 +76,13 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             {user ? (
               <>
+                <Button
+                  variant="ghost"
+                  onClick={() => navigate("/transactions")}
+                >
+                  <Receipt className="mr-2 h-4 w-4" />
+                  My Orders
+                </Button>
                 {isAdmin && (
                   <Button
                     variant="ghost"
