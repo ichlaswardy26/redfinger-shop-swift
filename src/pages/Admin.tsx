@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +13,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Users, Package, TrendingUp, CheckCircle, XCircle, Clock } from "lucide-react";
+import { ShoppingCart, Users, Package, TrendingUp, CheckCircle, XCircle, Clock, Search, ExternalLink } from "lucide-react";
+import { 
+  useReactTable, 
+  getCoreRowModel, 
+  getPaginationRowModel, 
+  getSortedRowModel, 
+  getFilteredRowModel,
+  flexRender,
+  ColumnDef,
+  SortingState,
+  ColumnFiltersState,
+} from "@tanstack/react-table";
+import { DataTablePagination } from "@/components/DataTablePagination";
 
 interface Product {
   id: string;
@@ -46,6 +58,7 @@ interface User {
   email: string;
   full_name: string;
   created_at: string;
+  is_active: boolean;
   roles: string[];
 }
 
@@ -67,6 +80,15 @@ const Admin = () => {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [productForm, setProductForm] = useState({ name: "", description: "", price: "", duration_days: "", stock: "" });
   const [verifyForm, setVerifyForm] = useState({ redeem_code: "", admin_notes: "", status: "verified" });
+  
+  // Table states
+  const [orderSorting, setOrderSorting] = useState<SortingState>([]);
+  const [orderFilters, setOrderFilters] = useState<ColumnFiltersState>([]);
+  const [orderSearch, setOrderSearch] = useState("");
+  const [userSorting, setUserSorting] = useState<SortingState>([]);
+  const [userFilters, setUserFilters] = useState<ColumnFiltersState>([]);
+  const [userSearch, setUserSearch] = useState("");
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -250,6 +272,8 @@ const Admin = () => {
             .update({ stock: Math.max(0, product.stock - 1) })
             .eq("id", product.id);
         }
+      } else if (verifyForm.status === "rejected") {
+        updateData.status = "rejected";
       }
 
       const { error } = await supabase
@@ -302,6 +326,307 @@ const Admin = () => {
     }
   };
 
+  const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_active: !currentStatus })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      toast({ 
+        title: `User ${!currentStatus ? "activated" : "deactivated"} successfully` 
+      });
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update user status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Order columns
+  const orderColumns: ColumnDef<Order>[] = useMemo(() => [
+    {
+      accessorKey: "customer_name",
+      header: "Customer",
+      cell: ({ row }) => (
+        <div>
+          <p className="font-medium">{row.original.customer_name}</p>
+          <p className="text-xs text-muted-foreground">{row.original.customer_email}</p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "product_name",
+      header: "Product",
+    },
+    {
+      accessorKey: "payment_status",
+      header: "Payment",
+      cell: ({ row }) => (
+        <Badge variant={
+          row.original.payment_status === "verified" ? "default" :
+          row.original.payment_status === "rejected" ? "destructive" : "outline"
+        }>
+          {row.original.payment_status}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "payment_proof",
+      header: "Proof",
+      cell: ({ row }) => (
+        row.original.payment_proof ? (
+          <a
+            href={row.original.payment_proof}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline flex items-center gap-1 text-sm"
+          >
+            <ExternalLink className="h-3 w-3" />
+            View
+          </a>
+        ) : (
+          <span className="text-muted-foreground text-sm">-</span>
+        )
+      ),
+    },
+    {
+      accessorKey: "redeem_code",
+      header: "Code",
+      cell: ({ row }) => (
+        row.original.redeem_code ? (
+          <code className="text-xs">{row.original.redeem_code}</code>
+        ) : (
+          <span className="text-muted-foreground text-sm">-</span>
+        )
+      ),
+    },
+    {
+      accessorKey: "created_at",
+      header: "Date",
+      cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString(),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        row.original.payment_status === "pending" && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setVerifyingOrder(row.original);
+                  setVerifyForm({
+                    redeem_code: `RF-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+                    admin_notes: "",
+                    status: "verified",
+                  });
+                }}
+              >
+                Verify
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Verify Payment</DialogTitle>
+                <DialogDescription>
+                  Review payment proof and issue redeem code
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleVerifyPayment} className="space-y-4">
+                {row.original.payment_proof && (
+                  <div>
+                    <Label>Payment Proof</Label>
+                    <a
+                      href={row.original.payment_proof}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary underline text-sm block"
+                    >
+                      View Payment Proof
+                    </a>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label>Decision</Label>
+                  <Select
+                    value={verifyForm.status}
+                    onValueChange={(value) =>
+                      setVerifyForm({ ...verifyForm, status: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="verified">Verified</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {verifyForm.status === "verified" && (
+                  <div className="space-y-2">
+                    <Label>Redeem Code</Label>
+                    <Input
+                      value={verifyForm.redeem_code}
+                      onChange={(e) =>
+                        setVerifyForm({ ...verifyForm, redeem_code: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label>Admin Notes</Label>
+                  <Textarea
+                    value={verifyForm.admin_notes}
+                    onChange={(e) =>
+                      setVerifyForm({ ...verifyForm, admin_notes: e.target.value })
+                    }
+                    placeholder="Optional notes for customer"
+                  />
+                </div>
+                <Button type="submit" className="w-full">
+                  Submit Verification
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        )
+      ),
+    },
+  ], [verifyForm]);
+
+  // User columns
+  const userColumns: ColumnDef<User>[] = useMemo(() => [
+    {
+      accessorKey: "full_name",
+      header: "Name",
+    },
+    {
+      accessorKey: "email",
+      header: "Email",
+    },
+    {
+      accessorKey: "is_active",
+      header: "Status",
+      cell: ({ row }) => (
+        <Badge variant={row.original.is_active ? "default" : "destructive"}>
+          {row.original.is_active ? "Active" : "Inactive"}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "roles",
+      header: "Roles",
+      cell: ({ row }) => (
+        <div className="flex gap-1">
+          {row.original.roles.length > 0 ? (
+            row.original.roles.map((role) => (
+              <Badge key={role} variant="secondary">
+                {role}
+              </Badge>
+            ))
+          ) : (
+            <Badge variant="outline">user</Badge>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant={row.original.roles.includes("admin") ? "destructive" : "outline"}
+            size="sm"
+            onClick={() =>
+              handleToggleRole(row.original.id, "admin", row.original.roles.includes("admin"))
+            }
+          >
+            {row.original.roles.includes("admin") ? "Remove" : "Make"} Admin
+          </Button>
+          <Button
+            variant={row.original.is_active ? "outline" : "default"}
+            size="sm"
+            onClick={() => handleToggleUserStatus(row.original.id, row.original.is_active)}
+          >
+            {row.original.is_active ? "Deactivate" : "Activate"}
+          </Button>
+        </div>
+      ),
+    },
+  ], []);
+
+  // Order table
+  const filteredOrders = useMemo(() => {
+    if (!orderSearch) return orders;
+    return orders.filter(order => 
+      order.customer_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      order.customer_email.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      order.product_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
+      order.payment_status.toLowerCase().includes(orderSearch.toLowerCase())
+    );
+  }, [orders, orderSearch]);
+
+  const orderTable = useReactTable({
+    data: filteredOrders,
+    columns: orderColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      sorting: orderSorting,
+      columnFilters: orderFilters,
+    },
+    onSortingChange: setOrderSorting,
+    onColumnFiltersChange: setOrderFilters,
+    initialState: {
+      pagination: {
+        pageSize: 10,
+      },
+    },
+  });
+
+  // User table
+  const filteredUsers = useMemo(() => {
+    if (!userSearch) return users;
+    return users.filter(user => 
+      user.full_name.toLowerCase().includes(userSearch.toLowerCase()) ||
+      user.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+      user.roles.some(role => role.toLowerCase().includes(userSearch.toLowerCase()))
+    );
+  }, [users, userSearch]);
+
+  const userTable = useReactTable({
+    data: filteredUsers,
+    columns: userColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    state: {
+      sorting: userSorting,
+      columnFilters: userFilters,
+    },
+    onSortingChange: setUserSorting,
+    onColumnFiltersChange: setUserFilters,
+    initialState: {
+      pagination: {
+        pageSize: 10,
+      },
+    },
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -320,7 +645,7 @@ const Admin = () => {
         <h1 className="text-3xl font-bold mb-8">Admin Panel</h1>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
@@ -328,7 +653,7 @@ const Admin = () => {
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
@@ -373,30 +698,32 @@ const Admin = () => {
                 <CardDescription>Latest orders and transactions</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.slice(0, 5).map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell>{order.customer_name}</TableCell>
-                        <TableCell>{order.product_name}</TableCell>
-                        <TableCell>
-                          <Badge variant={order.payment_status === "verified" ? "default" : "outline"}>
-                            {order.payment_status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Customer</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {orders.slice(0, 5).map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell>{order.customer_name}</TableCell>
+                          <TableCell>{order.product_name}</TableCell>
+                          <TableCell>
+                            <Badge variant={order.payment_status === "verified" ? "default" : "outline"}>
+                              {order.payment_status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -406,138 +733,52 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Order Management</CardTitle>
                 <CardDescription>Verify payments and issue redeem codes</CardDescription>
+                <div className="flex items-center gap-2 mt-4">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by customer, product, or status..."
+                    value={orderSearch}
+                    onChange={(e) => setOrderSearch(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Redeem Code</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {orders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{order.customer_name}</p>
-                            <p className="text-xs text-muted-foreground">{order.customer_email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>{order.product_name}</TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            order.payment_status === "verified" ? "default" :
-                            order.payment_status === "rejected" ? "destructive" : "outline"
-                          }>
-                            {order.payment_status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {order.redeem_code ? (
-                            <code className="text-xs">{order.redeem_code}</code>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {new Date(order.created_at).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell>
-                          {order.payment_status === "pending" && (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setVerifyingOrder(order);
-                                    setVerifyForm({
-                                      redeem_code: `RF-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-                                      admin_notes: "",
-                                      status: "verified",
-                                    });
-                                  }}
-                                >
-                                  Verify
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Verify Payment</DialogTitle>
-                                  <DialogDescription>
-                                    Review payment proof and issue redeem code
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <form onSubmit={handleVerifyPayment} className="space-y-4">
-                                  {order.payment_proof && (
-                                    <div>
-                                      <Label>Payment Proof</Label>
-                                      <a
-                                        href={order.payment_proof}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-primary underline text-sm block"
-                                      >
-                                        View Payment Proof
-                                      </a>
-                                    </div>
-                                  )}
-                                  <div className="space-y-2">
-                                    <Label>Decision</Label>
-                                    <Select
-                                      value={verifyForm.status}
-                                      onValueChange={(value) =>
-                                        setVerifyForm({ ...verifyForm, status: value })
-                                      }
-                                    >
-                                      <SelectTrigger>
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="verified">Verified</SelectItem>
-                                        <SelectItem value="rejected">Rejected</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  {verifyForm.status === "verified" && (
-                                    <div className="space-y-2">
-                                      <Label>Redeem Code</Label>
-                                      <Input
-                                        value={verifyForm.redeem_code}
-                                        onChange={(e) =>
-                                          setVerifyForm({ ...verifyForm, redeem_code: e.target.value })
-                                        }
-                                        required
-                                      />
-                                    </div>
-                                  )}
-                                  <div className="space-y-2">
-                                    <Label>Admin Notes</Label>
-                                    <Textarea
-                                      value={verifyForm.admin_notes}
-                                      onChange={(e) =>
-                                        setVerifyForm({ ...verifyForm, admin_notes: e.target.value })
-                                      }
-                                      placeholder="Optional notes for customer"
-                                    />
-                                  </div>
-                                  <Button type="submit" className="w-full">
-                                    Submit Verification
-                                  </Button>
-                                </form>
-                              </DialogContent>
-                            </Dialog>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      {orderTable.getHeaderGroups().map(headerGroup => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map(header => (
+                            <TableHead key={header.id}>
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {orderTable.getRowModel().rows.length ? (
+                        orderTable.getRowModel().rows.map(row => (
+                          <TableRow key={row.id}>
+                            {row.getVisibleCells().map(cell => (
+                              <TableCell key={cell.id}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={orderColumns.length} className="text-center">
+                            No orders found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <DataTablePagination table={orderTable} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -608,32 +849,34 @@ const Admin = () => {
                     </form>
                   </DialogContent>
                 </Dialog>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {products.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell>{product.name}</TableCell>
-                        <TableCell>Rp {product.price.toLocaleString('id-ID')}</TableCell>
-                        <TableCell>{product.duration_days} days</TableCell>
-                        <TableCell>{product.stock}</TableCell>
-                        <TableCell>
-                          <Badge variant={product.is_active ? "default" : "secondary"}>
-                            {product.is_active ? "Active" : "Inactive"}
-                          </Badge>
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Price</TableHead>
+                        <TableHead>Duration</TableHead>
+                        <TableHead>Stock</TableHead>
+                        <TableHead>Status</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {products.map((product) => (
+                        <TableRow key={product.id}>
+                          <TableCell>{product.name}</TableCell>
+                          <TableCell>Rp {product.price.toLocaleString('id-ID')}</TableCell>
+                          <TableCell>{product.duration_days} days</TableCell>
+                          <TableCell>{product.stock}</TableCell>
+                          <TableCell>
+                            <Badge variant={product.is_active ? "default" : "secondary"}>
+                              {product.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -643,52 +886,52 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>User Management</CardTitle>
                 <CardDescription>Manage user accounts and roles</CardDescription>
+                <div className="flex items-center gap-2 mt-4">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by name, email, or role..."
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Roles</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell>{user.full_name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {user.roles.length > 0 ? (
-                              user.roles.map((role) => (
-                                <Badge key={role} variant="secondary">
-                                  {role}
-                                </Badge>
-                              ))
-                            ) : (
-                              <Badge variant="outline">user</Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant={user.roles.includes("admin") ? "destructive" : "outline"}
-                              size="sm"
-                              onClick={() =>
-                                handleToggleRole(user.id, "admin", user.roles.includes("admin"))
-                              }
-                            >
-                              {user.roles.includes("admin") ? "Remove" : "Make"} Admin
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      {userTable.getHeaderGroups().map(headerGroup => (
+                        <TableRow key={headerGroup.id}>
+                          {headerGroup.headers.map(header => (
+                            <TableHead key={header.id}>
+                              {flexRender(header.column.columnDef.header, header.getContext())}
+                            </TableHead>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableHeader>
+                    <TableBody>
+                      {userTable.getRowModel().rows.length ? (
+                        userTable.getRowModel().rows.map(row => (
+                          <TableRow key={row.id}>
+                            {row.getVisibleCells().map(cell => (
+                              <TableCell key={cell.id}>
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </TableCell>
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={userColumns.length} className="text-center">
+                            No users found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+                <DataTablePagination table={userTable} />
               </CardContent>
             </Card>
           </TabsContent>

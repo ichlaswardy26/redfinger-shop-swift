@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileText } from "lucide-react";
+import { Upload, FileText, ExternalLink } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import CopyButton from "@/components/CopyButton";
 
 interface Order {
   id: string;
@@ -150,6 +151,7 @@ const Transactions = () => {
                     <TableHead>Product</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Payment Status</TableHead>
+                    <TableHead>Payment Proof</TableHead>
                     <TableHead>Redeem Code</TableHead>
                     <TableHead>Actions</TableHead>
                   </TableRow>
@@ -161,8 +163,28 @@ const Transactions = () => {
                       <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                       <TableCell>{getStatusBadge(order.payment_status)}</TableCell>
                       <TableCell>
-                        {order.redeem_code ? (
-                          <code className="bg-muted px-2 py-1 rounded text-sm">{order.redeem_code}</code>
+                        {order.payment_proof ? (
+                          <a
+                            href={order.payment_proof}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline flex items-center gap-1 text-sm"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            View Proof
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {order.payment_status === "verified" && order.redeem_code ? (
+                          <div className="flex items-center gap-2">
+                            <code className="bg-muted px-2 py-1 rounded text-sm">{order.redeem_code}</code>
+                            <CopyButton text={order.redeem_code} label="Copy" />
+                          </div>
+                        ) : order.payment_status === "rejected" ? (
+                          <span className="text-destructive text-sm">Order Rejected</span>
                         ) : (
                           <span className="text-muted-foreground text-sm">Awaiting verification</span>
                         )}
