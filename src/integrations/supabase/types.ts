@@ -23,7 +23,8 @@ export type Database = {
           payment_proof: string | null
           payment_status: string
           product_id: string
-          redeem_code: string | null
+          quantity: number
+          redeem_codes: string[] | null
           status: string
           user_id: string
           verified_at: string | null
@@ -37,7 +38,8 @@ export type Database = {
           payment_proof?: string | null
           payment_status?: string
           product_id: string
-          redeem_code?: string | null
+          quantity?: number
+          redeem_codes?: string[] | null
           status?: string
           user_id: string
           verified_at?: string | null
@@ -51,7 +53,8 @@ export type Database = {
           payment_proof?: string | null
           payment_status?: string
           product_id?: string
-          redeem_code?: string | null
+          quantity?: number
+          redeem_codes?: string[] | null
           status?: string
           user_id?: string
           verified_at?: string | null

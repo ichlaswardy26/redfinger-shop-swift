@@ -19,10 +19,15 @@ interface Product {
   is_active: boolean;
 }
 
+interface ProductQuantity {
+  [key: string]: number;
+}
+
 const Store = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [quantities, setQuantities] = useState<ProductQuantity>({});
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -61,6 +66,15 @@ const Store = () => {
     }
   };
 
+  const handleQuantityChange = (productId: string, change: number) => {
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const currentQty = quantities[productId] || 1;
+    const newQty = Math.max(1, Math.min(product.stock, currentQty + change));
+    setQuantities({ ...quantities, [productId]: newQty });
+  };
+
   const handlePurchase = async (productId: string) => {
     if (!user) {
       toast({
@@ -74,10 +88,12 @@ const Store = () => {
 
     try {
       const product = products.find(p => p.id === productId);
-      if (!product || product.stock === 0) {
+      const quantity = quantities[productId] || 1;
+      
+      if (!product || product.stock < quantity) {
         toast({
           title: "Error",
-          description: "Product is out of stock",
+          description: "Insufficient stock available",
           variant: "destructive",
         });
         return;
@@ -86,12 +102,12 @@ const Store = () => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + product.duration_days);
 
-      // Create pending order (without redeem code - admin will add after verification)
       const { error: orderError } = await supabase
         .from("orders")
         .insert({
           user_id: user.id,
           product_id: productId,
+          quantity: quantity,
           expires_at: expiresAt.toISOString(),
           status: "pending",
           payment_status: "pending",
@@ -104,6 +120,7 @@ const Store = () => {
         description: "Please upload your payment proof to complete the order.",
       });
 
+      setQuantities({ ...quantities, [productId]: 1 });
       fetchProducts();
     } catch (error) {
       toast({
@@ -218,6 +235,8 @@ const Store = () => {
                 <ProductCard
                   key={product.id}
                   {...product}
+                  quantity={quantities[product.id] || 1}
+                  onQuantityChange={handleQuantityChange}
                   onPurchase={handlePurchase}
                   isAuthenticated={!!user}
                 />

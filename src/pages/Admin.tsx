@@ -41,7 +41,8 @@ interface Order {
   id: string;
   user_id: string;
   product_id: string;
-  redeem_code: string | null;
+  redeem_codes: string[] | null;
+  quantity: number;
   status: string;
   payment_status: string;
   payment_proof: string | null;
@@ -79,7 +80,14 @@ const Admin = () => {
   const [verifyingOrder, setVerifyingOrder] = useState<Order | null>(null);
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [productForm, setProductForm] = useState({ name: "", description: "", price: "", duration_days: "", stock: "" });
-  const [verifyForm, setVerifyForm] = useState({ redeem_code: "", admin_notes: "", status: "verified" });
+  const [verifyForm, setVerifyForm] = useState<{ redeem_codes: string[], admin_notes: string, status: string }>({ 
+    redeem_codes: [], 
+    admin_notes: "", 
+    status: "verified" 
+  });
+  const [productSearch, setProductSearch] = useState("");
+  const [productSorting, setProductSorting] = useState<SortingState>([]);
+  const [productFilters, setProductFilters] = useState<ColumnFiltersState>([]);
   
   // Table states
   const [orderSorting, setOrderSorting] = useState<SortingState>([]);
@@ -261,15 +269,25 @@ const Admin = () => {
         verified_at: new Date().toISOString(),
       };
 
-      if (verifyForm.status === "verified" && verifyForm.redeem_code) {
-        updateData.redeem_code = verifyForm.redeem_code;
+      if (verifyForm.status === "verified") {
+        // Validate all redeem codes are filled
+        if (verifyForm.redeem_codes.some(code => !code.trim())) {
+          toast({
+            title: "Error",
+            description: "Please fill in all redeem codes",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        updateData.redeem_codes = verifyForm.redeem_codes;
         updateData.status = "active";
 
         const product = products.find(p => p.id === verifyingOrder.product_id);
         if (product) {
           await supabase
             .from("products")
-            .update({ stock: Math.max(0, product.stock - 1) })
+            .update({ stock: Math.max(0, product.stock - verifyingOrder.quantity) })
             .eq("id", product.id);
         }
       } else if (verifyForm.status === "rejected") {
@@ -285,7 +303,7 @@ const Admin = () => {
 
       toast({ title: "Payment verification updated" });
       setVerifyingOrder(null);
-      setVerifyForm({ redeem_code: "", admin_notes: "", status: "verified" });
+      setVerifyForm({ redeem_codes: [], admin_notes: "", status: "verified" });
       fetchOrders();
       fetchProducts();
       fetchStats();
@@ -377,6 +395,11 @@ const Admin = () => {
       ),
     },
     {
+      accessorKey: "quantity",
+      header: "Qty",
+      cell: ({ row }) => <span className="font-medium">{row.original.quantity}</span>,
+    },
+    {
       accessorKey: "payment_proof",
       header: "Proof",
       cell: ({ row }) => (
@@ -396,11 +419,15 @@ const Admin = () => {
       ),
     },
     {
-      accessorKey: "redeem_code",
-      header: "Code",
+      id: "redeem_codes",
+      header: "Codes",
       cell: ({ row }) => (
-        row.original.redeem_code ? (
-          <code className="text-xs">{row.original.redeem_code}</code>
+        row.original.redeem_codes && row.original.redeem_codes.length > 0 ? (
+          <div className="flex flex-col gap-1">
+            {row.original.redeem_codes.map((code, i) => (
+              <code key={i} className="text-xs bg-muted px-1 rounded">{code}</code>
+            ))}
+          </div>
         ) : (
           <span className="text-muted-foreground text-sm">-</span>
         )
@@ -423,8 +450,12 @@ const Admin = () => {
                 size="sm"
                 onClick={() => {
                   setVerifyingOrder(row.original);
+                  // Generate redeem codes based on quantity
+                  const codes = Array.from({ length: row.original.quantity }, () => 
+                    `RF-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+                  );
                   setVerifyForm({
-                    redeem_code: `RF-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+                    redeem_codes: codes,
                     admin_notes: "",
                     status: "verified",
                   });
@@ -454,6 +485,11 @@ const Admin = () => {
                     </a>
                   </div>
                 )}
+                <div>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Order Quantity: <span className="font-medium">{row.original.quantity}</span>
+                  </p>
+                </div>
                 <div className="space-y-2">
                   <Label>Decision</Label>
                   <Select
@@ -472,15 +508,23 @@ const Admin = () => {
                   </Select>
                 </div>
                 {verifyForm.status === "verified" && (
-                  <div className="space-y-2">
-                    <Label>Redeem Code</Label>
-                    <Input
-                      value={verifyForm.redeem_code}
-                      onChange={(e) =>
-                        setVerifyForm({ ...verifyForm, redeem_code: e.target.value })
-                      }
-                      required
-                    />
+                  <div className="space-y-3">
+                    <Label>Redeem Codes (one per quantity)</Label>
+                    {verifyForm.redeem_codes.map((code, index) => (
+                      <div key={index} className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Code {index + 1}</Label>
+                        <Input
+                          value={code}
+                          onChange={(e) => {
+                            const newCodes = [...verifyForm.redeem_codes];
+                            newCodes[index] = e.target.value;
+                            setVerifyForm({ ...verifyForm, redeem_codes: newCodes });
+                          }}
+                          required
+                          placeholder={`Redeem code ${index + 1}`}
+                        />
+                      </div>
+                    ))}
                   </div>
                 )}
                 <div className="space-y-2">
@@ -849,6 +893,15 @@ const Admin = () => {
                     </form>
                   </DialogContent>
                 </Dialog>
+                <div className="flex items-center gap-2 mb-4">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search products..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="max-w-sm"
+                  />
+                </div>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -858,10 +911,13 @@ const Admin = () => {
                         <TableHead>Duration</TableHead>
                         <TableHead>Stock</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {products.map((product) => (
+                      {products.filter(p => 
+                        p.name.toLowerCase().includes(productSearch.toLowerCase())
+                      ).map((product) => (
                         <TableRow key={product.id}>
                           <TableCell>{product.name}</TableCell>
                           <TableCell>Rp {product.price.toLocaleString('id-ID')}</TableCell>
@@ -871,6 +927,40 @@ const Admin = () => {
                             <Badge variant={product.is_active ? "default" : "secondary"}>
                               {product.is_active ? "Active" : "Inactive"}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingProduct(product);
+                                  setProductForm({
+                                    name: product.name,
+                                    description: product.description || "",
+                                    price: product.price.toString(),
+                                    duration_days: product.duration_days.toString(),
+                                    stock: product.stock.toString(),
+                                  });
+                                  setShowProductDialog(true);
+                                }}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant={product.is_active ? "outline" : "default"}
+                                size="sm"
+                                onClick={async () => {
+                                  await supabase
+                                    .from("products")
+                                    .update({ is_active: !product.is_active })
+                                    .eq("id", product.id);
+                                  fetchProducts();
+                                }}
+                              >
+                                {product.is_active ? "Deactivate" : "Activate"}
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
