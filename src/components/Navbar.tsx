@@ -35,14 +35,21 @@ const Navbar = () => {
   }, []);
 
   const checkAdminStatus = async (userId: string) => {
-    const { data } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .eq("role", "admin")
-      .maybeSingle();
-    
-    setIsAdmin(!!data);
+    try {
+      // Server-side admin verification
+      const { data, error } = await supabase.functions.invoke('verify-admin');
+      
+      if (error) {
+        console.error('Error verifying admin status:', error);
+        setIsAdmin(false);
+        return;
+      }
+      
+      setIsAdmin(data?.isAdmin || false);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+      setIsAdmin(false);
+    }
   };
 
   const handleLogout = async () => {

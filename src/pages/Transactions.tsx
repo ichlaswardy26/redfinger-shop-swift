@@ -67,10 +67,25 @@ const Transactions = () => {
 
       if (error) throw error;
 
-      const formattedOrders: Order[] = (data || []).map((order: any) => ({
-        ...order,
-        product_name: order.products?.name || "Unknown Product",
-      }));
+      // Generate signed URLs for payment proofs (1 hour expiry)
+      const ordersWithSignedUrls = await Promise.all(
+        (data || []).map(async (order: any) => {
+          let signedUrl = null;
+          if (order.payment_proof) {
+            const { data: signedData } = await supabase.storage
+              .from('payment-proofs')
+              .createSignedUrl(order.payment_proof, 3600); // 1 hour
+            signedUrl = signedData?.signedUrl || null;
+          }
+          return {
+            ...order,
+            payment_proof: signedUrl,
+            product_name: order.products?.name || "Unknown Product",
+          };
+        })
+      );
+
+      const formattedOrders: Order[] = ordersWithSignedUrls;
 
       setOrders(formattedOrders);
     } catch (error) {
@@ -88,6 +103,18 @@ const Transactions = () => {
     try {
       setUploadingId(orderId);
 
+      // Validate file
+      const { validatePaymentProofFile } = await import("@/hooks/useFileValidation").then(m => m.useFileValidation());
+      const validationError = await validatePaymentProofFile(file);
+      if (validationError) {
+        toast({
+          title: "Invalid File",
+          description: validationError,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const fileExt = file.name.split(".").pop();
       const fileName = `${orderId}-${Date.now()}.${fileExt}`;
 
@@ -97,13 +124,10 @@ const Transactions = () => {
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from("payment-proofs")
-        .getPublicUrl(fileName);
-
+      // Store only the path, not the full URL
       const { error: updateError } = await supabase
         .from("orders")
-        .update({ payment_proof: publicUrl })
+        .update({ payment_proof: fileName })
         .eq("id", orderId);
 
       if (updateError) throw updateError;

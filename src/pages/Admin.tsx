@@ -113,23 +113,20 @@ const Admin = () => {
         return;
       }
 
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (!roleData) {
+      // Server-side admin verification
+      const { data, error } = await supabase.functions.invoke('verify-admin');
+      
+      if (error || !data?.isAdmin) {
         toast({
-          title: "Access Denied",
-          description: "You don't have admin privileges",
+          title: "Access denied",
+          description: "You don't have permission to access this page",
           variant: "destructive",
         });
         navigate("/");
         return;
       }
 
+      // Only fetch data if admin verification succeeds
       await Promise.all([fetchProducts(), fetchOrders(), fetchUsers(), fetchStats()]);
     } catch (error) {
       toast({
