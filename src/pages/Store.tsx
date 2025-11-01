@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-cloud-phone.jpg";
 import { Smartphone, Cloud, Shield, Zap } from "lucide-react";
+import { OrderConfirmationDialog } from "@/components/OrderConfirmationDialog";
 
 interface Product {
   id: string;
@@ -28,6 +29,9 @@ const Store = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState<ProductQuantity>({});
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -75,7 +79,7 @@ const Store = () => {
     setQuantities({ ...quantities, [productId]: newQty });
   };
 
-  const handlePurchase = async (productId: string) => {
+  const handlePurchase = (productId: string) => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -86,27 +90,36 @@ const Store = () => {
       return;
     }
 
-    try {
-      const product = products.find(p => p.id === productId);
-      const quantity = quantities[productId] || 1;
-      
-      if (!product || product.stock < quantity) {
-        toast({
-          title: "Error",
-          description: "Insufficient stock available",
-          variant: "destructive",
-        });
-        return;
-      }
+    const product = products.find(p => p.id === productId);
+    const quantity = quantities[productId] || 1;
+    
+    if (!product || product.stock < quantity) {
+      toast({
+        title: "Error",
+        description: "Insufficient stock available",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    setSelectedProduct(product);
+    setConfirmDialogOpen(true);
+  };
+
+  const handleConfirmOrder = async () => {
+    if (!selectedProduct || !user) return;
+
+    setIsCreatingOrder(true);
+    try {
+      const quantity = quantities[selectedProduct.id] || 1;
       const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + product.duration_days);
+      expiresAt.setDate(expiresAt.getDate() + selectedProduct.duration_days);
 
       const { error: orderError } = await supabase
         .from("orders")
         .insert({
           user_id: user.id,
-          product_id: productId,
+          product_id: selectedProduct.id,
           quantity: quantity,
           expires_at: expiresAt.toISOString(),
           status: "pending",
@@ -116,18 +129,25 @@ const Store = () => {
       if (orderError) throw orderError;
 
       toast({
-        title: "Order created!",
-        description: "Please upload your payment proof to complete the order.",
+        title: "Order created successfully!",
+        description: "Please upload your payment proof in My Transactions to complete the order.",
       });
 
-      setQuantities({ ...quantities, [productId]: 1 });
+      setQuantities({ ...quantities, [selectedProduct.id]: 1 });
+      setConfirmDialogOpen(false);
+      setSelectedProduct(null);
       fetchProducts();
+      
+      // Navigate to transactions page
+      navigate("/transactions");
     } catch (error) {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to create order",
         variant: "destructive",
       });
+    } finally {
+      setIsCreatingOrder(false);
     }
   };
 
@@ -245,6 +265,15 @@ const Store = () => {
           )}
         </div>
       </section>
+
+      <OrderConfirmationDialog
+        open={confirmDialogOpen}
+        onOpenChange={setConfirmDialogOpen}
+        product={selectedProduct}
+        quantity={selectedProduct ? (quantities[selectedProduct.id] || 1) : 1}
+        onConfirm={handleConfirmOrder}
+        isLoading={isCreatingOrder}
+      />
     </div>
   );
 };

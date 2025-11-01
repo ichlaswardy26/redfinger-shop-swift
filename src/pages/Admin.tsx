@@ -78,6 +78,7 @@ const Admin = () => {
   const [stats, setStats] = useState<Stats>({ totalOrders: 0, pendingPayments: 0, totalRevenue: 0, totalUsers: 0 });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [verifyingOrder, setVerifyingOrder] = useState<Order | null>(null);
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [productForm, setProductForm] = useState({ name: "", description: "", price: "", duration_days: "", stock: "" });
   const [verifyForm, setVerifyForm] = useState<{ redeem_codes: string[], admin_notes: string, status: string }>({ 
@@ -303,6 +304,7 @@ const Admin = () => {
 
       toast({ title: "Payment verification updated" });
       setVerifyingOrder(null);
+      setVerifyDialogOpen(false);
       setVerifyForm({ redeem_codes: [], admin_notes: "", status: "verified" });
       fetchOrders();
       fetchProducts();
@@ -443,110 +445,28 @@ const Admin = () => {
       header: "Actions",
       cell: ({ row }) => (
         row.original.payment_status === "pending" && (
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setVerifyingOrder(row.original);
-                  // Generate redeem codes based on quantity
-                  const codes = Array.from({ length: row.original.quantity }, () => 
-                    `RF-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
-                  );
-                  setVerifyForm({
-                    redeem_codes: codes,
-                    admin_notes: "",
-                    status: "verified",
-                  });
-                }}
-              >
-                Verify
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Verify Payment</DialogTitle>
-                <DialogDescription>
-                  Review payment proof and issue redeem code
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleVerifyPayment} className="space-y-4">
-                {row.original.payment_proof && (
-                  <div>
-                    <Label>Payment Proof</Label>
-                    <a
-                      href={row.original.payment_proof}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline text-sm block"
-                    >
-                      View Payment Proof
-                    </a>
-                  </div>
-                )}
-                <div>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Order Quantity: <span className="font-medium">{row.original.quantity}</span>
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Decision</Label>
-                  <Select
-                    value={verifyForm.status}
-                    onValueChange={(value) =>
-                      setVerifyForm({ ...verifyForm, status: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="verified">Verified</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {verifyForm.status === "verified" && (
-                  <div className="space-y-3">
-                    <Label>Redeem Codes (one per quantity)</Label>
-                    {verifyForm.redeem_codes.map((code, index) => (
-                      <div key={index} className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Code {index + 1}</Label>
-                        <Input
-                          value={code}
-                          onChange={(e) => {
-                            const newCodes = [...verifyForm.redeem_codes];
-                            newCodes[index] = e.target.value;
-                            setVerifyForm({ ...verifyForm, redeem_codes: newCodes });
-                          }}
-                          required
-                          placeholder={`Redeem code ${index + 1}`}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label>Admin Notes</Label>
-                  <Textarea
-                    value={verifyForm.admin_notes}
-                    onChange={(e) =>
-                      setVerifyForm({ ...verifyForm, admin_notes: e.target.value })
-                    }
-                    placeholder="Optional notes for customer"
-                  />
-                </div>
-                <Button type="submit" className="w-full">
-                  Submit Verification
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setVerifyingOrder(row.original);
+              const codes = Array.from({ length: row.original.quantity }, () => 
+                `RF-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+              );
+              setVerifyForm({
+                redeem_codes: codes,
+                admin_notes: "",
+                status: "verified",
+              });
+              setVerifyDialogOpen(true);
+            }}
+          >
+            Verify
+          </Button>
         )
       ),
     },
-  ], [verifyForm]);
+  ], []);
 
   // User columns
   const userColumns: ColumnDef<User>[] = useMemo(() => [
@@ -1027,6 +947,88 @@ const Admin = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Verify Payment Dialog */}
+      <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Verify Payment</DialogTitle>
+            <DialogDescription>
+              Review payment proof and issue redeem codes
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleVerifyPayment} className="space-y-4">
+            {verifyingOrder?.payment_proof && (
+              <div>
+                <Label>Payment Proof</Label>
+                <a
+                  href={verifyingOrder.payment_proof}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline text-sm block"
+                >
+                  View Payment Proof
+                </a>
+              </div>
+            )}
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">
+                Order Quantity: <span className="font-medium">{verifyingOrder?.quantity}</span>
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label>Decision</Label>
+              <Select
+                value={verifyForm.status}
+                onValueChange={(value) =>
+                  setVerifyForm({ ...verifyForm, status: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="verified">Verified</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {verifyForm.status === "verified" && (
+              <div className="space-y-3">
+                <Label>Redeem Codes (one per quantity)</Label>
+                {verifyForm.redeem_codes.map((code, index) => (
+                  <div key={index} className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Code {index + 1}</Label>
+                    <Input
+                      value={code}
+                      onChange={(e) => {
+                        const newCodes = [...verifyForm.redeem_codes];
+                        newCodes[index] = e.target.value;
+                        setVerifyForm({ ...verifyForm, redeem_codes: newCodes });
+                      }}
+                      required
+                      placeholder={`Redeem code ${index + 1}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Admin Notes</Label>
+              <Textarea
+                value={verifyForm.admin_notes}
+                onChange={(e) =>
+                  setVerifyForm({ ...verifyForm, admin_notes: e.target.value })
+                }
+                placeholder="Optional notes for customer"
+              />
+            </div>
+            <Button type="submit" className="w-full">
+              Submit Verification
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
