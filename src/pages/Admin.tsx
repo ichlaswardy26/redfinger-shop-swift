@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
+import StockManagement from "@/components/StockManagement";
+import CopyButton from "@/components/CopyButton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -13,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Users, Package, TrendingUp, CheckCircle, XCircle, Clock, Search, ExternalLink } from "lucide-react";
+import { ShoppingCart, Users, Package, TrendingUp, CheckCircle, XCircle, Clock, Search, ExternalLink, AlertTriangle } from "lucide-react";
 import { 
   useReactTable, 
   getCoreRowModel, 
@@ -80,7 +82,9 @@ const Admin = () => {
   const [verifyingOrder, setVerifyingOrder] = useState<Order | null>(null);
   const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
-  const [productForm, setProductForm] = useState({ name: "", description: "", price: "", duration_days: "", stock: "" });
+  const [stockManagementOpen, setStockManagementOpen] = useState(false);
+  const [selectedProductForStock, setSelectedProductForStock] = useState<Product | null>(null);
+  const [productForm, setProductForm] = useState({ name: "", description: "", price: "", duration_days: "" });
   const [verifyForm, setVerifyForm] = useState<{ redeem_codes: string[], admin_notes: string, status: string }>({ 
     redeem_codes: [], 
     admin_notes: "", 
@@ -146,7 +150,29 @@ const Admin = () => {
       .select("*")
       .order("created_at", { ascending: false });
 
-    if (!error) setProducts(data || []);
+    if (!error && data) {
+      setProducts(data);
+      
+      // Check for low stock and show notifications
+      const lowStockProducts = data.filter(p => p.stock < 10 && p.stock > 0);
+      const outOfStockProducts = data.filter(p => p.stock === 0);
+      
+      if (lowStockProducts.length > 0) {
+        toast({
+          title: "Low Stock Alert",
+          description: `${lowStockProducts.length} product(s) have low stock (< 10 items)`,
+          variant: "destructive",
+        });
+      }
+      
+      if (outOfStockProducts.length > 0) {
+        toast({
+          title: "Out of Stock Alert",
+          description: `${outOfStockProducts.length} product(s) are out of stock`,
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const fetchOrders = async () => {
@@ -227,7 +253,6 @@ const Admin = () => {
         description: productForm.description,
         price: parseFloat(productForm.price),
         duration_days: parseInt(productForm.duration_days),
-        stock: parseInt(productForm.stock),
       };
 
       if (editingProduct) {
@@ -238,12 +263,12 @@ const Admin = () => {
         if (error) throw error;
         toast({ title: "Product updated successfully" });
       } else {
-        const { error } = await supabase.from("products").insert(productData);
+        const { error } = await supabase.from("products").insert({ ...productData, stock: 0 });
         if (error) throw error;
-        toast({ title: "Product created successfully" });
+        toast({ title: "Product created successfully. Use Stock Management to add stock." });
       }
 
-      setProductForm({ name: "", description: "", price: "", duration_days: "", stock: "" });
+      setProductForm({ name: "", description: "", price: "", duration_days: "" });
       setEditingProduct(null);
       setShowProductDialog(false);
       fetchProducts();
@@ -365,6 +390,34 @@ const Admin = () => {
     }
   };
 
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      // Delete user orders first
+      await supabase.from("orders").delete().eq("user_id", userId);
+      
+      // Delete user roles
+      await supabase.from("user_roles").delete().eq("user_id", userId);
+      
+      // Delete profile
+      const { error } = await supabase.from("profiles").delete().eq("id", userId);
+
+      if (error) throw error;
+
+      toast({ title: "User deleted successfully" });
+      fetchUsers();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to delete user",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Order columns
   const orderColumns: ColumnDef<Order>[] = useMemo(() => [
     {
@@ -424,7 +477,10 @@ const Admin = () => {
         row.original.redeem_codes && row.original.redeem_codes.length > 0 ? (
           <div className="flex flex-col gap-1">
             {row.original.redeem_codes.map((code, i) => (
-              <code key={i} className="text-xs bg-muted px-1 rounded">{code}</code>
+              <div key={i} className="flex items-center gap-2">
+                <code className="text-xs bg-muted px-2 py-1 rounded">{code}</code>
+                <CopyButton text={code} label="" />
+              </div>
             ))}
           </div>
         ) : (
@@ -516,11 +572,11 @@ const Admin = () => {
             {row.original.roles.includes("admin") ? "Remove" : "Make"} Admin
           </Button>
           <Button
-            variant={row.original.is_active ? "outline" : "default"}
+            variant="destructive"
             size="sm"
-            onClick={() => handleToggleUserStatus(row.original.id, row.original.is_active)}
+            onClick={() => handleDeleteUser(row.original.id)}
           >
-            {row.original.is_active ? "Deactivate" : "Activate"}
+            Delete
           </Button>
         </div>
       ),
@@ -590,7 +646,7 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background pb-20 md:pb-0">
         <Navbar />
         <div className="container mx-auto px-4 py-8 text-center">
           <p className="text-muted-foreground">Loading...</p>
@@ -600,7 +656,7 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Admin Panel</h1>
@@ -754,7 +810,7 @@ const Admin = () => {
                   <DialogTrigger asChild>
                     <Button className="mb-4" onClick={() => {
                       setEditingProduct(null);
-                      setProductForm({ name: "", description: "", price: "", duration_days: "", stock: "" });
+                      setProductForm({ name: "", description: "", price: "", duration_days: "" });
                     }}>Add Product</Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -795,15 +851,6 @@ const Admin = () => {
                           required
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label>Stock</Label>
-                        <Input
-                          type="number"
-                          value={productForm.stock}
-                          onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })}
-                          required
-                        />
-                      </div>
                       <Button type="submit" className="w-full">
                         {editingProduct ? "Update" : "Create"}
                       </Button>
@@ -839,14 +886,33 @@ const Admin = () => {
                           <TableCell>{product.name}</TableCell>
                           <TableCell>Rp {product.price.toLocaleString('id-ID')}</TableCell>
                           <TableCell>{product.duration_days} days</TableCell>
-                          <TableCell>{product.stock}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className={product.stock < 10 ? "text-destructive font-semibold" : ""}>
+                                {product.stock}
+                              </span>
+                              {product.stock < 10 && (
+                                <AlertTriangle className="h-4 w-4 text-destructive" />
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>
                             <Badge variant={product.is_active ? "default" : "secondary"}>
                               {product.is_active ? "Active" : "Inactive"}
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 flex-wrap">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedProductForStock(product);
+                                  setStockManagementOpen(true);
+                                }}
+                              >
+                                Manage Stock
+                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -857,7 +923,6 @@ const Admin = () => {
                                     description: product.description || "",
                                     price: product.price.toString(),
                                     duration_days: product.duration_days.toString(),
-                                    stock: product.stock.toString(),
                                   });
                                   setShowProductDialog(true);
                                 }}
@@ -1026,6 +1091,15 @@ const Admin = () => {
           </form>
         </DialogContent>
       </Dialog>
+        </Tabs>
+      </div>
+      
+      <StockManagement
+        open={stockManagementOpen}
+        onOpenChange={setStockManagementOpen}
+        product={selectedProductForStock}
+        onSuccess={fetchProducts}
+      />
     </div>
   );
 };

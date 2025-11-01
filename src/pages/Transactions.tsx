@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useFileValidation } from "@/hooks/useFileValidation";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,12 +100,13 @@ const Transactions = () => {
     }
   };
 
+  const { validatePaymentProofFile } = useFileValidation();
+
   const handleUploadProof = async (orderId: string, file: File) => {
     try {
       setUploadingId(orderId);
 
       // Validate file
-      const { validatePaymentProofFile } = await import("@/hooks/useFileValidation").then(m => m.useFileValidation());
       const validationError = await validatePaymentProofFile(file);
       if (validationError) {
         toast({
@@ -310,7 +312,7 @@ const Transactions = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <Card>
