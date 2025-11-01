@@ -93,7 +93,6 @@ const Admin = () => {
   const [productSearch, setProductSearch] = useState("");
   const [productSorting, setProductSorting] = useState<SortingState>([]);
   const [productFilters, setProductFilters] = useState<ColumnFiltersState>([]);
-  
   // Table states
   const [orderSorting, setOrderSorting] = useState<SortingState>([]);
   const [orderFilters, setOrderFilters] = useState<ColumnFiltersState>([]);
@@ -101,7 +100,6 @@ const Admin = () => {
   const [userSorting, setUserSorting] = useState<SortingState>([]);
   const [userFilters, setUserFilters] = useState<ColumnFiltersState>([]);
   const [userSearch, setUserSearch] = useState("");
-
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -116,10 +114,8 @@ const Admin = () => {
         navigate("/auth/signin");
         return;
       }
-
       // Server-side admin verification
       const { data, error } = await supabase.functions.invoke('verify-admin');
-      
       if (error || !data?.isAdmin) {
         toast({
           title: "Access denied",
@@ -129,7 +125,6 @@ const Admin = () => {
         navigate("/");
         return;
       }
-
       // Only fetch data if admin verification succeeds
       await Promise.all([fetchProducts(), fetchOrders(), fetchUsers(), fetchStats()]);
     } catch (error) {
@@ -149,14 +144,11 @@ const Admin = () => {
       .from("products")
       .select("*")
       .order("created_at", { ascending: false });
-
     if (!error && data) {
       setProducts(data);
-      
       // Check for low stock and show notifications
       const lowStockProducts = data.filter(p => p.stock < 10 && p.stock > 0);
       const outOfStockProducts = data.filter(p => p.stock === 0);
-      
       if (lowStockProducts.length > 0) {
         toast({
           title: "Low Stock Alert",
@@ -164,7 +156,6 @@ const Admin = () => {
           variant: "destructive",
         });
       }
-      
       if (outOfStockProducts.length > 0) {
         toast({
           title: "Out of Stock Alert",
@@ -183,16 +174,13 @@ const Admin = () => {
         products(name)
       `)
       .order("created_at", { ascending: false });
-
     if (!error && data) {
       const userIds = [...new Set(data.map((order: any) => order.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, email, full_name")
         .in("id", userIds);
-
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-
       const ordersWithDetails = data.map((order: any) => {
         const profile = profileMap.get(order.user_id);
         return {
@@ -202,7 +190,6 @@ const Admin = () => {
           customer_name: profile?.full_name || "Unknown",
         };
       });
-
       setOrders(ordersWithDetails);
     }
   };
@@ -212,23 +199,19 @@ const Admin = () => {
       .from("profiles")
       .select("*")
       .order("created_at", { ascending: false });
-
     if (profiles) {
       const { data: roles } = await supabase
         .from("user_roles")
         .select("user_id, role");
-
       const roleMap = new Map<string, string[]>();
       roles?.forEach(r => {
         if (!roleMap.has(r.user_id)) roleMap.set(r.user_id, []);
         roleMap.get(r.user_id)?.push(r.role);
       });
-
       const usersWithRoles = profiles.map(p => ({
         ...p,
         roles: roleMap.get(p.id) || [],
       }));
-
       setUsers(usersWithRoles);
     }
   };
@@ -236,12 +219,10 @@ const Admin = () => {
   const fetchStats = async () => {
     const { data: orders } = await supabase.from("orders").select("payment_status");
     const { data: profiles } = await supabase.from("profiles").select("id");
-
     const totalOrders = orders?.length || 0;
     const pendingPayments = orders?.filter(o => o.payment_status === "pending").length || 0;
     const totalRevenue = orders?.filter(o => o.payment_status === "verified").length || 0;
     const totalUsers = profiles?.length || 0;
-
     setStats({ totalOrders, pendingPayments, totalRevenue, totalUsers });
   };
 
@@ -254,7 +235,6 @@ const Admin = () => {
         price: parseFloat(productForm.price),
         duration_days: parseInt(productForm.duration_days),
       };
-
       if (editingProduct) {
         const { error } = await supabase
           .from("products")
@@ -267,7 +247,6 @@ const Admin = () => {
         if (error) throw error;
         toast({ title: "Product created successfully. Use Stock Management to add stock." });
       }
-
       setProductForm({ name: "", description: "", price: "", duration_days: "" });
       setEditingProduct(null);
       setShowProductDialog(false);
@@ -284,14 +263,12 @@ const Admin = () => {
   const handleVerifyPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!verifyingOrder) return;
-
     try {
       const updateData: any = {
         payment_status: verifyForm.status,
         admin_notes: verifyForm.admin_notes,
         verified_at: new Date().toISOString(),
       };
-
       if (verifyForm.status === "verified") {
         // Validate all redeem codes are filled
         if (verifyForm.redeem_codes.some(code => !code.trim())) {
@@ -302,10 +279,8 @@ const Admin = () => {
           });
           return;
         }
-
         updateData.redeem_codes = verifyForm.redeem_codes;
         updateData.status = "active";
-
         const product = products.find(p => p.id === verifyingOrder.product_id);
         if (product) {
           await supabase
@@ -316,14 +291,11 @@ const Admin = () => {
       } else if (verifyForm.status === "rejected") {
         updateData.status = "rejected";
       }
-
       const { error } = await supabase
         .from("orders")
         .update(updateData)
         .eq("id", verifyingOrder.id);
-
       if (error) throw error;
-
       toast({ title: "Payment verification updated" });
       setVerifyingOrder(null);
       setVerifyDialogOpen(false);
@@ -349,14 +321,12 @@ const Admin = () => {
           .eq("user_id", userId)
           .eq("role", role)
           .maybeSingle();
-
         if (data) {
           await supabase.from("user_roles").delete().eq("id", data.id);
         }
       } else {
         await supabase.from("user_roles").insert({ user_id: userId, role: role as any });
       }
-
       toast({ title: `Role ${hasRole ? "removed" : "added"} successfully` });
       fetchUsers();
     } catch (error) {
@@ -374,9 +344,7 @@ const Admin = () => {
         .from("profiles")
         .update({ is_active: !currentStatus })
         .eq("id", userId);
-
       if (error) throw error;
-
       toast({ 
         title: `User ${!currentStatus ? "activated" : "deactivated"} successfully` 
       });
@@ -394,19 +362,14 @@ const Admin = () => {
     if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
       return;
     }
-
     try {
       // Delete user orders first
       await supabase.from("orders").delete().eq("user_id", userId);
-      
       // Delete user roles
       await supabase.from("user_roles").delete().eq("user_id", userId);
-      
       // Delete profile
       const { error } = await supabase.from("profiles").delete().eq("id", userId);
-
       if (error) throw error;
-
       toast({ title: "User deleted successfully" });
       fetchUsers();
     } catch (error) {
@@ -660,7 +623,6 @@ const Admin = () => {
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Admin Panel</h1>
-
         <Tabs defaultValue="dashboard" className="space-y-6">
           <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
@@ -668,7 +630,6 @@ const Admin = () => {
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
           </TabsList>
-
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
@@ -708,7 +669,6 @@ const Admin = () => {
                 </CardContent>
               </Card>
             </div>
-
             <Card>
               <CardHeader>
                 <CardTitle>Recent Activity</CardTitle>
@@ -744,7 +704,6 @@ const Admin = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
           <TabsContent value="orders">
             <Card>
               <CardHeader>
@@ -799,7 +758,6 @@ const Admin = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
           <TabsContent value="products">
             <Card>
               <CardHeader>
@@ -952,7 +910,6 @@ const Admin = () => {
               </CardContent>
             </Card>
           </TabsContent>
-
           <TabsContent value="users">
             <Card>
               <CardHeader>
@@ -1091,9 +1048,8 @@ const Admin = () => {
           </form>
         </DialogContent>
       </Dialog>
-        </Tabs>
-      </div>
-      
+
+      {/* Stock Management Dialog */}
       <StockManagement
         open={stockManagementOpen}
         onOpenChange={setStockManagementOpen}
