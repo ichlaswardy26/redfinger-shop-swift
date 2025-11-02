@@ -1,20 +1,18 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useFileValidation } from "@/hooks/useFileValidation";
 import Navbar from "@/components/Navbar";
+import { OrderCard } from "@/components/OrderCard";
+import { TicketDialog } from "@/components/TicketDialog";
+import { RatingDialog } from "@/components/RatingDialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ExternalLink, Search } from "lucide-react";
-import CopyButton from "@/components/CopyButton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, getFilteredRowModel, flexRender, ColumnDef, SortingState, ColumnFiltersState } from "@tanstack/react-table";
-import { DataTablePagination } from "@/components/DataTablePagination";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search } from "lucide-react";
 
 interface Order {
   id: string;
@@ -26,19 +24,23 @@ interface Order {
   payment_proof: string | null;
   expires_at: string;
   created_at: string;
-  product_name: string;
-  admin_notes: string | null;
+  products: { name: string; duration_days: number };
+  support_tickets: { id: string; status: string } | null;
 }
 
 const Transactions = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
+  const [selectedRating, setSelectedRating] = useState<{orderId: string, productId: string, productName: string} | null>(null);
+  const [uploadingFile, setUploadingFile] = useState<File | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { validatePaymentProofFile } = useFileValidation();
 
   useEffect(() => {
     checkAuth();
@@ -61,34 +63,20 @@ const Transactions = () => {
         .from("orders")
         .select(`
           *,
-          products (name)
+          products (name, duration_days),
+          support_tickets (id, status)
         `)
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      // Generate signed URLs for payment proofs (1 hour expiry)
-      const ordersWithSignedUrls = await Promise.all(
-        (data || []).map(async (order: any) => {
-          let signedUrl = null;
-          if (order.payment_proof) {
-            const { data: signedData } = await supabase.storage
-              .from('payment-proofs')
-              .createSignedUrl(order.payment_proof, 3600); // 1 hour
-            signedUrl = signedData?.signedUrl || null;
-          }
-          return {
-            ...order,
-            payment_proof: signedUrl,
-            product_name: order.products?.name || "Unknown Product",
-          };
-        })
-      );
+      const ordersData = (data || []).map((order: any) => ({
+        ...order,
+        support_tickets: order.support_tickets?.[0] || null
+      }));
 
-      const formattedOrders: Order[] = ordersWithSignedUrls;
-
-      setOrders(formattedOrders);
+      setOrders(ordersData);
     } catch (error) {
       toast({
         title: "Error",
@@ -100,14 +88,11 @@ const Transactions = () => {
     }
   };
 
-  const { validatePaymentProofFile } = useFileValidation();
+  const handleUploadProof = async () => {
+    if (!selectedOrderId || !uploadingFile) return;
 
-  const handleUploadProof = async (orderId: string, file: File) => {
     try {
-      setUploadingId(orderId);
-
-      // Validate file
-      const validationError = await validatePaymentProofFile(file);
+      const validationError = await validatePaymentProofFile(uploadingFile);
       if (validationError) {
         toast({
           title: "Invalid File",
@@ -117,20 +102,22 @@ const Transactions = () => {
         return;
       }
 
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${orderId}-${Date.now()}.${fileExt}`;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const fileExt = uploadingFile.name.split(".").pop();
+      const fileName = `${user.id}/${selectedOrderId}-${Date.now()}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("payment-proofs")
-        .upload(fileName, file);
+        .upload(fileName, uploadingFile);
 
       if (uploadError) throw uploadError;
 
-      // Store only the path, not the full URL
       const { error: updateError } = await supabase
         .from("orders")
         .update({ payment_proof: fileName })
-        .eq("id", orderId);
+        .eq("id", selectedOrderId);
 
       if (updateError) throw updateError;
 
@@ -139,6 +126,9 @@ const Transactions = () => {
         description: "Payment proof uploaded successfully",
       });
 
+      setUploadDialogOpen(false);
+      setUploadingFile(null);
+      setSelectedOrderId(null);
       fetchOrders();
     } catch (error) {
       toast({
@@ -146,166 +136,46 @@ const Transactions = () => {
         description: error instanceof Error ? error.message : "Failed to upload proof",
         variant: "destructive",
       });
-    } finally {
-      setUploadingId(null);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-      verified: "default",
-      pending: "outline",
-      rejected: "destructive",
-    };
-    return <Badge variant={variants[status] || "secondary"}>{status}</Badge>;
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm("Are you sure you want to cancel this order?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ status: "cancelled", payment_status: "rejected" })
+        .eq("id", orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Order cancelled",
+        description: "Your order has been cancelled successfully",
+      });
+
+      fetchOrders();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to cancel order",
+        variant: "destructive",
+      });
+    }
   };
 
-  const columns: ColumnDef<Order>[] = useMemo(() => [
-    {
-      accessorKey: "product_name",
-      header: "Product",
-    },
-    {
-      accessorKey: "quantity",
-      header: "Qty",
-      cell: ({ row }) => <span className="font-medium">{row.original.quantity}</span>,
-    },
-    {
-      accessorKey: "created_at",
-      header: "Order Date",
-      cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString(),
-    },
-    {
-      accessorKey: "payment_status",
-      header: "Payment Status",
-      cell: ({ row }) => getStatusBadge(row.original.payment_status),
-    },
-    {
-      id: "payment_proof",
-      header: "Payment Proof",
-      cell: ({ row }) => (
-        <div className="space-y-2">
-          {row.original.payment_proof ? (
-            <a
-              href={row.original.payment_proof}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary hover:underline flex items-center gap-1 text-sm"
-            >
-              <ExternalLink className="h-3 w-3" />
-              View Proof
-            </a>
-          ) : row.original.payment_status === "pending" ? (
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">Upload Proof</Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Upload Payment Proof</DialogTitle>
-                  <DialogDescription>
-                    Upload a screenshot or photo of your payment
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="proof">Payment Proof Image</Label>
-                    <Input
-                      id="proof"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          handleUploadProof(row.original.id, file);
-                        }
-                      }}
-                      disabled={uploadingId === row.original.id}
-                    />
-                  </div>
-                  {uploadingId === row.original.id && (
-                    <p className="text-sm text-muted-foreground">Uploading...</p>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-          ) : (
-            <span className="text-muted-foreground text-sm">-</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      id: "redeem_codes",
-      header: "Redeem Codes",
-      cell: ({ row }) => {
-        if (row.original.payment_status === "verified" && row.original.redeem_codes) {
-          return (
-            <div className="flex flex-col gap-2">
-              {row.original.redeem_codes.map((code, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <code className="text-xs bg-muted px-2 py-1 rounded">{code}</code>
-                  <CopyButton text={code} label="" />
-                </div>
-              ))}
-            </div>
-          );
-        }
-        if (row.original.payment_status === "rejected") {
-          return <Badge variant="destructive">Order Rejected</Badge>;
-        }
-        return <span className="text-muted-foreground text-sm">Pending verification</span>;
-      },
-    },
-    {
-      id: "notes",
-      header: "Notes",
-      cell: ({ row }) => (
-        row.original.admin_notes ? (
-          <p className="text-xs text-muted-foreground max-w-xs">
-            {row.original.admin_notes}
-          </p>
-        ) : (
-          <span className="text-muted-foreground text-sm">-</span>
-        )
-      ),
-    },
-  ], [uploadingId]);
-
-  const filteredOrders = useMemo(() => {
-    if (!searchQuery) return orders;
-    return orders.filter(order =>
-      order.product_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.payment_status.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [orders, searchQuery]);
-
-  const table = useReactTable({
-    data: filteredOrders,
-    columns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: {
-      sorting,
-      columnFilters,
-    },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
-  });
+  const filteredOrders = orders.filter(order =>
+    order.products.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    order.payment_status.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto px-4 py-8">
-          <p className="text-center text-muted-foreground">Loading transactions...</p>
+          <p className="text-center text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -314,7 +184,7 @@ const Transactions = () => {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         <Card>
           <CardHeader>
             <CardTitle>My Orders</CardTitle>
@@ -331,51 +201,93 @@ const Transactions = () => {
           </CardHeader>
           <CardContent>
             {orders.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-muted-foreground py-12">
                 No orders yet. Visit the store to make your first purchase!
               </p>
             ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      {table.getHeaderGroups().map(headerGroup => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map(header => (
-                            <TableHead key={header.id}>
-                              {flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {table.getRowModel().rows.length ? (
-                        table.getRowModel().rows.map(row => (
-                          <TableRow key={row.id}>
-                            {row.getVisibleCells().map(cell => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={columns.length} className="text-center">
-                            No orders found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-                <DataTablePagination table={table} />
-              </>
+              <div className="grid md:grid-cols-2 gap-4">
+                {filteredOrders.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={{
+                      ...order,
+                      product: order.products,
+                      ticket: order.support_tickets
+                    }}
+                    onUploadProof={(id) => {
+                      setSelectedOrderId(id);
+                      setUploadDialogOpen(true);
+                    }}
+                    onCancelOrder={handleCancelOrder}
+                    onRate={(orderId, productId, productName) => {
+                      setSelectedRating({ orderId, productId, productName });
+                      setRatingDialogOpen(true);
+                    }}
+                    onCreateTicket={(orderId) => {
+                      setSelectedOrderId(orderId);
+                      setTicketDialogOpen(true);
+                    }}
+                  />
+                ))}
+              </div>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Upload Proof Dialog */}
+      <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Upload Payment Proof</DialogTitle>
+            <DialogDescription>
+              Upload a screenshot or photo of your payment (JPG/PNG only, max 5MB)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="proof">Payment Proof Image</Label>
+              <Input
+                id="proof"
+                type="file"
+                accept="image/jpeg,image/jpg,image/png"
+                onChange={(e) => setUploadingFile(e.target.files?.[0] || null)}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => {
+                setUploadDialogOpen(false);
+                setUploadingFile(null);
+              }}>
+                Cancel
+              </Button>
+              <Button onClick={handleUploadProof} disabled={!uploadingFile}>
+                Upload
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ticket Dialog */}
+      <TicketDialog
+        open={ticketDialogOpen}
+        onOpenChange={setTicketDialogOpen}
+        orderId={selectedOrderId || undefined}
+        onSuccess={fetchOrders}
+      />
+
+      {/* Rating Dialog */}
+      {selectedRating && (
+        <RatingDialog
+          open={ratingDialogOpen}
+          onOpenChange={setRatingDialogOpen}
+          orderId={selectedRating.orderId}
+          productId={selectedRating.productId}
+          productName={selectedRating.productName}
+          onSuccess={fetchOrders}
+        />
+      )}
     </div>
   );
 };

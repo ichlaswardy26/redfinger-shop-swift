@@ -42,12 +42,28 @@ const StockManagement = ({ open, onOpenChange, product, onSuccess }: StockManage
       : Math.max(0, product.stock - amount);
 
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Update product stock
       const { error } = await supabase
         .from("products")
         .update({ stock: newStock })
         .eq("id", product.id);
 
       if (error) throw error;
+
+      // Create stock log entry
+      await supabase
+        .from("stock_logs")
+        .insert({
+          product_id: product.id,
+          user_id: user.id,
+          operation: operation,
+          quantity: amount,
+          previous_stock: product.stock,
+          new_stock: newStock,
+        });
 
       toast({
         title: "Stock updated",

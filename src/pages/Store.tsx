@@ -5,9 +5,10 @@ import { User } from "@supabase/supabase-js";
 import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-cloud-phone.jpg";
-import { Smartphone, Cloud, Shield, Zap } from "lucide-react";
+import { Smartphone, Cloud, Shield, Zap, Star } from "lucide-react";
 import { OrderConfirmationDialog } from "@/components/OrderConfirmationDialog";
 
 interface Product {
@@ -18,6 +19,21 @@ interface Product {
   duration_days: number;
   stock: number;
   is_active: boolean;
+  average_rating?: number;
+  rating_count?: number;
+}
+
+interface Rating {
+  id: string;
+  rating: number;
+  review: string | null;
+  created_at: string;
+  profiles: {
+    full_name: string | null;
+  };
+  products: {
+    name: string;
+  };
 }
 
 interface ProductQuantity {
@@ -26,6 +42,7 @@ interface ProductQuantity {
 
 const Store = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [ratings, setRatings] = useState<Rating[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState<ProductQuantity>({});
@@ -45,6 +62,7 @@ const Store = () => {
     });
 
     fetchProducts();
+    fetchRatings();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -67,6 +85,41 @@ const Store = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRatings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("product_ratings")
+        .select("id, rating, review, created_at, user_id, product_id")
+        .eq("is_visible", true)
+        .order("created_at", { ascending: false })
+        .limit(6);
+
+      if (error) throw error;
+
+      // Fetch related profiles and products
+      const userIds = [...new Set(data?.map(r => r.user_id) || [])];
+      const productIds = [...new Set(data?.map(r => r.product_id) || [])];
+
+      const [profilesRes, productsRes] = await Promise.all([
+        supabase.from("profiles").select("id, full_name").in("id", userIds),
+        supabase.from("products").select("id, name").in("id", productIds)
+      ]);
+
+      const profileMap = new Map(profilesRes.data?.map(p => [p.id, p]) || []);
+      const productMap = new Map(productsRes.data?.map(p => [p.id, p]) || []);
+
+      const enrichedRatings = (data || []).map(rating => ({
+        ...rating,
+        profiles: { full_name: profileMap.get(rating.user_id)?.full_name || null },
+        products: { name: productMap.get(rating.product_id)?.name || "" }
+      }));
+
+      setRatings(enrichedRatings);
+    } catch (error) {
+      console.error("Error fetching ratings:", error);
     }
   };
 
@@ -265,6 +318,45 @@ const Store = () => {
           )}
         </div>
       </section>
+
+      {/* Testimonials Section */}
+      {ratings.length > 0 && (
+        <section className="py-20 bg-background">
+          <div className="container mx-auto px-4">
+            <div className="text-center space-y-4 mb-12">
+              <h2 className="text-4xl font-bold">What Our Customers Say</h2>
+              <p className="text-xl text-muted-foreground">Real reviews from verified customers</p>
+            </div>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+              {ratings.map((rating) => (
+                <Card key={rating.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  <CardContent className="p-6 space-y-3">
+                    <div className="flex items-center gap-1 mb-2">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-4 w-4 ${
+                            i < rating.rating
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-muted-foreground"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    {rating.review && (
+                      <p className="text-sm text-foreground">{rating.review}</p>
+                    )}
+                    <div className="pt-2 border-t">
+                      <p className="text-sm font-medium">{rating.profiles?.full_name || "Anonymous"}</p>
+                      <p className="text-xs text-muted-foreground">{rating.products?.name}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <OrderConfirmationDialog
         open={confirmDialogOpen}

@@ -70,6 +70,57 @@ export type Database = {
           },
         ]
       }
+      product_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          is_visible: boolean
+          order_id: string
+          product_id: string
+          rating: number
+          review: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          order_id: string
+          product_id: string
+          rating: number
+          review?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          order_id?: string
+          product_id?: string
+          rating?: number
+          review?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_ratings_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_ratings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           created_at: string
@@ -129,6 +180,100 @@ export type Database = {
           is_active?: boolean
         }
         Relationships: []
+      }
+      stock_logs: {
+        Row: {
+          created_at: string
+          id: string
+          new_stock: number
+          notes: string | null
+          operation: string
+          previous_stock: number
+          product_id: string
+          quantity: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_stock: number
+          notes?: string | null
+          operation: string
+          previous_stock: number
+          product_id: string
+          quantity: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_stock?: number
+          notes?: string | null
+          operation?: string
+          previous_stock?: number
+          product_id?: string
+          quantity?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_logs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string
+          id: string
+          image_proof: string | null
+          order_id: string | null
+          resolved_at: string | null
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          image_proof?: string | null
+          order_id?: string | null
+          resolved_at?: string | null
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          image_proof?: string | null
+          order_id?: string | null
+          resolved_at?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
