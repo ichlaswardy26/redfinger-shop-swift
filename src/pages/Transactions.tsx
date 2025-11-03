@@ -7,12 +7,13 @@ import Navbar from "@/components/Navbar";
 import { OrderCard } from "@/components/OrderCard";
 import { TicketDialog } from "@/components/TicketDialog";
 import { RatingDialog } from "@/components/RatingDialog";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { MessageSquare, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search } from "lucide-react";
 
 interface Order {
   id: string;
@@ -30,6 +31,7 @@ interface Order {
 
 const Transactions = () => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -45,12 +47,36 @@ const Transactions = () => {
   useEffect(() => {
     checkAuth();
     fetchOrders();
+    fetchTickets();
   }, []);
 
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       navigate("/auth/signin");
+    }
+  };
+
+  const fetchTickets = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("support_tickets")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setTickets(data || []);
+    } catch (error) {
+      console.error("Error fetching tickets:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load support tickets",
+        variant: "destructive",
+      });
     }
   };
 
@@ -185,6 +211,66 @@ const Transactions = () => {
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <h1 className="text-3xl font-bold mb-8">My Dashboard</h1>
+        
+        {/* Support Tickets Section */}
+        {tickets.length > 0 && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                My Support Tickets
+              </CardTitle>
+              <CardDescription>View and track your support requests</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {tickets.map((ticket) => (
+                  <div key={ticket.id} className="border rounded-lg p-4 space-y-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-semibold">{ticket.subject}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {ticket.description}
+                        </p>
+                      </div>
+                      <Badge 
+                        variant={
+                          ticket.status === "resolved" 
+                            ? "default" 
+                            : ticket.status === "in_progress"
+                            ? "secondary"
+                            : "outline"
+                        }
+                      >
+                        {ticket.status.replace("_", " ")}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                      <span>Created: {new Date(ticket.created_at).toLocaleDateString()}</span>
+                      {ticket.resolved_at && (
+                        <span>Resolved: {new Date(ticket.resolved_at).toLocaleDateString()}</span>
+                      )}
+                    </div>
+                    {ticket.image_proof && (
+                      <div className="mt-2">
+                        <a
+                          href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${ticket.image_proof}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-primary hover:underline"
+                        >
+                          View Attachment
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>My Orders</CardTitle>
@@ -274,7 +360,10 @@ const Transactions = () => {
         open={ticketDialogOpen}
         onOpenChange={setTicketDialogOpen}
         orderId={selectedOrderId || undefined}
-        onSuccess={fetchOrders}
+        onSuccess={() => {
+          fetchOrders();
+          fetchTickets();
+        }}
       />
 
       {/* Rating Dialog */}

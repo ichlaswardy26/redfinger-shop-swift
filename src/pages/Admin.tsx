@@ -312,7 +312,7 @@ const Admin = () => {
     }
   };
 
-  const handleToggleRole = async (userId: string, role: "admin" | "user", hasRole: boolean) => {
+  const handleToggleRole = async (userId: string, role: "admin" | "staff", hasRole: boolean) => {
     try {
       if (hasRole) {
         const { data } = await supabase
@@ -533,6 +533,15 @@ const Admin = () => {
             }
           >
             {row.original.roles.includes("admin") ? "Remove" : "Make"} Admin
+          </Button>
+          <Button
+            variant={row.original.roles.includes("staff") ? "destructive" : "outline"}
+            size="sm"
+            onClick={() =>
+              handleToggleRole(row.original.id, "staff", row.original.roles.includes("staff"))
+            }
+          >
+            {row.original.roles.includes("staff") ? "Remove" : "Make"} Staff
           </Button>
           <Button
             variant="destructive"

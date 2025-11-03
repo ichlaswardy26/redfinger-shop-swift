@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-cloud-phone.jpg";
-import { Smartphone, Cloud, Shield, Zap, Star } from "lucide-react";
+import { Smartphone, Cloud, Shield, Zap, Star, ChevronLeft, ChevronRight } from "lucide-react";
 import { OrderConfirmationDialog } from "@/components/OrderConfirmationDialog";
 
 interface Product {
@@ -49,6 +49,8 @@ const Store = () => {
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [currentRatingPage, setCurrentRatingPage] = useState(0);
+  const ratingsPerPage = 6;
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -327,32 +329,58 @@ const Store = () => {
               <h2 className="text-4xl font-bold">What Our Customers Say</h2>
               <p className="text-xl text-muted-foreground">Real reviews from verified customers</p>
             </div>
+            
+            {/* Pagination controls */}
+            <div className="flex justify-center items-center gap-4 mb-6">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentRatingPage(Math.max(0, currentRatingPage - 1))}
+                disabled={currentRatingPage === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                Page {currentRatingPage + 1} of {Math.ceil(ratings.length / ratingsPerPage)}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentRatingPage(Math.min(Math.ceil(ratings.length / ratingsPerPage) - 1, currentRatingPage + 1))}
+                disabled={currentRatingPage >= Math.ceil(ratings.length / ratingsPerPage) - 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-              {ratings.map((rating) => (
-                <Card key={rating.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                  <CardContent className="p-6 space-y-3">
-                    <div className="flex items-center gap-1 mb-2">
-                      {[...Array(5)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 ${
-                            i < rating.rating
-                              ? "fill-yellow-400 text-yellow-400"
-                              : "text-muted-foreground"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                    {rating.review && (
-                      <p className="text-sm text-foreground">{rating.review}</p>
-                    )}
-                    <div className="pt-2 border-t">
-                      <p className="text-sm font-medium">{rating.profiles?.full_name || "Anonymous"}</p>
-                      <p className="text-xs text-muted-foreground">{rating.products?.name}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+              {ratings
+                .slice(currentRatingPage * ratingsPerPage, (currentRatingPage + 1) * ratingsPerPage)
+                .map((rating) => (
+                  <Card key={rating.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                    <CardContent className="p-6 space-y-3">
+                      <div className="flex items-center gap-1 mb-2">
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${
+                              i < rating.rating
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-muted-foreground"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      {rating.review && (
+                        <p className="text-sm text-foreground line-clamp-4">{rating.review}</p>
+                      )}
+                      <div className="pt-2 border-t">
+                        <p className="text-sm font-medium">{rating.profiles?.full_name || "Anonymous"}</p>
+                        <p className="text-xs text-muted-foreground">{rating.products?.name}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
             </div>
           </div>
         </section>

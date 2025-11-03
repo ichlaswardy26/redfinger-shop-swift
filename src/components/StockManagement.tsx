@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Minus } from "lucide-react";
 
@@ -21,64 +21,65 @@ interface StockManagementProps {
 const StockManagement = ({ open, onOpenChange, product, onSuccess }: StockManagementProps) => {
   const [quantity, setQuantity] = useState("");
   const [operation, setOperation] = useState<"add" | "remove">("add");
-  const { toast } = useToast();
+  const [reason, setReason] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!product) return;
 
-    const amount = parseInt(quantity);
-    if (isNaN(amount) || amount <= 0) {
-      toast({
-        title: "Invalid quantity",
-        description: "Please enter a valid positive number",
-        variant: "destructive",
-      });
+    const qty = parseInt(quantity);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error("Please enter a valid quantity");
       return;
     }
 
-    const newStock = operation === "add" 
-      ? product.stock + amount 
-      : Math.max(0, product.stock - amount);
+    if (!reason.trim()) {
+      toast.error("Please provide a reason for the stock change");
+      return;
+    }
+
+    const newStock = operation === "add" ? product.stock + qty : product.stock - qty;
+    
+    if (newStock < 0) {
+      toast.error("Insufficient stock");
+      return;
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
       // Update product stock
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from("products")
         .update({ stock: newStock })
         .eq("id", product.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
-      // Create stock log entry
-      await supabase
+      // Log the stock change with reason
+      const { error: logError } = await supabase
         .from("stock_logs")
         .insert({
           product_id: product.id,
           user_id: user.id,
-          operation: operation,
-          quantity: amount,
+          operation,
+          quantity: qty,
           previous_stock: product.stock,
           new_stock: newStock,
+          reason: reason.trim(),
         });
 
-      toast({
-        title: "Stock updated",
-        description: `${operation === "add" ? "Added" : "Removed"} ${amount} items`,
-      });
+      if (logError) throw logError;
 
-      setQuantity("");
-      onOpenChange(false);
+      toast.success("Stock updated successfully");
       onSuccess();
+      onOpenChange(false);
+      setQuantity("");
+      setReason("");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to update stock",
-        variant: "destructive",
-      });
+      console.error("Stock update error:", error);
+      toast.error("Failed to update stock");
     }
   };
 
@@ -122,6 +123,17 @@ const StockManagement = ({ open, onOpenChange, product, onSuccess }: StockManage
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               placeholder="Enter quantity"
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="reason">Reason for Change</Label>
+            <Input
+              id="reason"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="e.g., Restock, Damaged, Sale, etc."
               required
             />
           </div>

@@ -1,5 +1,7 @@
-import { Link, useLocation } from "react-router-dom";
-import { Home, ShoppingBag, Shield, User, Briefcase } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Home, ShoppingBag, Shield, User, Briefcase, LogOut, LogIn, UserPlus } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface BottomNavProps {
   isAdmin: boolean;
@@ -7,26 +9,43 @@ interface BottomNavProps {
   isAuthenticated: boolean;
 }
 
+interface NavItem {
+  path: string;
+  icon: any;
+  label: string;
+  action?: () => void;
+}
+
 const BottomNav = ({ isAdmin, isStaff, isAuthenticated }: BottomNavProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   
-  const getNavItems = () => {
-    const items = [
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    toast.success("Signed out successfully");
+    navigate("/");
+  };
+  
+  const getNavItems = (): NavItem[] => {
+    const items: NavItem[] = [
       { path: "/", icon: Home, label: "Home" },
     ];
     
     if (isAuthenticated) {
       items.push({ path: "/transactions", icon: ShoppingBag, label: "Orders" });
-    }
-    
-    if (isAdmin) {
-      items.push({ path: "/admin", icon: Shield, label: "Admin" });
-    } else if (isStaff) {
-      items.push({ path: "/staff", icon: Briefcase, label: "Staff" });
-    }
-    
-    if (isAuthenticated && !isAdmin && !isStaff) {
-      items.push({ path: "/profile", icon: User, label: "Profile" });
+      
+      if (isAdmin) {
+        items.push({ path: "/admin", icon: Shield, label: "Admin" });
+      } else if (isStaff) {
+        items.push({ path: "/staff", icon: Briefcase, label: "Staff" });
+      }
+      
+      // Add logout action
+      items.push({ path: "logout", icon: LogOut, label: "Logout", action: handleSignOut });
+    } else {
+      // For guests, add sign in and sign up
+      items.push({ path: "/auth/signin", icon: LogIn, label: "Sign In" });
+      items.push({ path: "/auth/signup", icon: UserPlus, label: "Sign Up" });
     }
     
     return items;
@@ -40,6 +59,19 @@ const BottomNav = ({ isAdmin, isStaff, isAuthenticated }: BottomNavProps) => {
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.path;
+          
+          if (item.action) {
+            return (
+              <button
+                key={item.path}
+                onClick={item.action}
+                className="flex flex-col items-center justify-center gap-1 transition-all text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-xs font-medium">{item.label}</span>
+              </button>
+            );
+          }
           
           return (
             <Link

@@ -191,6 +191,7 @@ export type Database = {
           previous_stock: number
           product_id: string
           quantity: number
+          reason: string | null
           user_id: string
         }
         Insert: {
@@ -202,6 +203,7 @@ export type Database = {
           previous_stock: number
           product_id: string
           quantity: number
+          reason?: string | null
           user_id: string
         }
         Update: {
@@ -213,6 +215,7 @@ export type Database = {
           previous_stock?: number
           product_id?: string
           quantity?: number
+          reason?: string | null
           user_id?: string
         }
         Relationships: [

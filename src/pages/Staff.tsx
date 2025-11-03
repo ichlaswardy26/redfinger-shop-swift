@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Ticket, Package, Star, CheckCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import StockManagement from "@/components/StockManagement";
+import { StockActivityLog } from "@/components/StockActivityLog";
 import { format } from "date-fns";
 
 const Staff = () => {
@@ -325,6 +326,12 @@ const Staff = () => {
                 </TableBody>
               </Table>
             </Card>
+          </TabsContent>
+          <TabsContent value="activity">
+            <StockActivityLog />
+          </TabsContent>
+          <TabsContent value="activity">
+            <StockActivityLog />
           </TabsContent>
         </Tabs>
       </div>

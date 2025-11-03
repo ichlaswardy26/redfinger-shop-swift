@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Star } from "lucide-react";
 
@@ -19,56 +19,86 @@ interface RatingDialogProps {
 export const RatingDialog = ({ open, onOpenChange, orderId, productId, productName, onSuccess }: RatingDialogProps) => {
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [hoveredRating, setHoveredRating] = useState(0);
-  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hoveredStar, setHoveredStar] = useState(0);
+  const [existingRating, setExistingRating] = useState<any>(null);
+
+  useEffect(() => {
+    if (open && orderId) {
+      checkExistingRating();
+    }
+  }, [open, orderId]);
+
+  const checkExistingRating = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("product_ratings")
+        .select("*")
+        .eq("order_id", orderId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      
+      if (data) {
+        setExistingRating(data);
+        setRating(data.rating);
+        setReview(data.review || "");
+      } else {
+        setExistingRating(null);
+        setRating(0);
+        setReview("");
+      }
+    } catch (error) {
+      console.error("Error checking existing rating:", error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (rating === 0) {
-      toast({
-        title: "Please select a rating",
-        variant: "destructive",
-      });
+      toast.error("Please select a rating");
       return;
     }
 
-    setSubmitting(true);
+    if (existingRating) {
+      toast.info("You have already rated this product. Ratings are not editable.");
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Not authenticated");
+      if (!user) {
+        toast.error("You must be logged in to submit a rating");
+        return;
+      }
 
-      const { error } = await supabase
-        .from("product_ratings")
-        .insert({
-          user_id: user.id,
-          product_id: productId,
-          order_id: orderId,
-          rating,
-          review: review || null,
-        });
+      const { error } = await supabase.from("product_ratings").insert({
+        user_id: user.id,
+        product_id: productId,
+        order_id: orderId,
+        rating,
+        review: review.trim() || null,
+      });
 
       if (error) throw error;
 
-      toast({
-        title: "Rating submitted",
-        description: "Thank you for your feedback!",
-      });
-
-      setRating(0);
-      setReview("");
+      toast.success("Thank you for your rating!");
       onOpenChange(false);
       onSuccess?.();
+      setRating(0);
+      setReview("");
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to submit rating",
-        variant: "destructive",
-      });
+      console.error("Error submitting rating:", error);
+      toast.error("Failed to submit rating");
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -76,9 +106,11 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Rate Your Experience</DialogTitle>
+          <DialogTitle>{existingRating ? "Your Rating" : `Rate ${productName}`}</DialogTitle>
           <DialogDescription>
-            How would you rate {productName}?
+            {existingRating 
+              ? "You have already rated this product. Ratings cannot be edited."
+              : "Share your experience with this product"}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -87,14 +119,15 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
               <button
                 key={star}
                 type="button"
-                onClick={() => setRating(star)}
-                onMouseEnter={() => setHoveredRating(star)}
-                onMouseLeave={() => setHoveredRating(0)}
+                onClick={() => !existingRating && setRating(star)}
+                onMouseEnter={() => !existingRating && setHoveredStar(star)}
+                onMouseLeave={() => setHoveredStar(0)}
                 className="transition-transform hover:scale-110"
+                disabled={!!existingRating}
               >
                 <Star
                   className={`h-10 w-10 ${
-                    star <= (hoveredRating || rating)
+                    star <= (hoveredStar || rating)
                       ? "fill-yellow-400 text-yellow-400"
                       : "text-muted-foreground"
                   }`}
@@ -110,15 +143,18 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
               onChange={(e) => setReview(e.target.value)}
               placeholder="Tell us about your experience..."
               rows={4}
+              disabled={!!existingRating}
             />
           </div>
           <div className="flex gap-2 justify-end">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+              Close
             </Button>
-            <Button type="submit" disabled={submitting || rating === 0}>
-              {submitting ? "Submitting..." : "Submit Rating"}
-            </Button>
+            {!existingRating && (
+              <Button type="submit" disabled={rating === 0 || isSubmitting} className="flex-1">
+                {isSubmitting ? "Submitting..." : "Submit Rating"}
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>
