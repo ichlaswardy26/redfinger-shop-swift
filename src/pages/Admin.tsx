@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import Navbar from "@/components/Navbar";
 import StockManagement from "@/components/StockManagement";
 import CopyButton from "@/components/CopyButton";
+import { StockActivityLog } from "@/components/StockActivityLog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -15,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Users, Package, TrendingUp, CheckCircle, XCircle, Clock, Search, ExternalLink, AlertTriangle } from "lucide-react";
+import { ShoppingCart, Users, Package, TrendingUp, CheckCircle, XCircle, Clock, Search, ExternalLink, AlertTriangle, Ticket, Star } from "lucide-react";
 import { 
   useReactTable, 
   getCoreRowModel, 
@@ -77,6 +78,8 @@ const Admin = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [ratings, setRatings] = useState<any[]>([]);
   const [stats, setStats] = useState<Stats>({ totalOrders: 0, pendingPayments: 0, totalRevenue: 0, totalUsers: 0 });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [verifyingOrder, setVerifyingOrder] = useState<Order | null>(null);
@@ -126,7 +129,7 @@ const Admin = () => {
         return;
       }
       // Only fetch data if admin verification succeeds
-      await Promise.all([fetchProducts(), fetchOrders(), fetchUsers(), fetchStats()]);
+      await Promise.all([fetchProducts(), fetchOrders(), fetchUsers(), fetchStats(), fetchTickets(), fetchRatings()]);
     } catch (error) {
       toast({
         title: "Error",
@@ -224,6 +227,26 @@ const Admin = () => {
     const totalRevenue = orders?.filter(o => o.payment_status === "verified").length || 0;
     const totalUsers = profiles?.length || 0;
     setStats({ totalOrders, pendingPayments, totalRevenue, totalUsers });
+  };
+
+  const fetchTickets = async () => {
+    const { data, error } = await supabase
+      .from("support_tickets")
+      .select("*, profiles(full_name, email)")
+      .order("created_at", { ascending: false });
+    if (!error && data) {
+      setTickets(data);
+    }
+  };
+
+  const fetchRatings = async () => {
+    const { data, error } = await supabase
+      .from("product_ratings")
+      .select("*, products(name), profiles(full_name)")
+      .order("created_at", { ascending: false });
+    if (!error && data) {
+      setRatings(data);
+    }
   };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
@@ -633,11 +656,23 @@ const Admin = () => {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Admin Panel</h1>
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="products">Products</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
+            <TabsTrigger value="tickets">
+              <Ticket className="h-4 w-4 mr-2" />
+              Tickets
+            </TabsTrigger>
+            <TabsTrigger value="ratings">
+              <Star className="h-4 w-4 mr-2" />
+              Ratings
+            </TabsTrigger>
+            <TabsTrigger value="audit">
+              <Package className="h-4 w-4 mr-2" />
+              Stock Audit
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -972,6 +1007,135 @@ const Admin = () => {
                 <DataTablePagination table={userTable} />
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="tickets">
+            <Card>
+              <CardHeader>
+                <CardTitle>Support Tickets</CardTitle>
+                <CardDescription>Manage customer support requests</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Subject</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead>Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {tickets.map((ticket) => (
+                        <TableRow key={ticket.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{ticket.subject}</p>
+                              <p className="text-xs text-muted-foreground line-clamp-1">{ticket.description}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell>{ticket.profiles?.full_name || ticket.profiles?.email}</TableCell>
+                          <TableCell>
+                            <Badge variant={ticket.status === 'resolved' ? 'default' : 'secondary'}>
+                              {ticket.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(ticket.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <Select 
+                              value={ticket.status} 
+                              onValueChange={async (val) => {
+                                await supabase
+                                  .from("support_tickets")
+                                  .update({ status: val })
+                                  .eq("id", ticket.id);
+                                fetchTickets();
+                              }}
+                            >
+                              <SelectTrigger className="w-32">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="open">Open</SelectItem>
+                                <SelectItem value="in_progress">In Progress</SelectItem>
+                                <SelectItem value="resolved">Resolved</SelectItem>
+                                <SelectItem value="closed">Closed</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ratings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Ratings & Reviews</CardTitle>
+                <CardDescription>Manage customer ratings and reviews</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>User</TableHead>
+                        <TableHead>Rating</TableHead>
+                        <TableHead>Review</TableHead>
+                        <TableHead>Visible</TableHead>
+                        <TableHead>Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {ratings.map((rating) => (
+                        <TableRow key={rating.id}>
+                          <TableCell>{rating.products?.name}</TableCell>
+                          <TableCell>{rating.profiles?.full_name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                              <span>{rating.rating}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">{rating.review || "-"}</TableCell>
+                          <TableCell>
+                            <Badge variant={rating.is_visible ? 'default' : 'secondary'}>
+                              {rating.is_visible ? 'Yes' : 'No'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={async () => {
+                                await supabase
+                                  .from("product_ratings")
+                                  .update({ is_visible: !rating.is_visible })
+                                  .eq("id", rating.id);
+                                fetchRatings();
+                              }}
+                            >
+                              Toggle
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="audit">
+            <StockActivityLog />
           </TabsContent>
         </Tabs>
       </div>
