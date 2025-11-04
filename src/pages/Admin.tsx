@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import StockManagement from "@/components/StockManagement";
 import CopyButton from "@/components/CopyButton";
 import { StockActivityLog } from "@/components/StockActivityLog";
+import { productSchema } from "@/lib/validations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -252,12 +253,26 @@ const Admin = () => {
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const productData = {
-        name: productForm.name,
-        description: productForm.description,
+      // Validate product data
+      const validationResult = productSchema.safeParse({
+        name: productForm.name.trim(),
+        description: productForm.description.trim() || undefined,
         price: parseFloat(productForm.price),
         duration_days: parseInt(productForm.duration_days),
-      };
+      });
+
+      if (!validationResult.success) {
+        const firstError = validationResult.error.errors[0];
+        toast({
+          title: "Validation Error",
+          description: firstError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const productData = validationResult.data;
+      
       if (editingProduct) {
         const { error } = await supabase
           .from("products")
@@ -266,7 +281,13 @@ const Admin = () => {
         if (error) throw error;
         toast({ title: "Product updated successfully" });
       } else {
-        const { error } = await supabase.from("products").insert({ ...productData, stock: 0 });
+        const { error } = await supabase.from("products").insert([{ 
+          name: productData.name,
+          description: productData.description,
+          price: productData.price,
+          duration_days: productData.duration_days,
+          stock: 0 
+        }]);
         if (error) throw error;
         toast({ title: "Product created successfully. Use Stock Management to add stock." });
       }

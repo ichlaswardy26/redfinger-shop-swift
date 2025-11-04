@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Plus, Minus } from "lucide-react";
+import { stockLogSchema } from "@/lib/validations";
 
 interface StockManagementProps {
   open: boolean;
@@ -33,8 +34,14 @@ const StockManagement = ({ open, onOpenChange, product, onSuccess }: StockManage
       return;
     }
 
-    if (!reason.trim()) {
-      toast.error("Please provide a reason for the stock change");
+    // Validate reason
+    const validationResult = stockLogSchema.safeParse({
+      reason: reason.trim(),
+    });
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
+      toast.error(firstError.message);
       return;
     }
 
@@ -57,7 +64,7 @@ const StockManagement = ({ open, onOpenChange, product, onSuccess }: StockManage
 
       if (updateError) throw updateError;
 
-      // Log the stock change with reason
+      // Log the stock change with validated reason
       const { error: logError } = await supabase
         .from("stock_logs")
         .insert({
@@ -67,7 +74,7 @@ const StockManagement = ({ open, onOpenChange, product, onSuccess }: StockManage
           quantity: qty,
           previous_stock: product.stock,
           new_stock: newStock,
-          reason: reason.trim(),
+          reason: validationResult.data.reason,
         });
 
       if (logError) throw logError;
@@ -134,8 +141,12 @@ const StockManagement = ({ open, onOpenChange, product, onSuccess }: StockManage
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="e.g., Restock, Damaged, Sale, etc."
+              maxLength={500}
               required
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {reason.length}/500 characters
+            </p>
           </div>
 
           <div className="text-sm text-muted-foreground">

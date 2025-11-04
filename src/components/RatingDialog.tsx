@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Star } from "lucide-react";
+import { ratingSchema } from "@/lib/validations";
 
 interface RatingDialogProps {
   open: boolean;
@@ -70,6 +71,18 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
       return;
     }
 
+    // Validate review length
+    const validationResult = ratingSchema.safeParse({
+      rating,
+      review: review.trim() || undefined,
+    });
+
+    if (!validationResult.success) {
+      const firstError = validationResult.error.errors[0];
+      toast.error(firstError.message);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -83,8 +96,8 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
         user_id: user.id,
         product_id: productId,
         order_id: orderId,
-        rating,
-        review: review.trim() || null,
+        rating: validationResult.data.rating,
+        review: validationResult.data.review || null,
       });
 
       if (error) throw error;
@@ -143,8 +156,12 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
               onChange={(e) => setReview(e.target.value)}
               placeholder="Tell us about your experience..."
               rows={4}
+              maxLength={2000}
               disabled={!!existingRating}
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {review.length}/2000 characters
+            </p>
           </div>
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">

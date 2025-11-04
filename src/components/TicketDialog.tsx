@@ -7,6 +7,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Upload } from "lucide-react";
+import { ticketSchema } from "@/lib/validations";
+import { useFileValidation } from "@/hooks/useFileValidation";
 
 interface TicketDialogProps {
   open: boolean;
@@ -21,12 +23,44 @@ export const TicketDialog = ({ open, onOpenChange, orderId, onSuccess }: TicketD
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+  const { validatePaymentProofFile } = useFileValidation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
+      // Validate form data
+      const validationResult = ticketSchema.safeParse({
+        subject: subject.trim(),
+        description: description.trim(),
+      });
+
+      if (!validationResult.success) {
+        const firstError = validationResult.error.errors[0];
+        toast({
+          title: "Validation Error",
+          description: firstError.message,
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      // Validate image file if provided
+      if (imageFile) {
+        const fileValidationError = await validatePaymentProofFile(imageFile);
+        if (fileValidationError) {
+          toast({
+            title: "Invalid File",
+            description: fileValidationError,
+            variant: "destructive",
+          });
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -49,8 +83,8 @@ export const TicketDialog = ({ open, onOpenChange, orderId, onSuccess }: TicketD
         .insert({
           user_id: user.id,
           order_id: orderId || null,
-          subject,
-          description,
+          subject: validationResult.data.subject,
+          description: validationResult.data.description,
           image_proof: imageProof,
         });
 
@@ -67,11 +101,21 @@ export const TicketDialog = ({ open, onOpenChange, orderId, onSuccess }: TicketD
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to create ticket",
-        variant: "destructive",
-      });
+      const errorMessage = error instanceof Error ? error.message : "Failed to create ticket";
+      // Check for rate limit error
+      if (errorMessage.includes("Rate limit exceeded")) {
+        toast({
+          title: "Rate Limit Exceeded",
+          description: "You can only create 5 tickets per hour. Please try again later.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setSubmitting(false);
     }
@@ -94,8 +138,12 @@ export const TicketDialog = ({ open, onOpenChange, orderId, onSuccess }: TicketD
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               placeholder="Brief description of the issue"
+              maxLength={200}
               required
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {subject.length}/200 characters
+            </p>
           </div>
           <div>
             <Label htmlFor="description">Description</Label>
@@ -105,8 +153,12 @@ export const TicketDialog = ({ open, onOpenChange, orderId, onSuccess }: TicketD
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Please provide detailed information about your issue"
               rows={5}
+              maxLength={5000}
               required
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              {description.length}/5000 characters
+            </p>
           </div>
           <div>
             <Label htmlFor="image">Attach Image (optional)</Label>
