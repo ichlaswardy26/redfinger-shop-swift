@@ -52,7 +52,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const isAdmin = !!data;
-    console.log(`User ${user.id} admin status: ${isAdmin}`);
+    console.log('Admin verification completed');
 
     return new Response(
       JSON.stringify({ isAdmin }), 
