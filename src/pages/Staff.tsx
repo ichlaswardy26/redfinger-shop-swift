@@ -599,7 +599,7 @@ const Staff = () => {
                             {product.stock}
                           </Badge>
                         </TableCell>
-                        <TableCell>${product.price}</TableCell>
+                        <TableCell>Rp {product.price.toLocaleString('id-ID')}</TableCell>
                         <TableCell>
                           <Button 
                             size="sm"
