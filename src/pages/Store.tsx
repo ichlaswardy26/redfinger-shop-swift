@@ -21,6 +21,7 @@ interface Product {
   is_active: boolean;
   average_rating?: number;
   rating_count?: number;
+  isBestSeller?: boolean;
 }
 
 interface Rating {
@@ -50,6 +51,7 @@ const Store = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [currentRatingPage, setCurrentRatingPage] = useState(0);
+  const [bestSellerId, setBestSellerId] = useState<string | null>(null);
   const ratingsPerPage = 6;
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -65,6 +67,7 @@ const Store = () => {
 
     fetchProducts();
     fetchRatings();
+    fetchBestSeller();
 
     return () => subscription.unsubscribe();
   }, []);
@@ -122,6 +125,34 @@ const Store = () => {
       setRatings(enrichedRatings);
     } catch (error) {
       console.error("Error fetching ratings:", error);
+    }
+  };
+
+  const fetchBestSeller = async () => {
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from("orders")
+        .select("product_id")
+        .eq("payment_status", "verified")
+        .gte("created_at", startOfMonth.toISOString());
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const productCounts = data.reduce((acc, order) => {
+          acc[order.product_id] = (acc[order.product_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const bestSeller = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0];
+        setBestSellerId(bestSeller[0]);
+      }
+    } catch (error) {
+      console.error("Error fetching best seller:", error);
     }
   };
 
@@ -314,6 +345,7 @@ const Store = () => {
                   onQuantityChange={handleQuantityChange}
                   onPurchase={handlePurchase}
                   isAuthenticated={!!user}
+                  isBestSeller={product.id === bestSellerId}
                 />
               ))}
             </div>

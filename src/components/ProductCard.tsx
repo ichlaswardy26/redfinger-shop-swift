@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Package, Minus, Plus } from "lucide-react";
+import { Clock, Package, Minus, Plus, TrendingUp } from "lucide-react";
 
 interface ProductCardProps {
   id: string;
@@ -14,6 +14,7 @@ interface ProductCardProps {
   onQuantityChange: (id: string, change: number) => void;
   onPurchase: (id: string) => void;
   isAuthenticated: boolean;
+  isBestSeller?: boolean;
 }
 
 const ProductCard = ({ 
@@ -26,10 +27,17 @@ const ProductCard = ({
   onQuantityChange, 
   onPurchase,
   id,
-  isAuthenticated 
+  isAuthenticated,
+  isBestSeller = false
 }: ProductCardProps) => {
   return (
-    <Card className="flex flex-col h-full transition-all duration-300 hover:shadow-[0_10px_40px_-10px_hsl(var(--primary)/0.2)] hover:-translate-y-1">
+    <Card className="flex flex-col h-full transition-all duration-300 hover:shadow-[0_10px_40px_-10px_hsl(var(--primary)/0.2)] hover:-translate-y-1 relative">
+      {isBestSeller && (
+        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 z-10">
+          <TrendingUp className="h-3 w-3 mr-1" />
+          Best Seller
+        </Badge>
+      )}
       <CardHeader>
         <div className="flex items-start justify-between">
           <CardTitle className="text-2xl">{name}</CardTitle>

@@ -4,8 +4,20 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import heroImage from "@/assets/hero-cloud-phone.jpg";
-import { Smartphone, Cloud, Shield, Zap, Star, ChevronLeft, ChevronRight, Quote } from "lucide-react";
+import { Smartphone, Cloud, Shield, Zap, Star, Quote, TrendingUp } from "lucide-react";
+
+interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  duration_days: number;
+  stock: number;
+  is_active: boolean;
+}
 
 interface Rating {
   id: string;
@@ -21,14 +33,32 @@ interface Rating {
 }
 
 const Index = () => {
+  const [products, setProducts] = useState<Product[]>([]);
   const [ratings, setRatings] = useState<Rating[]>([]);
-  const [currentPage, setCurrentPage] = useState(0);
-  const ratingsPerPage = 6;
+  const [bestSellerId, setBestSellerId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
+    fetchProducts();
     fetchRatings();
+    fetchBestSeller();
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .order("price", { ascending: true })
+        .limit(3);
+
+      if (error) throw error;
+      setProducts(data || []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
+  };
 
   const fetchRatings = async () => {
     try {
@@ -63,11 +93,33 @@ const Index = () => {
     }
   };
 
-  const totalPages = Math.ceil(ratings.length / ratingsPerPage);
-  const displayedRatings = ratings.slice(
-    currentPage * ratingsPerPage,
-    (currentPage + 1) * ratingsPerPage
-  );
+  const fetchBestSeller = async () => {
+    try {
+      const startOfMonth = new Date();
+      startOfMonth.setDate(1);
+      startOfMonth.setHours(0, 0, 0, 0);
+
+      const { data, error } = await supabase
+        .from("orders")
+        .select("product_id")
+        .eq("payment_status", "verified")
+        .gte("created_at", startOfMonth.toISOString());
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const productCounts = data.reduce((acc, order) => {
+          acc[order.product_id] = (acc[order.product_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        const bestSeller = Object.entries(productCounts).sort((a, b) => b[1] - a[1])[0];
+        setBestSellerId(bestSeller[0]);
+      }
+    } catch (error) {
+      console.error("Error fetching best seller:", error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -162,72 +214,110 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      {ratings.length > 0 && (
-        <section className="container mx-auto px-4 py-16 lg:py-24 bg-muted/30">
+      {/* Products Section */}
+      {products.length > 0 && (
+        <section className="container mx-auto px-4 py-16 lg:py-24 bg-muted/20">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Customer Testimonials</h2>
-            <p className="text-muted-foreground text-lg">See what our customers are saying</p>
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Our Plans</h2>
+            <p className="text-muted-foreground text-lg">Choose the perfect plan for your needs</p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {displayedRatings.map((rating) => (
-              <Card key={rating.id} className="relative">
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            {products.map((product) => (
+              <Card key={product.id} className="relative border-2 hover:border-primary/50 transition-all">
+                {bestSellerId === product.id && (
+                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
+                    <TrendingUp className="h-3 w-3 mr-1" />
+                    Best Seller
+                  </Badge>
+                )}
                 <CardContent className="pt-6 space-y-4">
-                  <Quote className="h-8 w-8 text-primary/20 absolute top-4 right-4" />
-                  <div className="flex items-center gap-1">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 ${
-                          i < rating.rating
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "text-muted-foreground"
-                        }`}
-                      />
-                    ))}
+                  <div className="text-center space-y-2">
+                    <h3 className="text-2xl font-bold">{product.name}</h3>
+                    {product.description && (
+                      <p className="text-sm text-muted-foreground">{product.description}</p>
+                    )}
                   </div>
-                  {rating.review && (
-                    <p className="text-sm text-muted-foreground line-clamp-4">
-                      "{rating.review}"
-                    </p>
-                  )}
-                  <div className="pt-4 border-t">
-                    <p className="font-semibold text-sm">
-                      {rating.profiles.full_name || "Anonymous"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {rating.products.name}
+                  <div className="text-center py-4">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                      Rp {product.price.toLocaleString('id-ID')}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {product.duration_days} days validity
                     </p>
                   </div>
+                  <Badge variant={product.stock > 0 ? "default" : "secondary"} className="w-full justify-center">
+                    {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
+                  </Badge>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
-                disabled={currentPage === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {currentPage + 1} of {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))}
-                disabled={currentPage === totalPages - 1}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+          <div className="text-center mt-8">
+            <Button size="lg" onClick={() => navigate("/store")}>
+              View All Products
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {/* Testimonials Slider Section */}
+      {ratings.length > 0 && (
+        <section className="container mx-auto px-4 py-16 lg:py-24">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Customer Testimonials</h2>
+            <p className="text-muted-foreground text-lg">See what our customers are saying</p>
+          </div>
+
+          <div className="max-w-6xl mx-auto">
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              className="w-full"
+            >
+              <CarouselContent>
+                {ratings.map((rating) => (
+                  <CarouselItem key={rating.id} className="md:basis-1/2 lg:basis-1/3">
+                    <Card className="relative h-full">
+                      <CardContent className="pt-6 space-y-4 h-full flex flex-col">
+                        <Quote className="h-8 w-8 text-primary/20 absolute top-4 right-4" />
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < rating.rating
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-muted-foreground"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        {rating.review && (
+                          <p className="text-sm text-muted-foreground line-clamp-4 flex-grow">
+                            "{rating.review}"
+                          </p>
+                        )}
+                        <div className="pt-4 border-t mt-auto">
+                          <p className="font-semibold text-sm">
+                            {rating.profiles.full_name || "Anonymous"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {rating.products.name}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="hidden md:flex" />
+              <CarouselNext className="hidden md:flex" />
+            </Carousel>
+          </div>
         </section>
       )}
 
