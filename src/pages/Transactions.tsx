@@ -297,6 +297,7 @@ const Transactions = () => {
                     key={order.id}
                     order={{
                       ...order,
+                      product_id: order.product_id,
                       product: order.products,
                       ticket: order.support_tickets
                     }}

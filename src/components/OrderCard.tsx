@@ -9,6 +9,7 @@ import CopyButton from "./CopyButton";
 interface OrderCardProps {
   order: {
     id: string;
+    product_id: string;
     product: { name: string; duration_days: number };
     quantity: number;
     status: string;
@@ -92,7 +93,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
             <Button 
               size="sm" 
               variant="default"
-              onClick={() => onRate(order.id, order.product.name, order.product.name)}
+              onClick={() => onRate(order.id, order.product_id, order.product.name)}
               className="flex-1"
             >
               <Star className="h-4 w-4 mr-2" />
