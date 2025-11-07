@@ -27,6 +27,12 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
   useEffect(() => {
     if (open && orderId) {
       checkExistingRating();
+    } else if (!open) {
+      // Reset all states when dialog closes
+      setRating(0);
+      setReview("");
+      setExistingRating(null);
+      setHoveredStar(0);
     }
   }, [open, orderId]);
 
