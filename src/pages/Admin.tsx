@@ -677,24 +677,26 @@ const Admin = () => {
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Admin Panel</h1>
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 lg:grid-cols-7">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="products">Products</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="tickets">
-              <Ticket className="h-4 w-4 mr-2" />
-              Tickets
-            </TabsTrigger>
-            <TabsTrigger value="ratings">
-              <Star className="h-4 w-4 mr-2" />
-              Ratings
-            </TabsTrigger>
-            <TabsTrigger value="audit">
-              <Package className="h-4 w-4 mr-2" />
-              Stock Audit
-            </TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto pb-2">
+            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-7">
+              <TabsTrigger value="dashboard" className="flex-shrink-0">Dashboard</TabsTrigger>
+              <TabsTrigger value="orders" className="flex-shrink-0">Orders</TabsTrigger>
+              <TabsTrigger value="products" className="flex-shrink-0">Products</TabsTrigger>
+              <TabsTrigger value="users" className="flex-shrink-0">Users</TabsTrigger>
+              <TabsTrigger value="tickets" className="flex-shrink-0">
+                <Ticket className="h-4 w-4 mr-2" />
+                <span>Tickets</span>
+              </TabsTrigger>
+              <TabsTrigger value="ratings" className="flex-shrink-0">
+                <Star className="h-4 w-4 mr-2" />
+                <span>Ratings</span>
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="flex-shrink-0">
+                <Package className="h-4 w-4 mr-2" />
+                <span>Stock Audit</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
