@@ -41,10 +41,11 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Check if user has ever rated this product (not just for this order)
       const { data, error } = await supabase
         .from("product_ratings")
         .select("*")
-        .eq("order_id", orderId)
+        .eq("product_id", productId)
         .eq("user_id", user.id)
         .maybeSingle();
 
