@@ -34,9 +34,11 @@ const BottomNav = ({ isAdmin, isStaff, isAuthenticated }: BottomNavProps) => {
     if (isAuthenticated) {
       items.push({ path: "/transactions", icon: ShoppingBag, label: "Orders" });
       
+      // Show both admin and staff if user has both roles
       if (isAdmin) {
         items.push({ path: "/admin", icon: Shield, label: "Admin" });
-      } else if (isStaff) {
+      }
+      if (isStaff) {
         items.push({ path: "/staff", icon: Briefcase, label: "Staff" });
       }
       
