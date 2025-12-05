@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Ticket, Package, Star, CheckCircle, Search } from "lucide-react";
+import { Ticket, Package, Star, CheckCircle, Search, History } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import StockManagement from "@/components/StockManagement";
 import { StockActivityLog } from "@/components/StockActivityLog";
@@ -386,28 +386,30 @@ const Staff = () => {
         </div>
 
         <Tabs defaultValue="tickets" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5">
-            <TabsTrigger value="tickets">
-              <Ticket className="h-4 w-4 mr-2" />
-              Tickets
-            </TabsTrigger>
-            <TabsTrigger value="orders">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Orders
-            </TabsTrigger>
-            <TabsTrigger value="ratings">
-              <Star className="h-4 w-4 mr-2" />
-              Ratings
-            </TabsTrigger>
-            <TabsTrigger value="stock">
-              <Package className="h-4 w-4 mr-2" />
-              Stock
-            </TabsTrigger>
-            <TabsTrigger value="activity">
-              <Package className="h-4 w-4 mr-2" />
-              Activity
-            </TabsTrigger>
-          </TabsList>
+          <div className="w-full overflow-x-auto pb-2">
+            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-5">
+              <TabsTrigger value="tickets" className="flex-shrink-0">
+                <Ticket className="h-4 w-4 mr-2" />
+                <span>Tickets</span>
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="flex-shrink-0">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                <span>Orders</span>
+              </TabsTrigger>
+              <TabsTrigger value="ratings" className="flex-shrink-0">
+                <Star className="h-4 w-4 mr-2" />
+                <span>Ratings</span>
+              </TabsTrigger>
+              <TabsTrigger value="stock" className="flex-shrink-0">
+                <Package className="h-4 w-4 mr-2" />
+                <span>Stock</span>
+              </TabsTrigger>
+              <TabsTrigger value="activity" className="flex-shrink-0">
+                <History className="h-4 w-4 mr-2" />
+                <span>Activity</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="tickets">
             <Card>
