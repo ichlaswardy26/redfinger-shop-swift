@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -9,11 +9,12 @@ import { TicketDialog } from "@/components/TicketDialog";
 import { RatingDialog } from "@/components/RatingDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MessageSquare, Search } from "lucide-react";
+import { MessageSquare, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Order {
   id: string;
@@ -29,6 +30,9 @@ interface Order {
   support_tickets: { id: string; status: string } | null;
 }
 
+const ITEMS_PER_PAGE = 6;
+const TICKETS_PER_PAGE = 5;
+
 const Transactions = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [tickets, setTickets] = useState<any[]>([]);
@@ -40,6 +44,12 @@ const Transactions = () => {
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState<{orderId: string, productId: string, productName: string} | null>(null);
   const [uploadingFile, setUploadingFile] = useState<File | null>(null);
+  
+  // Pagination states
+  const [orderPage, setOrderPage] = useState(1);
+  const [ticketPage, setTicketPage] = useState(1);
+  const [ordersPerPage, setOrdersPerPage] = useState(ITEMS_PER_PAGE);
+  
   const { toast } = useToast();
   const navigate = useNavigate();
   const { validatePaymentProofFile } = useFileValidation();
@@ -48,6 +58,17 @@ const Transactions = () => {
     checkAuth();
     fetchOrders();
     fetchTickets();
+
+    // Set up realtime subscriptions
+    const channel = supabase
+      .channel('customer-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchOrders)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, fetchTickets)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const checkAuth = async () => {
@@ -191,10 +212,30 @@ const Transactions = () => {
     }
   };
 
-  const filteredOrders = orders.filter(order =>
-    order.products.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    order.payment_status.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order =>
+      order.products.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.payment_status.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [orders, searchQuery]);
+
+  // Pagination calculations
+  const totalOrderPages = Math.ceil(filteredOrders.length / ordersPerPage);
+  const paginatedOrders = useMemo(() => {
+    const start = (orderPage - 1) * ordersPerPage;
+    return filteredOrders.slice(start, start + ordersPerPage);
+  }, [filteredOrders, orderPage, ordersPerPage]);
+
+  const totalTicketPages = Math.ceil(tickets.length / TICKETS_PER_PAGE);
+  const paginatedTickets = useMemo(() => {
+    const start = (ticketPage - 1) * TICKETS_PER_PAGE;
+    return tickets.slice(start, start + TICKETS_PER_PAGE);
+  }, [tickets, ticketPage]);
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    setOrderPage(1);
+  }, [searchQuery]);
 
   if (loading) {
     return (
@@ -208,7 +249,7 @@ const Transactions = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <h1 className="text-3xl font-bold mb-8">My Dashboard</h1>
@@ -225,7 +266,7 @@ const Transactions = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {tickets.map((ticket) => (
+                {paginatedTickets.map((ticket) => (
                   <div key={ticket.id} className="border rounded-lg p-4 space-y-2">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -267,6 +308,33 @@ const Transactions = () => {
                   </div>
                 ))}
               </div>
+              
+              {/* Tickets Pagination */}
+              {totalTicketPages > 1 && (
+                <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    Page {ticketPage} of {totalTicketPages} ({tickets.length} tickets)
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTicketPage(p => Math.max(1, p - 1))}
+                      disabled={ticketPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setTicketPage(p => Math.min(totalTicketPages, p + 1))}
+                      disabled={ticketPage === totalTicketPages}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
@@ -275,14 +343,29 @@ const Transactions = () => {
           <CardHeader>
             <CardTitle>My Orders</CardTitle>
             <CardDescription>View and manage your orders</CardDescription>
-            <div className="flex items-center gap-2 mt-4">
-              <Search className="h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search by product or status..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="max-w-sm"
-              />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-4">
+              <div className="flex items-center gap-2 flex-1">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by product or status..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-sm"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Show:</span>
+                <Select value={ordersPerPage.toString()} onValueChange={(val) => { setOrdersPerPage(Number(val)); setOrderPage(1); }}>
+                  <SelectTrigger className="w-20">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="6">6</SelectItem>
+                    <SelectItem value="12">12</SelectItem>
+                    <SelectItem value="24">24</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
@@ -290,33 +373,85 @@ const Transactions = () => {
               <p className="text-center text-muted-foreground py-12">
                 No orders yet. Visit the store to make your first purchase!
               </p>
+            ) : filteredOrders.length === 0 ? (
+              <p className="text-center text-muted-foreground py-12">
+                No orders match your search.
+              </p>
             ) : (
-              <div className="grid md:grid-cols-2 gap-4">
-                {filteredOrders.map((order) => (
-                  <OrderCard
-                    key={order.id}
-                    order={{
-                      ...order,
-                      product_id: order.product_id,
-                      product: order.products,
-                      ticket: order.support_tickets
-                    }}
-                    onUploadProof={(id) => {
-                      setSelectedOrderId(id);
-                      setUploadDialogOpen(true);
-                    }}
-                    onCancelOrder={handleCancelOrder}
-                    onRate={(orderId, productId, productName) => {
-                      setSelectedRating({ orderId, productId, productName });
-                      setRatingDialogOpen(true);
-                    }}
-                    onCreateTicket={(orderId) => {
-                      setSelectedOrderId(orderId);
-                      setTicketDialogOpen(true);
-                    }}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {paginatedOrders.map((order) => (
+                    <OrderCard
+                      key={order.id}
+                      order={{
+                        ...order,
+                        product_id: order.product_id,
+                        product: order.products,
+                        ticket: order.support_tickets
+                      }}
+                      onUploadProof={(id) => {
+                        setSelectedOrderId(id);
+                        setUploadDialogOpen(true);
+                      }}
+                      onCancelOrder={handleCancelOrder}
+                      onRate={(orderId, productId, productName) => {
+                        setSelectedRating({ orderId, productId, productName });
+                        setRatingDialogOpen(true);
+                      }}
+                      onCreateTicket={(orderId) => {
+                        setSelectedOrderId(orderId);
+                        setTicketDialogOpen(true);
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Orders Pagination */}
+                {totalOrderPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t gap-4">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {((orderPage - 1) * ordersPerPage) + 1} - {Math.min(orderPage * ordersPerPage, filteredOrders.length)} of {filteredOrders.length} orders
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setOrderPage(1)}
+                        disabled={orderPage === 1}
+                      >
+                        First
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setOrderPage(p => Math.max(1, p - 1))}
+                        disabled={orderPage === 1}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="text-sm px-2">
+                        Page {orderPage} of {totalOrderPages}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setOrderPage(p => Math.min(totalOrderPages, p + 1))}
+                        disabled={orderPage === totalOrderPages}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setOrderPage(totalOrderPages)}
+                        disabled={orderPage === totalOrderPages}
+                      >
+                        Last
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

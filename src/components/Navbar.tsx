@@ -8,11 +8,21 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Settings, User as UserIcon, Shield, Briefcase } from "lucide-react";
+import { 
+  LogOut, 
+  User as UserIcon, 
+  Shield, 
+  Briefcase, 
+  ShoppingBag,
+  Home,
+  Menu,
+  LogIn,
+  UserPlus
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import BottomNav from "./BottomNav";
 
 const Navbar = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -78,16 +88,18 @@ const Navbar = () => {
     }
   };
 
-  return (
-    <>
-      {/* Desktop Navbar */}
-      <nav className="hidden md:block sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            Redfinger Store
-          </Link>
+  const isActive = (path: string) => location.pathname === path;
 
-          <div className="flex items-center gap-4">
+  return (
+    <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <Link to="/" className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          Redfinger Store
+        </Link>
+
+        <div className="flex items-center gap-2">
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-2">
             {!user ? (
               <>
                 <Link to="/auth/signin">
@@ -100,46 +112,43 @@ const Navbar = () => {
             ) : (
               <>
                 <Link to="/transactions">
-                  <Button variant="ghost" className={location.pathname === '/transactions' ? 'bg-muted' : ''}>
+                  <Button variant="ghost" className={isActive('/transactions') ? 'bg-muted' : ''}>
+                    <ShoppingBag className="mr-2 h-4 w-4" />
                     My Orders
                   </Button>
                 </Link>
                 {isAdmin && (
                   <Link to="/admin">
-                    <Button variant="ghost" className={location.pathname === '/admin' ? 'bg-muted' : ''}>
+                    <Button variant="ghost" className={isActive('/admin') ? 'bg-muted' : ''}>
                       <Shield className="mr-2 h-4 w-4" />
-                      Admin Panel
+                      Admin
                     </Button>
                   </Link>
                 )}
                 {isStaff && (
                   <Link to="/staff">
-                    <Button variant="ghost" className={location.pathname === '/staff' ? 'bg-muted' : ''}>
+                    <Button variant="ghost" className={isActive('/staff') ? 'bg-muted' : ''}>
                       <Briefcase className="mr-2 h-4 w-4" />
-                      Staff Panel
+                      Staff
                     </Button>
                   </Link>
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="rounded-full">
-                      <Avatar>
+                      <Avatar className="h-8 w-8">
                         <AvatarFallback>
                           {user.email?.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => navigate('/profile')}>
-                      <UserIcon className="mr-2 h-4 w-4" />
-                      Profile
+                  <DropdownMenuContent align="end" className="w-48 bg-popover">
+                    <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                      {user.email}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/settings')}>
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleSignOut}>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign Out
                     </DropdownMenuItem>
@@ -148,12 +157,70 @@ const Navbar = () => {
               </>
             )}
           </div>
+
+          {/* Mobile Navigation - Dropdown Menu */}
+          <div className="md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 bg-popover">
+                <DropdownMenuItem onClick={() => navigate("/")}>
+                  <Home className="mr-2 h-4 w-4" />
+                  Home
+                </DropdownMenuItem>
+                
+                {!user ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate("/auth/signin")}>
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Sign In
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/auth/signup")}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Sign Up
+                    </DropdownMenuItem>
+                  </>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={() => navigate("/transactions")}>
+                      <ShoppingBag className="mr-2 h-4 w-4" />
+                      My Orders
+                    </DropdownMenuItem>
+                    
+                    {isAdmin && (
+                      <DropdownMenuItem onClick={() => navigate("/admin")}>
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin Panel
+                      </DropdownMenuItem>
+                    )}
+                    
+                    {isStaff && (
+                      <DropdownMenuItem onClick={() => navigate("/staff")}>
+                        <Briefcase className="mr-2 h-4 w-4" />
+                        Staff Panel
+                      </DropdownMenuItem>
+                    )}
+                    
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                      {user.email}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      </nav>
-      
-      {/* Mobile/Tablet Bottom Nav */}
-      <BottomNav isAdmin={isAdmin} isStaff={isStaff} isAuthenticated={!!user} />
-    </>
+      </div>
+    </nav>
   );
 };
 

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ProtectedRoute, GuestRoute } from "@/components/ProtectedRoute";
 import Store from "./pages/Store";
 import Auth from "./pages/Auth";
 import SignIn from "./pages/SignIn";
@@ -23,12 +24,33 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Store />} />
           <Route path="/store" element={<Store />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/auth/signin" element={<SignIn />} />
-          <Route path="/auth/signup" element={<SignUp />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/staff" element={<Staff />} />
+          <Route path="/auth" element={<GuestRoute><Auth /></GuestRoute>} />
+          <Route path="/auth/signin" element={<GuestRoute><SignIn /></GuestRoute>} />
+          <Route path="/auth/signup" element={<GuestRoute><SignUp /></GuestRoute>} />
+          <Route 
+            path="/transactions" 
+            element={
+              <ProtectedRoute requireAuth>
+                <Transactions />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute requireAuth requireAdmin>
+                <Admin />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/staff" 
+            element={
+              <ProtectedRoute requireAuth requireStaff>
+                <Staff />
+              </ProtectedRoute>
+            } 
+          />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
