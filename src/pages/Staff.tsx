@@ -23,28 +23,50 @@ import {
   flexRender,
   ColumnDef,
   SortingState,
-  ColumnFiltersState,
 } from "@tanstack/react-table";
 import { DataTablePagination } from "@/components/DataTablePagination";
 
+interface TicketRow {
+  id: string;
+  subject: string;
+  description: string;
+  status: string;
+  created_at: string;
+  profiles: { full_name: string | null; email: string } | null;
+}
+
+interface OrderRow {
+  id: string;
+  payment_status: string;
+  created_at: string;
+  profiles: { full_name: string | null; email: string } | null;
+  products: { name: string } | null;
+}
+
+interface RatingRow {
+  id: string;
+  rating: number;
+  review: string | null;
+  is_visible: boolean;
+  products: { name: string } | null;
+  profiles: { full_name: string | null } | null;
+}
+
 const Staff = () => {
   const [loading, setLoading] = useState(true);
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [ratings, setRatings] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<TicketRow[]>([]);
+  const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [ratings, setRatings] = useState<RatingRow[]>([]);
   const [products, setProducts] = useState<any[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
   
   // Table states
   const [ticketSorting, setTicketSorting] = useState<SortingState>([]);
-  const [ticketFilters, setTicketFilters] = useState<ColumnFiltersState>([]);
   const [ticketSearch, setTicketSearch] = useState("");
   const [orderSorting, setOrderSorting] = useState<SortingState>([]);
-  const [orderFilters, setOrderFilters] = useState<ColumnFiltersState>([]);
   const [orderSearch, setOrderSearch] = useState("");
   const [ratingSorting, setRatingSorting] = useState<SortingState>([]);
-  const [ratingFilters, setRatingFilters] = useState<ColumnFiltersState>([]);
   const [ratingSearch, setRatingSearch] = useState("");
   
   const { toast } = useToast();
@@ -102,15 +124,26 @@ const Staff = () => {
   const fetchData = async () => {
     try {
       const [ticketsRes, ordersRes, ratingsRes, productsRes] = await Promise.all([
-        supabase.from("support_tickets").select("*, profiles(full_name, email)").order("created_at", { ascending: false }),
-        supabase.from("orders").select("*, products(name), profiles(full_name, email)").order("created_at", { ascending: false }),
-        supabase.from("product_ratings").select("*, products(name), profiles(full_name)").order("created_at", { ascending: false }),
+        supabase.from("support_tickets").select("*").order("created_at", { ascending: false }),
+        supabase.from("orders").select("*, products(name)").order("created_at", { ascending: false }),
+        supabase.from("product_ratings").select("*, products(name)").order("created_at", { ascending: false }),
         supabase.from("products").select("*").order("name"),
       ]);
 
-      setTickets(ticketsRes.data || []);
-      setOrders(ordersRes.data || []);
-      setRatings(ratingsRes.data || []);
+      // Fetch profiles separately
+      const allUserIds = [
+        ...new Set([
+          ...(ticketsRes.data || []).map(t => t.user_id),
+          ...(ordersRes.data || []).map(o => o.user_id),
+          ...(ratingsRes.data || []).map(r => r.user_id),
+        ])
+      ];
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", allUserIds);
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      setTickets((ticketsRes.data || []).map(t => ({ ...t, profiles: profileMap.get(t.user_id) || null })) as any);
+      setOrders((ordersRes.data || []).map(o => ({ ...o, profiles: profileMap.get(o.user_id) || null })) as any);
+      setRatings((ratingsRes.data || []).map(r => ({ ...r, profiles: profileMap.get(r.user_id) || null })) as any);
       setProducts(productsRes.data || []);
     } catch (error) {
       toast({
@@ -171,7 +204,7 @@ const Staff = () => {
   };
 
   // Ticket columns
-  const ticketColumns: ColumnDef<any>[] = useMemo(() => [
+  const ticketColumns: ColumnDef<TicketRow>[] = useMemo(() => [
     {
       accessorKey: "subject",
       header: "Subject",
@@ -183,9 +216,9 @@ const Staff = () => {
       ),
     },
     {
-      accessorKey: "profiles.full_name",
+      id: "user",
       header: "User",
-      cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email,
+      cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-",
     },
     {
       accessorKey: "status",
@@ -221,15 +254,16 @@ const Staff = () => {
   ], []);
 
   // Order columns
-  const orderColumns: ColumnDef<any>[] = useMemo(() => [
+  const orderColumns: ColumnDef<OrderRow>[] = useMemo(() => [
     {
-      accessorKey: "profiles.full_name",
+      id: "user",
       header: "User",
-      cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email,
+      cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-",
     },
     {
-      accessorKey: "products.name",
+      id: "product",
       header: "Product",
+      cell: ({ row }) => row.original.products?.name || "-",
     },
     {
       accessorKey: "payment_status",
@@ -260,19 +294,26 @@ const Staff = () => {
   ], []);
 
   // Rating columns
-  const ratingColumns: ColumnDef<any>[] = useMemo(() => [
+  const ratingColumns: ColumnDef<RatingRow>[] = useMemo(() => [
     {
-      accessorKey: "products.name",
+      id: "product",
       header: "Product",
+      cell: ({ row }) => row.original.products?.name || "-",
     },
     {
-      accessorKey: "profiles.full_name",
+      id: "user",
       header: "User",
+      cell: ({ row }) => row.original.profiles?.full_name || "-",
     },
     {
       accessorKey: "rating",
       header: "Rating",
-      cell: ({ row }) => `⭐ ${row.original.rating}`,
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+          <span>{row.original.rating}</span>
+        </div>
+      ),
     },
     {
       accessorKey: "review",
@@ -315,9 +356,10 @@ const Staff = () => {
   }, [tickets, ticketSearch]);
 
   const filteredOrders = useMemo(() => {
-    if (!orderSearch) return orders;
-    return orders.filter(order => 
-      order.products?.name.toLowerCase().includes(orderSearch.toLowerCase()) ||
+    const pendingOrders = orders.filter(o => o.payment_status === 'pending');
+    if (!orderSearch) return pendingOrders;
+    return pendingOrders.filter(order => 
+      order.products?.name?.toLowerCase().includes(orderSearch.toLowerCase()) ||
       order.payment_status.toLowerCase().includes(orderSearch.toLowerCase())
     );
   }, [orders, orderSearch]);
@@ -325,7 +367,7 @@ const Staff = () => {
   const filteredRatings = useMemo(() => {
     if (!ratingSearch) return ratings;
     return ratings.filter(rating => 
-      rating.products?.name.toLowerCase().includes(ratingSearch.toLowerCase()) ||
+      rating.products?.name?.toLowerCase().includes(ratingSearch.toLowerCase()) ||
       rating.profiles?.full_name?.toLowerCase().includes(ratingSearch.toLowerCase())
     );
   }, [ratings, ratingSearch]);
@@ -337,22 +379,20 @@ const Staff = () => {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: { sorting: ticketSorting, columnFilters: ticketFilters },
+    state: { sorting: ticketSorting },
     onSortingChange: setTicketSorting,
-    onColumnFiltersChange: setTicketFilters,
+    initialState: { pagination: { pageSize: 10 } },
   });
 
   const orderTable = useReactTable({
-    data: filteredOrders.filter(o => o.payment_status === 'pending'),
+    data: filteredOrders,
     columns: orderColumns,
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: { sorting: orderSorting, columnFilters: orderFilters },
+    state: { sorting: orderSorting },
     onSortingChange: setOrderSorting,
-    onColumnFiltersChange: setOrderFilters,
+    initialState: { pagination: { pageSize: 10 } },
   });
 
   const ratingTable = useReactTable({
@@ -361,15 +401,14 @@ const Staff = () => {
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: { sorting: ratingSorting, columnFilters: ratingFilters },
+    state: { sorting: ratingSorting },
     onSortingChange: setRatingSorting,
-    onColumnFiltersChange: setRatingFilters,
+    initialState: { pagination: { pageSize: 10 } },
   });
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-20">
+      <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto p-4">Loading...</div>
       </div>
@@ -377,7 +416,7 @@ const Staff = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background">
       <Navbar />
       
       <div className="container mx-auto p-4 space-y-6">
@@ -525,7 +564,7 @@ const Staff = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Product Ratings</CardTitle>
-                <CardDescription>Manage product ratings and reviews</CardDescription>
+                <CardDescription>Manage product reviews visibility</CardDescription>
                 <div className="flex items-center gap-2 mt-4">
                   <Search className="h-4 w-4 text-muted-foreground" />
                   <Input
@@ -580,59 +619,50 @@ const Staff = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Stock Management</CardTitle>
-                <CardDescription>Manage product inventory</CardDescription>
+                <CardDescription>Update product inventory</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>Stock</TableHead>
-                      <TableHead>Price</TableHead>
-                      <TableHead>Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {products.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell>{product.name}</TableCell>
-                        <TableCell>
-                          <Badge variant={product.stock < 10 ? 'destructive' : 'default'}>
-                            {product.stock}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>Rp {product.price.toLocaleString('id-ID')}</TableCell>
-                        <TableCell>
-                          <Button 
-                            size="sm"
-                            onClick={() => {
-                              setSelectedProduct(product);
-                              setStockDialogOpen(true);
-                            }}
-                          >
-                            Manage Stock
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {products.map((product) => (
+                    <Card key={product.id} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-semibold">{product.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Current Stock: <span className={product.stock < 10 ? "text-destructive font-bold" : ""}>{product.stock}</span>
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setStockDialogOpen(true);
+                          }}
+                        >
+                          Update
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
-          
+
           <TabsContent value="activity">
             <StockActivityLog />
           </TabsContent>
         </Tabs>
       </div>
 
-      <StockManagement
-        open={stockDialogOpen}
-        onOpenChange={setStockDialogOpen}
-        product={selectedProduct}
-        onSuccess={fetchData}
-      />
+      {selectedProduct && (
+        <StockManagement
+          product={selectedProduct}
+          open={stockDialogOpen}
+          onOpenChange={setStockDialogOpen}
+          onSuccess={fetchData}
+        />
+      )}
     </div>
   );
 };

@@ -17,7 +17,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ShoppingCart, Users, Package, TrendingUp, CheckCircle, XCircle, Clock, Search, ExternalLink, AlertTriangle, Ticket, Star } from "lucide-react";
+import { 
+  ShoppingCart, Users, Package, LayoutDashboard, CheckCircle, XCircle, Clock, Search, 
+  ExternalLink, AlertTriangle, Ticket, Star, Settings, History 
+} from "lucide-react";
 import { 
   useReactTable, 
   getCoreRowModel, 
@@ -74,13 +77,32 @@ interface Stats {
   totalUsers: number;
 }
 
+interface TicketRow {
+  id: string;
+  subject: string;
+  description: string;
+  status: string;
+  created_at: string;
+  profiles: { full_name: string | null; email: string } | null;
+}
+
+interface RatingRow {
+  id: string;
+  rating: number;
+  review: string | null;
+  is_visible: boolean;
+  created_at: string;
+  products: { name: string } | null;
+  profiles: { full_name: string | null } | null;
+}
+
 const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  const [tickets, setTickets] = useState<any[]>([]);
-  const [ratings, setRatings] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<TicketRow[]>([]);
+  const [ratings, setRatings] = useState<RatingRow[]>([]);
   const [stats, setStats] = useState<Stats>({ totalOrders: 0, pendingPayments: 0, totalRevenue: 0, totalUsers: 0 });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [verifyingOrder, setVerifyingOrder] = useState<Order | null>(null);
@@ -97,18 +119,36 @@ const Admin = () => {
   const [productSearch, setProductSearch] = useState("");
   const [productSorting, setProductSorting] = useState<SortingState>([]);
   const [productFilters, setProductFilters] = useState<ColumnFiltersState>([]);
-  // Table states
   const [orderSorting, setOrderSorting] = useState<SortingState>([]);
   const [orderFilters, setOrderFilters] = useState<ColumnFiltersState>([]);
   const [orderSearch, setOrderSearch] = useState("");
   const [userSorting, setUserSorting] = useState<SortingState>([]);
   const [userFilters, setUserFilters] = useState<ColumnFiltersState>([]);
   const [userSearch, setUserSearch] = useState("");
+  const [ticketSorting, setTicketSorting] = useState<SortingState>([]);
+  const [ticketSearch, setTicketSearch] = useState("");
+  const [ratingSorting, setRatingSorting] = useState<SortingState>([]);
+  const [ratingSearch, setRatingSearch] = useState("");
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     checkAdminAccess();
+  }, []);
+
+  useEffect(() => {
+    // Set up realtime subscriptions
+    const channel = supabase
+      .channel('admin-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => fetchTickets())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => { fetchOrders(); fetchStats(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_ratings' }, () => fetchRatings())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchProducts())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const checkAdminAccess = async () => {
@@ -118,7 +158,6 @@ const Admin = () => {
         navigate("/auth/signin");
         return;
       }
-      // Server-side admin verification
       const { data, error } = await supabase.functions.invoke('verify-admin');
       if (error || !data?.isAdmin) {
         toast({
@@ -129,7 +168,6 @@ const Admin = () => {
         navigate("/");
         return;
       }
-      // Only fetch data if admin verification succeeds
       await Promise.all([fetchProducts(), fetchOrders(), fetchUsers(), fetchStats(), fetchTickets(), fetchRatings()]);
     } catch (error) {
       toast({
@@ -150,7 +188,6 @@ const Admin = () => {
       .order("created_at", { ascending: false });
     if (!error && data) {
       setProducts(data);
-      // Check for low stock and show notifications
       const lowStockProducts = data.filter(p => p.stock < 10 && p.stock > 0);
       const outOfStockProducts = data.filter(p => p.stock === 0);
       if (lowStockProducts.length > 0) {
@@ -173,10 +210,7 @@ const Admin = () => {
   const fetchOrders = async () => {
     const { data, error } = await supabase
       .from("orders")
-      .select(`
-        *,
-        products(name)
-      `)
+      .select(`*, products(name)`)
       .order("created_at", { ascending: false });
     if (!error && data) {
       const userIds = [...new Set(data.map((order: any) => order.user_id))];
@@ -233,27 +267,34 @@ const Admin = () => {
   const fetchTickets = async () => {
     const { data, error } = await supabase
       .from("support_tickets")
-      .select("*, profiles(full_name, email)")
+      .select("*")
       .order("created_at", { ascending: false });
     if (!error && data) {
-      setTickets(data);
+      const userIds = [...new Set(data.map(t => t.user_id))];
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const ticketsWithProfiles = data.map(t => ({ ...t, profiles: profileMap.get(t.user_id) || null }));
+      setTickets(ticketsWithProfiles as any);
     }
   };
 
   const fetchRatings = async () => {
     const { data, error } = await supabase
       .from("product_ratings")
-      .select("*, products(name), profiles(full_name)")
+      .select("*, products(name)")
       .order("created_at", { ascending: false });
     if (!error && data) {
-      setRatings(data);
+      const userIds = [...new Set(data.map(r => r.user_id))];
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const ratingsWithProfiles = data.map(r => ({ ...r, profiles: profileMap.get(r.user_id) || null }));
+      setRatings(ratingsWithProfiles as any);
     }
   };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      // Validate product data
       const validationResult = productSchema.safeParse({
         name: productForm.name.trim(),
         description: productForm.description.trim() || undefined,
@@ -314,7 +355,6 @@ const Admin = () => {
         verified_at: new Date().toISOString(),
       };
       if (verifyForm.status === "verified") {
-        // Validate all redeem codes are filled
         if (verifyForm.redeem_codes.some(code => !code.trim())) {
           toast({
             title: "Error",
@@ -389,9 +429,7 @@ const Admin = () => {
         .update({ is_active: !currentStatus })
         .eq("id", userId);
       if (error) throw error;
-      toast({ 
-        title: `User ${!currentStatus ? "activated" : "deactivated"} successfully` 
-      });
+      toast({ title: `User ${!currentStatus ? "activated" : "deactivated"} successfully` });
       fetchUsers();
     } catch (error) {
       toast({
@@ -407,11 +445,8 @@ const Admin = () => {
       return;
     }
     try {
-      // Delete user orders first
       await supabase.from("orders").delete().eq("user_id", userId);
-      // Delete user roles
       await supabase.from("user_roles").delete().eq("user_id", userId);
-      // Delete profile
       const { error } = await supabase.from("profiles").delete().eq("id", userId);
       if (error) throw error;
       toast({ title: "User deleted successfully" });
@@ -422,6 +457,34 @@ const Admin = () => {
         description: error instanceof Error ? error.message : "Failed to delete user",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleUpdateTicketStatus = async (ticketId: string, status: string) => {
+    try {
+      const { error } = await supabase
+        .from("support_tickets")
+        .update({ status })
+        .eq("id", ticketId);
+      if (error) throw error;
+      toast({ title: "Ticket status updated" });
+      fetchTickets();
+    } catch (error) {
+      toast({ title: "Error updating ticket", variant: "destructive" });
+    }
+  };
+
+  const handleToggleRatingVisibility = async (ratingId: string, isVisible: boolean) => {
+    try {
+      const { error } = await supabase
+        .from("product_ratings")
+        .update({ is_visible: !isVisible })
+        .eq("id", ratingId);
+      if (error) throw error;
+      toast({ title: "Rating visibility updated" });
+      fetchRatings();
+    } catch (error) {
+      toast({ title: "Error updating rating", variant: "destructive" });
     }
   };
 
@@ -437,10 +500,7 @@ const Admin = () => {
         </div>
       ),
     },
-    {
-      accessorKey: "product_name",
-      header: "Product",
-    },
+    { accessorKey: "product_name", header: "Product" },
     {
       accessorKey: "payment_status",
       header: "Payment",
@@ -472,9 +532,7 @@ const Admin = () => {
             <ExternalLink className="h-3 w-3" />
             View
           </a>
-        ) : (
-          <span className="text-muted-foreground text-sm">-</span>
-        )
+        ) : <span className="text-muted-foreground text-sm">-</span>
       ),
     },
     {
@@ -490,9 +548,7 @@ const Admin = () => {
               </div>
             ))}
           </div>
-        ) : (
-          <span className="text-muted-foreground text-sm">-</span>
-        )
+        ) : <span className="text-muted-foreground text-sm">-</span>
       ),
     },
     {
@@ -513,11 +569,7 @@ const Admin = () => {
               const codes = Array.from({ length: row.original.quantity }, () => 
                 `RF-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
               );
-              setVerifyForm({
-                redeem_codes: codes,
-                admin_notes: "",
-                status: "verified",
-              });
+              setVerifyForm({ redeem_codes: codes, admin_notes: "", status: "verified" });
               setVerifyDialogOpen(true);
             }}
           >
@@ -530,14 +582,8 @@ const Admin = () => {
 
   // User columns
   const userColumns: ColumnDef<User>[] = useMemo(() => [
-    {
-      accessorKey: "full_name",
-      header: "Name",
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
+    { accessorKey: "full_name", header: "Name" },
+    { accessorKey: "email", header: "Email" },
     {
       accessorKey: "is_active",
       header: "Status",
@@ -553,14 +599,8 @@ const Admin = () => {
       cell: ({ row }) => (
         <div className="flex gap-1">
           {row.original.roles.length > 0 ? (
-            row.original.roles.map((role) => (
-              <Badge key={role} variant="secondary">
-                {role}
-              </Badge>
-            ))
-          ) : (
-            <Badge variant="outline">user</Badge>
-          )}
+            row.original.roles.map((role) => <Badge key={role} variant="secondary">{role}</Badge>)
+          ) : <Badge variant="outline">user</Badge>}
         </div>
       ),
     },
@@ -572,26 +612,18 @@ const Admin = () => {
           <Button
             variant={row.original.roles.includes("admin") ? "destructive" : "outline"}
             size="sm"
-            onClick={() =>
-              handleToggleRole(row.original.id, "admin", row.original.roles.includes("admin"))
-            }
+            onClick={() => handleToggleRole(row.original.id, "admin", row.original.roles.includes("admin"))}
           >
             {row.original.roles.includes("admin") ? "Remove" : "Make"} Admin
           </Button>
           <Button
             variant={row.original.roles.includes("staff") ? "destructive" : "outline"}
             size="sm"
-            onClick={() =>
-              handleToggleRole(row.original.id, "staff", row.original.roles.includes("staff"))
-            }
+            onClick={() => handleToggleRole(row.original.id, "staff", row.original.roles.includes("staff"))}
           >
             {row.original.roles.includes("staff") ? "Remove" : "Make"} Staff
           </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => handleDeleteUser(row.original.id)}
-          >
+          <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(row.original.id)}>
             Delete
           </Button>
         </div>
@@ -599,7 +631,104 @@ const Admin = () => {
     },
   ], []);
 
-  // Order table
+  // Ticket columns
+  const ticketColumns: ColumnDef<TicketRow>[] = useMemo(() => [
+    {
+      accessorKey: "subject",
+      header: "Subject",
+      cell: ({ row }) => (
+        <div>
+          <p className="font-medium">{row.original.subject}</p>
+          <p className="text-xs text-muted-foreground line-clamp-1">{row.original.description}</p>
+        </div>
+      ),
+    },
+    {
+      id: "user",
+      header: "User",
+      cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-",
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => (
+        <Badge variant={row.original.status === 'resolved' ? 'default' : 'secondary'}>
+          {row.original.status}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "created_at",
+      header: "Created",
+      cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString(),
+    },
+    {
+      id: "actions",
+      header: "Action",
+      cell: ({ row }) => (
+        <Select value={row.original.status} onValueChange={(val) => handleUpdateTicketStatus(row.original.id, val)}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="open">Open</SelectItem>
+            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="resolved">Resolved</SelectItem>
+            <SelectItem value="closed">Closed</SelectItem>
+          </SelectContent>
+        </Select>
+      ),
+    },
+  ], []);
+
+  // Rating columns
+  const ratingColumns: ColumnDef<RatingRow>[] = useMemo(() => [
+    {
+      id: "product",
+      header: "Product",
+      cell: ({ row }) => row.original.products?.name || "-",
+    },
+    {
+      id: "user",
+      header: "User",
+      cell: ({ row }) => row.original.profiles?.full_name || "-",
+    },
+    {
+      accessorKey: "rating",
+      header: "Rating",
+      cell: ({ row }) => (
+        <div className="flex items-center gap-1">
+          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+          <span>{row.original.rating}</span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "review",
+      header: "Review",
+      cell: ({ row }) => <span className="max-w-xs truncate block">{row.original.review || "-"}</span>,
+    },
+    {
+      accessorKey: "is_visible",
+      header: "Visible",
+      cell: ({ row }) => (
+        <Badge variant={row.original.is_visible ? 'default' : 'secondary'}>
+          {row.original.is_visible ? 'Yes' : 'No'}
+        </Badge>
+      ),
+    },
+    {
+      id: "actions",
+      header: "Action",
+      cell: ({ row }) => (
+        <Button size="sm" variant="outline" onClick={() => handleToggleRatingVisibility(row.original.id, row.original.is_visible)}>
+          Toggle
+        </Button>
+      ),
+    },
+  ], []);
+
+  // Filtered data
   const filteredOrders = useMemo(() => {
     if (!orderSearch) return orders;
     return orders.filter(order => 
@@ -610,27 +739,6 @@ const Admin = () => {
     );
   }, [orders, orderSearch]);
 
-  const orderTable = useReactTable({
-    data: filteredOrders,
-    columns: orderColumns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: {
-      sorting: orderSorting,
-      columnFilters: orderFilters,
-    },
-    onSortingChange: setOrderSorting,
-    onColumnFiltersChange: setOrderFilters,
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
-  });
-
-  // User table
   const filteredUsers = useMemo(() => {
     if (!userSearch) return users;
     return users.filter(user => 
@@ -640,6 +748,36 @@ const Admin = () => {
     );
   }, [users, userSearch]);
 
+  const filteredTickets = useMemo(() => {
+    if (!ticketSearch) return tickets;
+    return tickets.filter(ticket => 
+      ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase()) ||
+      ticket.status.toLowerCase().includes(ticketSearch.toLowerCase())
+    );
+  }, [tickets, ticketSearch]);
+
+  const filteredRatings = useMemo(() => {
+    if (!ratingSearch) return ratings;
+    return ratings.filter(rating => 
+      rating.products?.name.toLowerCase().includes(ratingSearch.toLowerCase()) ||
+      rating.profiles?.full_name?.toLowerCase().includes(ratingSearch.toLowerCase())
+    );
+  }, [ratings, ratingSearch]);
+
+  // Tables
+  const orderTable = useReactTable({
+    data: filteredOrders,
+    columns: orderColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    state: { sorting: orderSorting, columnFilters: orderFilters },
+    onSortingChange: setOrderSorting,
+    onColumnFiltersChange: setOrderFilters,
+    initialState: { pagination: { pageSize: 10 } },
+  });
+
   const userTable = useReactTable({
     data: filteredUsers,
     columns: userColumns,
@@ -647,22 +785,37 @@ const Admin = () => {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    state: {
-      sorting: userSorting,
-      columnFilters: userFilters,
-    },
+    state: { sorting: userSorting, columnFilters: userFilters },
     onSortingChange: setUserSorting,
     onColumnFiltersChange: setUserFilters,
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
+    initialState: { pagination: { pageSize: 10 } },
+  });
+
+  const ticketTable = useReactTable({
+    data: filteredTickets,
+    columns: ticketColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: { sorting: ticketSorting },
+    onSortingChange: setTicketSorting,
+    initialState: { pagination: { pageSize: 10 } },
+  });
+
+  const ratingTable = useReactTable({
+    data: filteredRatings,
+    columns: ratingColumns,
+    getCoreRowModel: getCoreRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    state: { sorting: ratingSorting },
+    onSortingChange: setRatingSorting,
+    initialState: { pagination: { pageSize: 10 } },
   });
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-20 md:pb-0">
+      <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto px-4 py-8 text-center">
           <p className="text-muted-foreground">Loading...</p>
@@ -672,17 +825,29 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-0">
+    <div className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Admin Panel</h1>
         <Tabs defaultValue="dashboard" className="space-y-6">
           <div className="w-full overflow-x-auto pb-2">
-            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-7">
-              <TabsTrigger value="dashboard" className="flex-shrink-0">Dashboard</TabsTrigger>
-              <TabsTrigger value="orders" className="flex-shrink-0">Orders</TabsTrigger>
-              <TabsTrigger value="products" className="flex-shrink-0">Products</TabsTrigger>
-              <TabsTrigger value="users" className="flex-shrink-0">Users</TabsTrigger>
+            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-8">
+              <TabsTrigger value="dashboard" className="flex-shrink-0">
+                <LayoutDashboard className="h-4 w-4 mr-2" />
+                <span>Dashboard</span>
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="flex-shrink-0">
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                <span>Orders</span>
+              </TabsTrigger>
+              <TabsTrigger value="products" className="flex-shrink-0">
+                <Package className="h-4 w-4 mr-2" />
+                <span>Products</span>
+              </TabsTrigger>
+              <TabsTrigger value="users" className="flex-shrink-0">
+                <Users className="h-4 w-4 mr-2" />
+                <span>Users</span>
+              </TabsTrigger>
               <TabsTrigger value="tickets" className="flex-shrink-0">
                 <Ticket className="h-4 w-4 mr-2" />
                 <span>Tickets</span>
@@ -692,11 +857,16 @@ const Admin = () => {
                 <span>Ratings</span>
               </TabsTrigger>
               <TabsTrigger value="audit" className="flex-shrink-0">
-                <Package className="h-4 w-4 mr-2" />
-                <span>Stock Audit</span>
+                <History className="h-4 w-4 mr-2" />
+                <span>Audit</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex-shrink-0">
+                <Settings className="h-4 w-4 mr-2" />
+                <span>Settings</span>
               </TabsTrigger>
             </TabsList>
           </div>
+
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
@@ -704,36 +874,28 @@ const Admin = () => {
                   <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
                   <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalOrders}</div>
-                </CardContent>
+                <CardContent><div className="text-2xl font-bold">{stats.totalOrders}</div></CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
                   <Clock className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.pendingPayments}</div>
-                </CardContent>
+                <CardContent><div className="text-2xl font-bold">{stats.pendingPayments}</div></CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Verified Orders</CardTitle>
                   <CheckCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalRevenue}</div>
-                </CardContent>
+                <CardContent><div className="text-2xl font-bold">{stats.totalRevenue}</div></CardContent>
               </Card>
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{stats.totalUsers}</div>
-                </CardContent>
+                <CardContent><div className="text-2xl font-bold">{stats.totalUsers}</div></CardContent>
               </Card>
             </div>
             <Card>
@@ -771,6 +933,7 @@ const Admin = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="orders">
             <Card>
               <CardHeader>
@@ -778,12 +941,7 @@ const Admin = () => {
                 <CardDescription>Verify payments and issue redeem codes</CardDescription>
                 <div className="flex items-center gap-2 mt-4">
                   <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by customer, product, or status..."
-                    value={orderSearch}
-                    onChange={(e) => setOrderSearch(e.target.value)}
-                    className="max-w-sm"
-                  />
+                  <Input placeholder="Search by customer, product, or status..." value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} className="max-w-sm" />
                 </div>
               </CardHeader>
               <CardContent>
@@ -793,9 +951,7 @@ const Admin = () => {
                       {orderTable.getHeaderGroups().map(headerGroup => (
                         <TableRow key={headerGroup.id}>
                           {headerGroup.headers.map(header => (
-                            <TableHead key={header.id}>
-                              {flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
+                            <TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>
                           ))}
                         </TableRow>
                       ))}
@@ -805,18 +961,12 @@ const Admin = () => {
                         orderTable.getRowModel().rows.map(row => (
                           <TableRow key={row.id}>
                             {row.getVisibleCells().map(cell => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
+                              <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                             ))}
                           </TableRow>
                         ))
                       ) : (
-                        <TableRow>
-                          <TableCell colSpan={orderColumns.length} className="text-center">
-                            No orders found
-                          </TableCell>
-                        </TableRow>
+                        <TableRow><TableCell colSpan={orderColumns.length} className="text-center">No orders found</TableCell></TableRow>
                       )}
                     </TableBody>
                   </Table>
@@ -825,148 +975,50 @@ const Admin = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="products">
             <Card>
-              <CardHeader>
-                <CardTitle>Product Management</CardTitle>
-              </CardHeader>
+              <CardHeader><CardTitle>Product Management</CardTitle></CardHeader>
               <CardContent>
                 <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
                   <DialogTrigger asChild>
-                    <Button className="mb-4" onClick={() => {
-                      setEditingProduct(null);
-                      setProductForm({ name: "", description: "", price: "", duration_days: "" });
-                    }}>Add Product</Button>
+                    <Button className="mb-4" onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", price: "", duration_days: "" }); }}>Add Product</Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{editingProduct ? "Edit" : "Add"} Product</DialogTitle>
-                    </DialogHeader>
+                    <DialogHeader><DialogTitle>{editingProduct ? "Edit" : "Add"} Product</DialogTitle></DialogHeader>
                     <form onSubmit={handleProductSubmit} className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Name</Label>
-                        <Input
-                          value={productForm.name}
-                          onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Description</Label>
-                        <Textarea
-                          value={productForm.description}
-                          onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Price (IDR)</Label>
-                        <Input
-                          type="number"
-                          value={productForm.price}
-                          onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Duration (days)</Label>
-                        <Input
-                          type="number"
-                          value={productForm.duration_days}
-                          onChange={(e) => setProductForm({ ...productForm, duration_days: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <Button type="submit" className="w-full">
-                        {editingProduct ? "Update" : "Create"}
-                      </Button>
+                      <div className="space-y-2"><Label>Name</Label><Input value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required /></div>
+                      <div className="space-y-2"><Label>Description</Label><Textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></div>
+                      <div className="space-y-2"><Label>Price (IDR)</Label><Input type="number" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} required /></div>
+                      <div className="space-y-2"><Label>Duration (days)</Label><Input type="number" value={productForm.duration_days} onChange={(e) => setProductForm({ ...productForm, duration_days: e.target.value })} required /></div>
+                      <Button type="submit" className="w-full">{editingProduct ? "Update" : "Create"}</Button>
                     </form>
                   </DialogContent>
                 </Dialog>
-                <div className="flex items-center gap-2 mb-4">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search products..."
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    className="max-w-sm"
-                  />
-                </div>
+                <div className="flex items-center gap-2 mb-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search products..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="max-w-sm" /></div>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Duration</TableHead>
-                        <TableHead>Stock</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
+                      <TableRow><TableHead>Name</TableHead><TableHead>Price</TableHead><TableHead>Duration</TableHead><TableHead>Stock</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow>
                     </TableHeader>
                     <TableBody>
-                      {products.filter(p => 
-                        p.name.toLowerCase().includes(productSearch.toLowerCase())
-                      ).map((product) => (
+                      {products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).map((product) => (
                         <TableRow key={product.id}>
                           <TableCell>{product.name}</TableCell>
                           <TableCell>Rp {product.price.toLocaleString('id-ID')}</TableCell>
                           <TableCell>{product.duration_days} days</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
-                              <span className={product.stock < 10 ? "text-destructive font-semibold" : ""}>
-                                {product.stock}
-                              </span>
-                              {product.stock < 10 && (
-                                <AlertTriangle className="h-4 w-4 text-destructive" />
-                              )}
+                              <span className={product.stock < 10 ? "text-destructive font-semibold" : ""}>{product.stock}</span>
+                              {product.stock < 10 && <AlertTriangle className="h-4 w-4 text-destructive" />}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <Badge variant={product.is_active ? "default" : "secondary"}>
-                              {product.is_active ? "Active" : "Inactive"}
-                            </Badge>
-                          </TableCell>
+                          <TableCell><Badge variant={product.is_active ? "default" : "secondary"}>{product.is_active ? "Active" : "Inactive"}</Badge></TableCell>
                           <TableCell>
                             <div className="flex gap-2 flex-wrap">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedProductForStock(product);
-                                  setStockManagementOpen(true);
-                                }}
-                              >
-                                Manage Stock
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setEditingProduct(product);
-                                  setProductForm({
-                                    name: product.name,
-                                    description: product.description || "",
-                                    price: product.price.toString(),
-                                    duration_days: product.duration_days.toString(),
-                                  });
-                                  setShowProductDialog(true);
-                                }}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant={product.is_active ? "outline" : "default"}
-                                size="sm"
-                                onClick={async () => {
-                                  await supabase
-                                    .from("products")
-                                    .update({ is_active: !product.is_active })
-                                    .eq("id", product.id);
-                                  fetchProducts();
-                                }}
-                              >
-                                {product.is_active ? "Deactivate" : "Activate"}
-                              </Button>
+                              <Button variant="outline" size="sm" onClick={() => { setSelectedProductForStock(product); setStockManagementOpen(true); }}>Manage Stock</Button>
+                              <Button variant="outline" size="sm" onClick={() => { setEditingProduct(product); setProductForm({ name: product.name, description: product.description || "", price: product.price.toString(), duration_days: product.duration_days.toString() }); setShowProductDialog(true); }}>Edit</Button>
+                              <Button variant={product.is_active ? "outline" : "default"} size="sm" onClick={async () => { await supabase.from("products").update({ is_active: !product.is_active }).eq("id", product.id); fetchProducts(); }}>{product.is_active ? "Deactivate" : "Activate"}</Button>
                             </div>
                           </TableCell>
                         </TableRow>
@@ -977,53 +1029,28 @@ const Admin = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
           <TabsContent value="users">
             <Card>
               <CardHeader>
                 <CardTitle>User Management</CardTitle>
                 <CardDescription>Manage user accounts and roles</CardDescription>
-                <div className="flex items-center gap-2 mt-4">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by name, email, or role..."
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    className="max-w-sm"
-                  />
-                </div>
+                <div className="flex items-center gap-2 mt-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search by name, email, or role..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="max-w-sm" /></div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       {userTable.getHeaderGroups().map(headerGroup => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map(header => (
-                            <TableHead key={header.id}>
-                              {flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
-                          ))}
-                        </TableRow>
+                        <TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>
                       ))}
                     </TableHeader>
                     <TableBody>
                       {userTable.getRowModel().rows.length ? (
                         userTable.getRowModel().rows.map(row => (
-                          <TableRow key={row.id}>
-                            {row.getVisibleCells().map(cell => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
+                          <TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>
                         ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={userColumns.length} className="text-center">
-                            No users found
-                          </TableCell>
-                        </TableRow>
-                      )}
+                      ) : (<TableRow><TableCell colSpan={userColumns.length} className="text-center">No users found</TableCell></TableRow>)}
                     </TableBody>
                   </Table>
                 </div>
@@ -1037,62 +1064,26 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Support Tickets</CardTitle>
                 <CardDescription>Manage customer support requests</CardDescription>
+                <div className="flex items-center gap-2 mt-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search tickets..." value={ticketSearch} onChange={(e) => setTicketSearch(e.target.value)} className="max-w-sm" /></div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Subject</TableHead>
-                        <TableHead>User</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Created</TableHead>
-                        <TableHead>Action</TableHead>
-                      </TableRow>
+                      {ticketTable.getHeaderGroups().map(headerGroup => (
+                        <TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>
+                      ))}
                     </TableHeader>
                     <TableBody>
-                      {tickets.map((ticket) => (
-                        <TableRow key={ticket.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium">{ticket.subject}</p>
-                              <p className="text-xs text-muted-foreground line-clamp-1">{ticket.description}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell>{ticket.profiles?.full_name || ticket.profiles?.email}</TableCell>
-                          <TableCell>
-                            <Badge variant={ticket.status === 'resolved' ? 'default' : 'secondary'}>
-                              {ticket.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(ticket.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <Select 
-                              value={ticket.status} 
-                              onValueChange={async (val) => {
-                                await supabase
-                                  .from("support_tickets")
-                                  .update({ status: val })
-                                  .eq("id", ticket.id);
-                                fetchTickets();
-                              }}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="open">Open</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="resolved">Resolved</SelectItem>
-                                <SelectItem value="closed">Closed</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {ticketTable.getRowModel().rows.length ? (
+                        ticketTable.getRowModel().rows.map(row => (
+                          <TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>
+                        ))
+                      ) : (<TableRow><TableCell colSpan={ticketColumns.length} className="text-center">No tickets found</TableCell></TableRow>)}
                     </TableBody>
                   </Table>
                 </div>
+                <DataTablePagination table={ticketTable} />
               </CardContent>
             </Card>
           </TabsContent>
@@ -1102,63 +1093,80 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Product Ratings & Reviews</CardTitle>
                 <CardDescription>Manage customer ratings and reviews</CardDescription>
+                <div className="flex items-center gap-2 mt-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search ratings..." value={ratingSearch} onChange={(e) => setRatingSearch(e.target.value)} className="max-w-sm" /></div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Product</TableHead>
-                        <TableHead>User</TableHead>
-                        <TableHead>Rating</TableHead>
-                        <TableHead>Review</TableHead>
-                        <TableHead>Visible</TableHead>
-                        <TableHead>Action</TableHead>
-                      </TableRow>
+                      {ratingTable.getHeaderGroups().map(headerGroup => (
+                        <TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>
+                      ))}
                     </TableHeader>
                     <TableBody>
-                      {ratings.map((rating) => (
-                        <TableRow key={rating.id}>
-                          <TableCell>{rating.products?.name}</TableCell>
-                          <TableCell>{rating.profiles?.full_name}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                              <span>{rating.rating}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate">{rating.review || "-"}</TableCell>
-                          <TableCell>
-                            <Badge variant={rating.is_visible ? 'default' : 'secondary'}>
-                              {rating.is_visible ? 'Yes' : 'No'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={async () => {
-                                await supabase
-                                  .from("product_ratings")
-                                  .update({ is_visible: !rating.is_visible })
-                                  .eq("id", rating.id);
-                                fetchRatings();
-                              }}
-                            >
-                              Toggle
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {ratingTable.getRowModel().rows.length ? (
+                        ratingTable.getRowModel().rows.map(row => (
+                          <TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>
+                        ))
+                      ) : (<TableRow><TableCell colSpan={ratingColumns.length} className="text-center">No ratings found</TableCell></TableRow>)}
                     </TableBody>
                   </Table>
                 </div>
+                <DataTablePagination table={ratingTable} />
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="audit">
-            <StockActivityLog />
+          <TabsContent value="audit"><StockActivityLog /></TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Web Settings</CardTitle>
+                <CardDescription>Customize static content and site configuration</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Site Name</Label>
+                    <Input defaultValue="Redfinger Store" placeholder="Your site name" />
+                    <p className="text-xs text-muted-foreground">Displayed in header and browser tab</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Support Email</Label>
+                    <Input defaultValue="support@redfinger.store" placeholder="support@example.com" />
+                    <p className="text-xs text-muted-foreground">For customer support inquiries</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>WhatsApp Number</Label>
+                    <Input defaultValue="+62812345678" placeholder="+62..." />
+                    <p className="text-xs text-muted-foreground">For WhatsApp support link</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Redeem Site URL</Label>
+                    <Input defaultValue="https://redfinger.com/redeem" placeholder="https://..." />
+                    <p className="text-xs text-muted-foreground">URL for customers to redeem codes</p>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Hero Title</Label>
+                  <Input defaultValue="Cloud Phone Solutions for Everyone" placeholder="Main headline" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Hero Description</Label>
+                  <Textarea defaultValue="Get premium Redfinger cloud phone services at competitive prices. Perfect for gaming, social media, and more." placeholder="Subheadline text" rows={3} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Footer Text</Label>
+                  <Input defaultValue="© 2024 Redfinger Store. All rights reserved." placeholder="Footer copyright text" />
+                </div>
+                <div className="flex gap-2">
+                  <Button>Save Settings</Button>
+                  <Button variant="outline">Reset to Default</Button>
+                </div>
+                <p className="text-sm text-muted-foreground">Note: Settings will be saved to the database and applied across all pages.</p>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
@@ -1168,40 +1176,19 @@ const Admin = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Verify Payment</DialogTitle>
-            <DialogDescription>
-              Review payment proof and issue redeem codes
-            </DialogDescription>
+            <DialogDescription>Review payment proof and issue redeem codes</DialogDescription>
           </DialogHeader>
           <form onSubmit={handleVerifyPayment} className="space-y-4">
             {verifyingOrder?.payment_proof && (
               <div>
                 <Label>Payment Proof</Label>
-                <a
-                  href={verifyingOrder.payment_proof}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline text-sm block"
-                >
-                  View Payment Proof
-                </a>
+                <a href={verifyingOrder.payment_proof} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm block">View Payment Proof</a>
               </div>
             )}
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">
-                Order Quantity: <span className="font-medium">{verifyingOrder?.quantity}</span>
-              </p>
-            </div>
             <div className="space-y-2">
-              <Label>Decision</Label>
-              <Select
-                value={verifyForm.status}
-                onValueChange={(value) =>
-                  setVerifyForm({ ...verifyForm, status: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Label>Status</Label>
+              <Select value={verifyForm.status} onValueChange={(val) => setVerifyForm({ ...verifyForm, status: val })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="verified">Verified</SelectItem>
                   <SelectItem value="rejected">Rejected</SelectItem>
@@ -1209,49 +1196,34 @@ const Admin = () => {
               </Select>
             </div>
             {verifyForm.status === "verified" && (
-              <div className="space-y-3">
-                <Label>Redeem Codes (one per quantity)</Label>
+              <div className="space-y-2">
+                <Label>Redeem Codes (one per quantity ordered)</Label>
                 {verifyForm.redeem_codes.map((code, index) => (
-                  <div key={index} className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Code {index + 1}</Label>
-                    <Input
-                      value={code}
-                      onChange={(e) => {
-                        const newCodes = [...verifyForm.redeem_codes];
-                        newCodes[index] = e.target.value;
-                        setVerifyForm({ ...verifyForm, redeem_codes: newCodes });
-                      }}
-                      required
-                      placeholder={`Redeem code ${index + 1}`}
-                    />
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">#{index + 1}</span>
+                    <Input value={code} onChange={(e) => { const newCodes = [...verifyForm.redeem_codes]; newCodes[index] = e.target.value; setVerifyForm({ ...verifyForm, redeem_codes: newCodes }); }} placeholder={`Redeem code ${index + 1}`} />
                   </div>
                 ))}
               </div>
             )}
             <div className="space-y-2">
               <Label>Admin Notes</Label>
-              <Textarea
-                value={verifyForm.admin_notes}
-                onChange={(e) =>
-                  setVerifyForm({ ...verifyForm, admin_notes: e.target.value })
-                }
-                placeholder="Optional notes for customer"
-              />
+              <Textarea value={verifyForm.admin_notes} onChange={(e) => setVerifyForm({ ...verifyForm, admin_notes: e.target.value })} placeholder="Optional notes for this verification" />
             </div>
-            <Button type="submit" className="w-full">
-              Submit Verification
-            </Button>
+            <Button type="submit" className="w-full">{verifyForm.status === "verified" ? "Verify & Issue Codes" : "Reject Payment"}</Button>
           </form>
         </DialogContent>
       </Dialog>
 
       {/* Stock Management Dialog */}
-      <StockManagement
-        open={stockManagementOpen}
-        onOpenChange={setStockManagementOpen}
-        product={selectedProductForStock}
-        onSuccess={fetchProducts}
-      />
+      {selectedProductForStock && (
+        <StockManagement
+          product={selectedProductForStock}
+          open={stockManagementOpen}
+          onOpenChange={setStockManagementOpen}
+          onSuccess={fetchProducts}
+        />
+      )}
     </div>
   );
 };
