@@ -69,8 +69,29 @@ const Store = () => {
     fetchRatings();
     fetchBestSeller();
 
-    return () => subscription.unsubscribe();
+    // Real-time stock updates
+    const channel = supabase
+      .channel('store-products')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        fetchProducts();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  // Reset quantity if it exceeds stock
+  useEffect(() => {
+    products.forEach(product => {
+      const currentQty = quantities[product.id] || 1;
+      if (currentQty > product.stock && product.stock > 0) {
+        setQuantities(prev => ({ ...prev, [product.id]: product.stock }));
+      }
+    });
+  }, [products]);
 
   const fetchProducts = async () => {
     try {
@@ -104,7 +125,6 @@ const Store = () => {
 
       if (error) throw error;
 
-      // Fetch related profiles and products
       const userIds = [...new Set(data?.map(r => r.user_id) || [])];
       const productIds = [...new Set(data?.map(r => r.product_id) || [])];
 
@@ -165,7 +185,7 @@ const Store = () => {
     setQuantities({ ...quantities, [productId]: newQty });
   };
 
-  const handlePurchase = (productId: string) => {
+  const handlePurchase = async (productId: string) => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -176,19 +196,47 @@ const Store = () => {
       return;
     }
 
-    const product = products.find(p => p.id === productId);
-    const quantity = quantities[productId] || 1;
-    
-    if (!product || product.stock < quantity) {
+    // Re-fetch latest stock to prevent race condition
+    const { data: latestProduct, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("id", productId)
+      .single();
+
+    if (error || !latestProduct) {
       toast({
         title: "Error",
-        description: "Insufficient stock available",
+        description: "Product not found",
         variant: "destructive",
       });
       return;
     }
 
-    setSelectedProduct(product);
+    const quantity = quantities[productId] || 1;
+    
+    if (latestProduct.stock < quantity) {
+      toast({
+        title: "Insufficient stock",
+        description: `Only ${latestProduct.stock} items available. Quantity has been adjusted.`,
+        variant: "destructive",
+      });
+      setQuantities({ ...quantities, [productId]: Math.max(1, latestProduct.stock) });
+      // Update products state with latest data
+      setProducts(prev => prev.map(p => p.id === productId ? latestProduct : p));
+      return;
+    }
+
+    if (latestProduct.stock === 0) {
+      toast({
+        title: "Out of stock",
+        description: "This product is currently out of stock",
+        variant: "destructive",
+      });
+      fetchProducts();
+      return;
+    }
+
+    setSelectedProduct(latestProduct);
     setConfirmDialogOpen(true);
   };
 
@@ -198,6 +246,29 @@ const Store = () => {
     setIsCreatingOrder(true);
     try {
       const quantity = quantities[selectedProduct.id] || 1;
+
+      // Double-check stock before creating order
+      const { data: currentProduct, error: checkError } = await supabase
+        .from("products")
+        .select("stock")
+        .eq("id", selectedProduct.id)
+        .single();
+
+      if (checkError || !currentProduct) {
+        throw new Error("Failed to verify product availability");
+      }
+
+      if (currentProduct.stock < quantity) {
+        toast({
+          title: "Stock changed",
+          description: `Only ${currentProduct.stock} items available now. Please adjust your quantity.`,
+          variant: "destructive",
+        });
+        setConfirmDialogOpen(false);
+        fetchProducts();
+        return;
+      }
+
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + selectedProduct.duration_days);
 
@@ -224,7 +295,6 @@ const Store = () => {
       setSelectedProduct(null);
       fetchProducts();
       
-      // Navigate to transactions page
       navigate("/transactions");
     } catch (error) {
       toast({
@@ -341,7 +411,7 @@ const Store = () => {
                 <ProductCard
                   key={product.id}
                   {...product}
-                  quantity={quantities[product.id] || 1}
+                  quantity={Math.min(quantities[product.id] || 1, product.stock || 1)}
                   onQuantityChange={handleQuantityChange}
                   onPurchase={handlePurchase}
                   isAuthenticated={!!user}
@@ -362,7 +432,6 @@ const Store = () => {
               <p className="text-xl text-muted-foreground">Real reviews from verified customers</p>
             </div>
             
-            {/* Pagination controls */}
             <div className="flex justify-center items-center gap-4 mb-6">
               <Button
                 variant="outline"
@@ -422,7 +491,7 @@ const Store = () => {
         open={confirmDialogOpen}
         onOpenChange={setConfirmDialogOpen}
         product={selectedProduct}
-        quantity={selectedProduct ? (quantities[selectedProduct.id] || 1) : 1}
+        quantity={selectedProduct ? Math.min(quantities[selectedProduct.id] || 1, selectedProduct.stock) : 1}
         onConfirm={handleConfirmOrder}
         isLoading={isCreatingOrder}
       />

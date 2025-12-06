@@ -8,22 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Ticket, Package, Star, CheckCircle, Search, History } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Ticket, Package, Star, CheckCircle, History, MessageSquare, ExternalLink } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import StockManagement from "@/components/StockManagement";
 import { StockActivityLog } from "@/components/StockActivityLog";
+import { TicketConversation } from "@/components/TicketConversation";
+import { FilePreview } from "@/components/FilePreview";
+import { DataTableFilters } from "@/components/DataTableFilters";
+import { OrderVerificationDialog } from "@/components/OrderVerificationDialog";
 import { format } from "date-fns";
-import { 
-  useReactTable, 
-  getCoreRowModel, 
-  getPaginationRowModel, 
-  getSortedRowModel, 
-  getFilteredRowModel,
-  flexRender,
-  ColumnDef,
-  SortingState,
-} from "@tanstack/react-table";
+import { useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, flexRender, ColumnDef, SortingState } from "@tanstack/react-table";
 import { DataTablePagination } from "@/components/DataTablePagination";
 
 interface TicketRow {
@@ -31,14 +26,19 @@ interface TicketRow {
   subject: string;
   description: string;
   status: string;
+  image_proof: string | null;
+  user_id: string;
   created_at: string;
   profiles: { full_name: string | null; email: string } | null;
 }
 
 interface OrderRow {
   id: string;
+  quantity: number;
   payment_status: string;
+  payment_proof: string | null;
   created_at: string;
+  product_id: string;
   profiles: { full_name: string | null; email: string } | null;
   products: { name: string } | null;
 }
@@ -52,6 +52,16 @@ interface RatingRow {
   profiles: { full_name: string | null } | null;
 }
 
+const getTicketStatusColor = (status: string) => {
+  switch (status) {
+    case 'open': return 'bg-green-500 text-white';
+    case 'in_progress': return 'bg-yellow-500 text-white';
+    case 'resolved': return 'bg-blue-500 text-white';
+    case 'closed': return 'bg-gray-500 text-white';
+    default: return 'bg-gray-400 text-white';
+  }
+};
+
 const Staff = () => {
   const [loading, setLoading] = useState(true);
   const [tickets, setTickets] = useState<TicketRow[]>([]);
@@ -60,22 +70,28 @@ const Staff = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [stockDialogOpen, setStockDialogOpen] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<TicketRow | null>(null);
+  const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+  const [verifyingOrder, setVerifyingOrder] = useState<OrderRow | null>(null);
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
   
-  // Table states
-  const [ticketSorting, setTicketSorting] = useState<SortingState>([]);
+  // Filters
   const [ticketSearch, setTicketSearch] = useState("");
-  const [orderSorting, setOrderSorting] = useState<SortingState>([]);
+  const [ticketStatusFilter, setTicketStatusFilter] = useState("all");
   const [orderSearch, setOrderSearch] = useState("");
-  const [ratingSorting, setRatingSorting] = useState<SortingState>([]);
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
   const [ratingSearch, setRatingSearch] = useState("");
+  const [ratingVisibleFilter, setRatingVisibleFilter] = useState("all");
+  
+  const [ticketSorting, setTicketSorting] = useState<SortingState>([]);
+  const [orderSorting, setOrderSorting] = useState<SortingState>([]);
+  const [ratingSorting, setRatingSorting] = useState<SortingState>([]);
   
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
     checkStaffAccess();
-    
-    // Set up realtime subscription
     const channel = supabase
       .channel('staff-updates')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, fetchData)
@@ -83,42 +99,17 @@ const Staff = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'product_ratings' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchData)
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const checkStaffAccess = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth/signin");
-        return;
-      }
-
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id);
-
-      const hasStaffOrAdmin = roles?.some(r => r.role === 'staff' || r.role === 'admin');
-
-      if (!hasStaffOrAdmin) {
-        navigate("/");
-        toast({
-          title: "Access denied",
-          description: "You don't have staff or admin permissions",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      fetchData();
-    } catch (error) {
-      console.error("Error checking staff access:", error);
-      navigate("/");
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { navigate("/auth/signin"); return; }
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+    if (!roles?.some(r => r.role === 'staff' || r.role === 'admin')) {
+      navigate("/"); toast({ title: "Access denied", variant: "destructive" }); return;
     }
+    fetchData();
   };
 
   const fetchData = async () => {
@@ -129,324 +120,158 @@ const Staff = () => {
         supabase.from("product_ratings").select("*, products(name)").order("created_at", { ascending: false }),
         supabase.from("products").select("*").order("name"),
       ]);
-
-      // Fetch profiles separately
-      const allUserIds = [
-        ...new Set([
-          ...(ticketsRes.data || []).map(t => t.user_id),
-          ...(ordersRes.data || []).map(o => o.user_id),
-          ...(ratingsRes.data || []).map(r => r.user_id),
-        ])
-      ];
+      const allUserIds = [...new Set([
+        ...(ticketsRes.data || []).map(t => t.user_id),
+        ...(ordersRes.data || []).map(o => o.user_id),
+        ...(ratingsRes.data || []).map(r => r.user_id),
+      ])];
       const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", allUserIds);
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-
       setTickets((ticketsRes.data || []).map(t => ({ ...t, profiles: profileMap.get(t.user_id) || null })) as any);
       setOrders((ordersRes.data || []).map(o => ({ ...o, profiles: profileMap.get(o.user_id) || null })) as any);
       setRatings((ratingsRes.data || []).map(r => ({ ...r, profiles: profileMap.get(r.user_id) || null })) as any);
       setProducts(productsRes.data || []);
-    } catch (error) {
-      toast({
-        title: "Error loading data",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast({ title: "Error loading data", variant: "destructive" }); }
+    finally { setLoading(false); }
   };
 
   const handleUpdateTicketStatus = async (ticketId: string, status: string) => {
-    try {
-      const { error } = await supabase
-        .from("support_tickets")
-        .update({ status })
-        .eq("id", ticketId);
-
-      if (error) throw error;
-
-      toast({ title: "Ticket updated" });
-      fetchData();
-    } catch (error) {
-      toast({ title: "Error updating ticket", variant: "destructive" });
-    }
+    const { error } = await supabase.from("support_tickets").update({ status }).eq("id", ticketId);
+    if (error) { toast({ title: "Error updating ticket", variant: "destructive" }); return; }
+    toast({ title: "Ticket updated" }); fetchData();
   };
 
-  const handleVerifyPayment = async (orderId: string, status: string) => {
-    try {
-      const { error } = await supabase
-        .from("orders")
-        .update({ payment_status: status })
-        .eq("id", orderId);
-
-      if (error) throw error;
-
-      toast({ title: "Payment status updated" });
-      fetchData();
-    } catch (error) {
-      toast({ title: "Error updating payment", variant: "destructive" });
+  const handleVerifyOrder = async (orderId: string, redeemCodes: string[], adminNotes: string) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+    const product = products.find(p => p.id === order.product_id);
+    const { error } = await supabase.from("orders").update({
+      payment_status: "verified", status: "active", redeem_codes: redeemCodes, admin_notes: adminNotes, verified_at: new Date().toISOString()
+    }).eq("id", orderId);
+    if (error) { toast({ title: "Error verifying", variant: "destructive" }); return; }
+    if (product) {
+      await supabase.from("products").update({ stock: Math.max(0, product.stock - order.quantity) }).eq("id", product.id);
     }
+    toast({ title: "Order verified" }); fetchData();
+  };
+
+  const handleRejectOrder = async (orderId: string, reason: string) => {
+    const { error } = await supabase.from("orders").update({
+      payment_status: "rejected", status: "rejected", admin_notes: reason
+    }).eq("id", orderId);
+    if (error) { toast({ title: "Error rejecting", variant: "destructive" }); return; }
+    toast({ title: "Order rejected" }); fetchData();
   };
 
   const handleToggleRatingVisibility = async (ratingId: string, isVisible: boolean) => {
-    try {
-      const { error } = await supabase
-        .from("product_ratings")
-        .update({ is_visible: !isVisible })
-        .eq("id", ratingId);
-
-      if (error) throw error;
-
-      toast({ title: "Rating visibility updated" });
-      fetchData();
-    } catch (error) {
-      toast({ title: "Error updating rating", variant: "destructive" });
-    }
+    const { error } = await supabase.from("product_ratings").update({ is_visible: !isVisible }).eq("id", ratingId);
+    if (error) { toast({ title: "Error updating rating", variant: "destructive" }); return; }
+    toast({ title: "Rating visibility updated" }); fetchData();
   };
-
-  // Ticket columns
-  const ticketColumns: ColumnDef<TicketRow>[] = useMemo(() => [
-    {
-      accessorKey: "subject",
-      header: "Subject",
-      cell: ({ row }) => (
-        <div>
-          <p className="font-medium">{row.original.subject}</p>
-          <p className="text-xs text-muted-foreground line-clamp-1">{row.original.description}</p>
-        </div>
-      ),
-    },
-    {
-      id: "user",
-      header: "User",
-      cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-",
-    },
-    {
-      accessorKey: "status",
-      header: "Status",
-      cell: ({ row }) => (
-        <Badge variant={row.original.status === 'resolved' ? 'default' : 'secondary'}>
-          {row.original.status}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "created_at",
-      header: "Created",
-      cell: ({ row }) => format(new Date(row.original.created_at), 'PP'),
-    },
-    {
-      id: "actions",
-      header: "Action",
-      cell: ({ row }) => (
-        <Select value={row.original.status} onValueChange={(val) => handleUpdateTicketStatus(row.original.id, val)}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="open">Open</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="resolved">Resolved</SelectItem>
-            <SelectItem value="closed">Closed</SelectItem>
-          </SelectContent>
-        </Select>
-      ),
-    },
-  ], []);
-
-  // Order columns
-  const orderColumns: ColumnDef<OrderRow>[] = useMemo(() => [
-    {
-      id: "user",
-      header: "User",
-      cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-",
-    },
-    {
-      id: "product",
-      header: "Product",
-      cell: ({ row }) => row.original.products?.name || "-",
-    },
-    {
-      accessorKey: "payment_status",
-      header: "Payment Status",
-      cell: ({ row }) => <Badge variant="secondary">{row.original.payment_status}</Badge>,
-    },
-    {
-      accessorKey: "created_at",
-      header: "Date",
-      cell: ({ row }) => format(new Date(row.original.created_at), 'PP'),
-    },
-    {
-      id: "actions",
-      header: "Action",
-      cell: ({ row }) => (
-        row.original.payment_status === 'pending' ? (
-          <div className="flex gap-2">
-            <Button size="sm" onClick={() => handleVerifyPayment(row.original.id, 'verified')}>
-              Verify
-            </Button>
-            <Button size="sm" variant="destructive" onClick={() => handleVerifyPayment(row.original.id, 'rejected')}>
-              Reject
-            </Button>
-          </div>
-        ) : null
-      ),
-    },
-  ], []);
-
-  // Rating columns
-  const ratingColumns: ColumnDef<RatingRow>[] = useMemo(() => [
-    {
-      id: "product",
-      header: "Product",
-      cell: ({ row }) => row.original.products?.name || "-",
-    },
-    {
-      id: "user",
-      header: "User",
-      cell: ({ row }) => row.original.profiles?.full_name || "-",
-    },
-    {
-      accessorKey: "rating",
-      header: "Rating",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-          <span>{row.original.rating}</span>
-        </div>
-      ),
-    },
-    {
-      accessorKey: "review",
-      header: "Review",
-      cell: ({ row }) => (
-        <span className="max-w-xs truncate block">{row.original.review || "-"}</span>
-      ),
-    },
-    {
-      accessorKey: "is_visible",
-      header: "Visible",
-      cell: ({ row }) => (
-        <Badge variant={row.original.is_visible ? 'default' : 'secondary'}>
-          {row.original.is_visible ? 'Yes' : 'No'}
-        </Badge>
-      ),
-    },
-    {
-      id: "actions",
-      header: "Action",
-      cell: ({ row }) => (
-        <Button 
-          size="sm" 
-          variant="outline"
-          onClick={() => handleToggleRatingVisibility(row.original.id, row.original.is_visible)}
-        >
-          Toggle
-        </Button>
-      ),
-    },
-  ], []);
 
   // Filtered data
   const filteredTickets = useMemo(() => {
-    if (!ticketSearch) return tickets;
-    return tickets.filter(ticket => 
-      ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase()) ||
-      ticket.status.toLowerCase().includes(ticketSearch.toLowerCase())
-    );
-  }, [tickets, ticketSearch]);
+    return tickets.filter(t => {
+      const matchesSearch = t.subject.toLowerCase().includes(ticketSearch.toLowerCase()) ||
+        t.profiles?.full_name?.toLowerCase().includes(ticketSearch.toLowerCase()) || 
+        t.profiles?.email?.toLowerCase().includes(ticketSearch.toLowerCase());
+      const matchesStatus = ticketStatusFilter === 'all' || t.status === ticketStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [tickets, ticketSearch, ticketStatusFilter]);
 
   const filteredOrders = useMemo(() => {
-    const pendingOrders = orders.filter(o => o.payment_status === 'pending');
-    if (!orderSearch) return pendingOrders;
-    return pendingOrders.filter(order => 
-      order.products?.name?.toLowerCase().includes(orderSearch.toLowerCase()) ||
-      order.payment_status.toLowerCase().includes(orderSearch.toLowerCase())
-    );
-  }, [orders, orderSearch]);
+    return orders.filter(o => {
+      const matchesSearch = o.products?.name?.toLowerCase().includes(orderSearch.toLowerCase()) ||
+        o.profiles?.full_name?.toLowerCase().includes(orderSearch.toLowerCase());
+      const matchesStatus = orderStatusFilter === 'all' || o.payment_status === orderStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [orders, orderSearch, orderStatusFilter]);
 
   const filteredRatings = useMemo(() => {
-    if (!ratingSearch) return ratings;
-    return ratings.filter(rating => 
-      rating.products?.name?.toLowerCase().includes(ratingSearch.toLowerCase()) ||
-      rating.profiles?.full_name?.toLowerCase().includes(ratingSearch.toLowerCase())
-    );
-  }, [ratings, ratingSearch]);
+    return ratings.filter(r => {
+      const matchesSearch = r.products?.name?.toLowerCase().includes(ratingSearch.toLowerCase()) ||
+        r.profiles?.full_name?.toLowerCase().includes(ratingSearch.toLowerCase());
+      const matchesVisible = ratingVisibleFilter === 'all' || 
+        (ratingVisibleFilter === 'visible' && r.is_visible) ||
+        (ratingVisibleFilter === 'hidden' && !r.is_visible);
+      return matchesSearch && matchesVisible;
+    });
+  }, [ratings, ratingSearch, ratingVisibleFilter]);
 
-  // Tables
-  const ticketTable = useReactTable({
-    data: filteredTickets,
-    columns: ticketColumns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    state: { sorting: ticketSorting },
-    onSortingChange: setTicketSorting,
-    initialState: { pagination: { pageSize: 10 } },
-  });
-
-  const orderTable = useReactTable({
-    data: filteredOrders,
-    columns: orderColumns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    state: { sorting: orderSorting },
-    onSortingChange: setOrderSorting,
-    initialState: { pagination: { pageSize: 10 } },
-  });
-
-  const ratingTable = useReactTable({
-    data: filteredRatings,
-    columns: ratingColumns,
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    state: { sorting: ratingSorting },
-    onSortingChange: setRatingSorting,
-    initialState: { pagination: { pageSize: 10 } },
-  });
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <div className="container mx-auto p-4">Loading...</div>
+  const ticketColumns: ColumnDef<TicketRow>[] = useMemo(() => [
+    { accessorKey: "subject", header: "Subject", cell: ({ row }) => (
+      <div className="cursor-pointer hover:text-primary" onClick={() => { setSelectedTicket(row.original); setTicketDialogOpen(true); }}>
+        <p className="font-medium">{row.original.subject}</p>
+        <p className="text-xs text-muted-foreground line-clamp-1">{row.original.description}</p>
       </div>
-    );
-  }
+    )},
+    { id: "user", header: "User", cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-" },
+    { accessorKey: "status", header: "Status", cell: ({ row }) => (
+      <Badge className={getTicketStatusColor(row.original.status)}>{row.original.status.replace("_", " ")}</Badge>
+    )},
+    { accessorKey: "created_at", header: "Created", cell: ({ row }) => format(new Date(row.original.created_at), 'PP') },
+    { id: "attachment", header: "Attachment", cell: ({ row }) => row.original.image_proof ? (
+      <a href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${row.original.image_proof}`} target="_blank" className="text-primary hover:underline flex items-center gap-1"><ExternalLink className="h-3 w-3" />View</a>
+    ) : "-" },
+    { id: "actions", header: "Action", cell: ({ row }) => (
+      <Select value={row.original.status} onValueChange={(val) => handleUpdateTicketStatus(row.original.id, val)}>
+        <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="open">Open</SelectItem>
+          <SelectItem value="in_progress">In Progress</SelectItem>
+          <SelectItem value="resolved">Resolved</SelectItem>
+          <SelectItem value="closed">Closed</SelectItem>
+        </SelectContent>
+      </Select>
+    )},
+  ], []);
+
+  const orderColumns: ColumnDef<OrderRow>[] = useMemo(() => [
+    { id: "user", header: "User", cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-" },
+    { id: "product", header: "Product", cell: ({ row }) => row.original.products?.name || "-" },
+    { accessorKey: "quantity", header: "Qty" },
+    { accessorKey: "payment_status", header: "Status", cell: ({ row }) => (
+      <Badge variant={row.original.payment_status === 'verified' ? 'default' : row.original.payment_status === 'rejected' ? 'destructive' : 'secondary'}>{row.original.payment_status}</Badge>
+    )},
+    { accessorKey: "created_at", header: "Date", cell: ({ row }) => format(new Date(row.original.created_at), 'PP') },
+    { id: "proof", header: "Proof", cell: ({ row }) => row.original.payment_proof ? (
+      <a href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${row.original.payment_proof}`} target="_blank" className="text-primary hover:underline flex items-center gap-1"><ExternalLink className="h-3 w-3" />View</a>
+    ) : "-" },
+    { id: "actions", header: "Action", cell: ({ row }) => row.original.payment_status === 'pending' && (
+      <Button size="sm" onClick={() => { setVerifyingOrder(row.original); setVerifyDialogOpen(true); }}>Verify</Button>
+    )},
+  ], []);
+
+  const ratingColumns: ColumnDef<RatingRow>[] = useMemo(() => [
+    { id: "product", header: "Product", cell: ({ row }) => row.original.products?.name || "-" },
+    { id: "user", header: "User", cell: ({ row }) => row.original.profiles?.full_name || "-" },
+    { accessorKey: "rating", header: "Rating", cell: ({ row }) => <div className="flex items-center gap-1"><Star className="h-4 w-4 fill-yellow-400 text-yellow-400" /><span>{row.original.rating}</span></div> },
+    { accessorKey: "review", header: "Review", cell: ({ row }) => <span className="max-w-xs truncate block">{row.original.review || "-"}</span> },
+    { accessorKey: "is_visible", header: "Visible", cell: ({ row }) => <Badge variant={row.original.is_visible ? 'default' : 'secondary'}>{row.original.is_visible ? 'Yes' : 'No'}</Badge> },
+    { id: "actions", header: "Action", cell: ({ row }) => <Button size="sm" variant="outline" onClick={() => handleToggleRatingVisibility(row.original.id, row.original.is_visible)}>Toggle</Button> },
+  ], []);
+
+  const ticketTable = useReactTable({ data: filteredTickets, columns: ticketColumns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), getSortedRowModel: getSortedRowModel(), state: { sorting: ticketSorting }, onSortingChange: setTicketSorting, initialState: { pagination: { pageSize: 10 } } });
+  const orderTable = useReactTable({ data: filteredOrders, columns: orderColumns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), getSortedRowModel: getSortedRowModel(), state: { sorting: orderSorting }, onSortingChange: setOrderSorting, initialState: { pagination: { pageSize: 10 } } });
+  const ratingTable = useReactTable({ data: filteredRatings, columns: ratingColumns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), getSortedRowModel: getSortedRowModel(), state: { sorting: ratingSorting }, onSortingChange: setRatingSorting, initialState: { pagination: { pageSize: 10 } } });
+
+  if (loading) return <div className="min-h-screen bg-background"><Navbar /><div className="container mx-auto p-4">Loading...</div></div>;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
       <div className="container mx-auto p-4 space-y-6">
-        <div className="flex items-center gap-3">
-          <Badge variant="secondary" className="text-lg px-4 py-2">Staff Dashboard</Badge>
-        </div>
-
+        <Badge variant="secondary" className="text-lg px-4 py-2">Staff Dashboard</Badge>
         <Tabs defaultValue="tickets" className="space-y-4">
           <div className="w-full overflow-x-auto pb-2">
             <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-5">
-              <TabsTrigger value="tickets" className="flex-shrink-0">
-                <Ticket className="h-4 w-4 mr-2" />
-                <span>Tickets</span>
-              </TabsTrigger>
-              <TabsTrigger value="orders" className="flex-shrink-0">
-                <CheckCircle className="h-4 w-4 mr-2" />
-                <span>Orders</span>
-              </TabsTrigger>
-              <TabsTrigger value="ratings" className="flex-shrink-0">
-                <Star className="h-4 w-4 mr-2" />
-                <span>Ratings</span>
-              </TabsTrigger>
-              <TabsTrigger value="stock" className="flex-shrink-0">
-                <Package className="h-4 w-4 mr-2" />
-                <span>Stock</span>
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="flex-shrink-0">
-                <History className="h-4 w-4 mr-2" />
-                <span>Activity</span>
-              </TabsTrigger>
+              <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-2" />Tickets</TabsTrigger>
+              <TabsTrigger value="orders"><CheckCircle className="h-4 w-4 mr-2" />Orders</TabsTrigger>
+              <TabsTrigger value="ratings"><Star className="h-4 w-4 mr-2" />Ratings</TabsTrigger>
+              <TabsTrigger value="stock"><Package className="h-4 w-4 mr-2" />Stock</TabsTrigger>
+              <TabsTrigger value="activity"><History className="h-4 w-4 mr-2" />Activity</TabsTrigger>
             </TabsList>
           </div>
 
@@ -455,49 +280,15 @@ const Staff = () => {
               <CardHeader>
                 <CardTitle>Support Tickets</CardTitle>
                 <CardDescription>Manage customer support requests</CardDescription>
-                <div className="flex items-center gap-2 mt-4">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search tickets..."
-                    value={ticketSearch}
-                    onChange={(e) => setTicketSearch(e.target.value)}
-                    className="max-w-sm"
-                  />
-                </div>
+                <DataTableFilters searchValue={ticketSearch} onSearchChange={setTicketSearch} searchPlaceholder="Search tickets..."
+                  filters={[{ key: 'status', label: 'Status', value: ticketStatusFilter, options: [{ label: 'Open', value: 'open' }, { label: 'In Progress', value: 'in_progress' }, { label: 'Resolved', value: 'resolved' }, { label: 'Closed', value: 'closed' }], onChange: setTicketStatusFilter }]}
+                  onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); }} />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      {ticketTable.getHeaderGroups().map(headerGroup => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map(header => (
-                            <TableHead key={header.id}>
-                              {flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {ticketTable.getRowModel().rows.length ? (
-                        ticketTable.getRowModel().rows.map(row => (
-                          <TableRow key={row.id}>
-                            {row.getVisibleCells().map(cell => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={ticketColumns.length} className="text-center">
-                            No tickets found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
+                    <TableHeader>{ticketTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                    <TableBody>{ticketTable.getRowModel().rows.length ? ticketTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={ticketColumns.length} className="text-center">No tickets found</TableCell></TableRow>}</TableBody>
                   </Table>
                 </div>
                 <DataTablePagination table={ticketTable} />
@@ -508,51 +299,17 @@ const Staff = () => {
           <TabsContent value="orders">
             <Card>
               <CardHeader>
-                <CardTitle>Pending Orders</CardTitle>
-                <CardDescription>Verify payments for pending orders</CardDescription>
-                <div className="flex items-center gap-2 mt-4">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search orders..."
-                    value={orderSearch}
-                    onChange={(e) => setOrderSearch(e.target.value)}
-                    className="max-w-sm"
-                  />
-                </div>
+                <CardTitle>Order Verification</CardTitle>
+                <CardDescription>Verify payments and issue redeem codes</CardDescription>
+                <DataTableFilters searchValue={orderSearch} onSearchChange={setOrderSearch} searchPlaceholder="Search orders..."
+                  filters={[{ key: 'status', label: 'Status', value: orderStatusFilter, options: [{ label: 'Pending', value: 'pending' }, { label: 'Verified', value: 'verified' }, { label: 'Rejected', value: 'rejected' }], onChange: setOrderStatusFilter }]}
+                  onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); }} />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      {orderTable.getHeaderGroups().map(headerGroup => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map(header => (
-                            <TableHead key={header.id}>
-                              {flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {orderTable.getRowModel().rows.length ? (
-                        orderTable.getRowModel().rows.map(row => (
-                          <TableRow key={row.id}>
-                            {row.getVisibleCells().map(cell => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={orderColumns.length} className="text-center">
-                            No pending orders
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
+                    <TableHeader>{orderTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                    <TableBody>{orderTable.getRowModel().rows.length ? orderTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={orderColumns.length} className="text-center">No orders found</TableCell></TableRow>}</TableBody>
                   </Table>
                 </div>
                 <DataTablePagination table={orderTable} />
@@ -565,49 +322,15 @@ const Staff = () => {
               <CardHeader>
                 <CardTitle>Product Ratings</CardTitle>
                 <CardDescription>Manage product reviews visibility</CardDescription>
-                <div className="flex items-center gap-2 mt-4">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search ratings..."
-                    value={ratingSearch}
-                    onChange={(e) => setRatingSearch(e.target.value)}
-                    className="max-w-sm"
-                  />
-                </div>
+                <DataTableFilters searchValue={ratingSearch} onSearchChange={setRatingSearch} searchPlaceholder="Search ratings..."
+                  filters={[{ key: 'visible', label: 'Visibility', value: ratingVisibleFilter, options: [{ label: 'Visible', value: 'visible' }, { label: 'Hidden', value: 'hidden' }], onChange: setRatingVisibleFilter }]}
+                  onReset={() => { setRatingSearch(""); setRatingVisibleFilter("all"); }} />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      {ratingTable.getHeaderGroups().map(headerGroup => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map(header => (
-                            <TableHead key={header.id}>
-                              {flexRender(header.column.columnDef.header, header.getContext())}
-                            </TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {ratingTable.getRowModel().rows.length ? (
-                        ratingTable.getRowModel().rows.map(row => (
-                          <TableRow key={row.id}>
-                            {row.getVisibleCells().map(cell => (
-                              <TableCell key={cell.id}>
-                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                              </TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={ratingColumns.length} className="text-center">
-                            No ratings found
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
+                    <TableHeader>{ratingTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                    <TableBody>{ratingTable.getRowModel().rows.length ? ratingTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={ratingColumns.length} className="text-center">No ratings found</TableCell></TableRow>}</TableBody>
                   </Table>
                 </div>
                 <DataTablePagination table={ratingTable} />
@@ -617,31 +340,12 @@ const Staff = () => {
 
           <TabsContent value="stock">
             <Card>
-              <CardHeader>
-                <CardTitle>Stock Management</CardTitle>
-                <CardDescription>Update product inventory</CardDescription>
-              </CardHeader>
+              <CardHeader><CardTitle>Stock Management</CardTitle><CardDescription>Manage product inventory</CardDescription></CardHeader>
               <CardContent>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {products.map((product) => (
-                    <Card key={product.id} className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">{product.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Current Stock: <span className={product.stock < 10 ? "text-destructive font-bold" : ""}>{product.stock}</span>
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            setSelectedProduct(product);
-                            setStockDialogOpen(true);
-                          }}
-                        >
-                          Update
-                        </Button>
-                      </div>
+                  {products.map(p => (
+                    <Card key={p.id} className="cursor-pointer hover:border-primary" onClick={() => { setSelectedProduct(p); setStockDialogOpen(true); }}>
+                      <CardContent className="p-4"><p className="font-medium">{p.name}</p><Badge variant={p.stock > 10 ? 'default' : p.stock > 0 ? 'secondary' : 'destructive'}>{p.stock} in stock</Badge></CardContent>
                     </Card>
                   ))}
                 </div>
@@ -649,20 +353,22 @@ const Staff = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="activity">
-            <StockActivityLog />
-          </TabsContent>
+          <TabsContent value="activity"><StockActivityLog /></TabsContent>
         </Tabs>
       </div>
 
-      {selectedProduct && (
-        <StockManagement
-          product={selectedProduct}
-          open={stockDialogOpen}
-          onOpenChange={setStockDialogOpen}
-          onSuccess={fetchData}
-        />
-      )}
+      {selectedProduct && <StockManagement product={selectedProduct} open={stockDialogOpen} onOpenChange={setStockDialogOpen} onSuccess={fetchData} />}
+      
+      <Dialog open={ticketDialogOpen} onOpenChange={setTicketDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="flex items-center gap-2"><MessageSquare className="h-5 w-5" />{selectedTicket?.subject}</DialogTitle></DialogHeader>
+          {selectedTicket && <TicketConversation ticketId={selectedTicket.id} ticketStatus={selectedTicket.status} ticketOwnerId={selectedTicket.user_id} imageProof={selectedTicket.image_proof} />}
+        </DialogContent>
+      </Dialog>
+
+      <OrderVerificationDialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen} 
+        order={verifyingOrder ? { ...verifyingOrder, product_name: verifyingOrder.products?.name, customer_name: verifyingOrder.profiles?.full_name || '', customer_email: verifyingOrder.profiles?.email || '' } : null}
+        onVerify={handleVerifyOrder} onReject={handleRejectOrder} />
     </div>
   );
 };
