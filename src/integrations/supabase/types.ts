@@ -357,7 +357,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_product_ratings: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          product_id: string | null
+          product_name: string | null
+          rating: number | null
+          review: string | null
+          reviewer_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_ratings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       has_role: {

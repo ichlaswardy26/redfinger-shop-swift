@@ -6,6 +6,11 @@ import Navbar from "@/components/Navbar";
 import StockManagement from "@/components/StockManagement";
 import CopyButton from "@/components/CopyButton";
 import { StockActivityLog } from "@/components/StockActivityLog";
+import { DataTableFilters } from "@/components/DataTableFilters";
+import { OrderVerificationDialog } from "@/components/OrderVerificationDialog";
+import { TicketConversation } from "@/components/TicketConversation";
+import { FilePreview } from "@/components/FilePreview";
+import { WebSettingsEditor } from "@/components/WebSettingsEditor";
 import { productSchema } from "@/lib/validations";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +24,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ShoppingCart, Users, Package, LayoutDashboard, CheckCircle, XCircle, Clock, Search, 
-  ExternalLink, AlertTriangle, Ticket, Star, Settings, History 
+  ExternalLink, AlertTriangle, Ticket, Star, Settings, History, Eye, MessageSquare
 } from "lucide-react";
 import { 
   useReactTable, 
@@ -82,7 +87,9 @@ interface TicketRow {
   subject: string;
   description: string;
   status: string;
+  image_proof: string | null;
   created_at: string;
+  user_id: string;
   profiles: { full_name: string | null; email: string } | null;
 }
 
@@ -105,30 +112,37 @@ const Admin = () => {
   const [ratings, setRatings] = useState<RatingRow[]>([]);
   const [stats, setStats] = useState<Stats>({ totalOrders: 0, pendingPayments: 0, totalRevenue: 0, totalUsers: 0 });
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [verifyingOrder, setVerifyingOrder] = useState<Order | null>(null);
-  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [stockManagementOpen, setStockManagementOpen] = useState(false);
   const [selectedProductForStock, setSelectedProductForStock] = useState<Product | null>(null);
   const [productForm, setProductForm] = useState({ name: "", description: "", price: "", duration_days: "" });
-  const [verifyForm, setVerifyForm] = useState<{ redeem_codes: string[], admin_notes: string, status: string }>({ 
-    redeem_codes: [], 
-    admin_notes: "", 
-    status: "verified" 
-  });
+  
+  // Order verification
+  const [verifyingOrder, setVerifyingOrder] = useState<Order | null>(null);
+  const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
+  
+  // Ticket conversation
+  const [selectedTicket, setSelectedTicket] = useState<TicketRow | null>(null);
+  const [ticketConversationOpen, setTicketConversationOpen] = useState(false);
+  
+  // Filters
+  const [orderSearch, setOrderSearch] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [userSearch, setUserSearch] = useState("");
+  const [ticketSearch, setTicketSearch] = useState("");
+  const [ticketStatusFilter, setTicketStatusFilter] = useState("all");
+  const [ratingSearch, setRatingSearch] = useState("");
+  const [ratingVisibleFilter, setRatingVisibleFilter] = useState("all");
   const [productSearch, setProductSearch] = useState("");
-  const [productSorting, setProductSorting] = useState<SortingState>([]);
-  const [productFilters, setProductFilters] = useState<ColumnFiltersState>([]);
+  
+  // Table state
   const [orderSorting, setOrderSorting] = useState<SortingState>([]);
   const [orderFilters, setOrderFilters] = useState<ColumnFiltersState>([]);
-  const [orderSearch, setOrderSearch] = useState("");
   const [userSorting, setUserSorting] = useState<SortingState>([]);
   const [userFilters, setUserFilters] = useState<ColumnFiltersState>([]);
-  const [userSearch, setUserSearch] = useState("");
   const [ticketSorting, setTicketSorting] = useState<SortingState>([]);
-  const [ticketSearch, setTicketSearch] = useState("");
   const [ratingSorting, setRatingSorting] = useState<SortingState>([]);
-  const [ratingSearch, setRatingSearch] = useState("");
+  
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -137,7 +151,6 @@ const Admin = () => {
   }, []);
 
   useEffect(() => {
-    // Set up realtime subscriptions
     const channel = supabase
       .channel('admin-updates')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, () => fetchTickets())
@@ -160,21 +173,13 @@ const Admin = () => {
       }
       const { data, error } = await supabase.functions.invoke('verify-admin');
       if (error || !data?.isAdmin) {
-        toast({
-          title: "Access denied",
-          description: "You don't have permission to access this page",
-          variant: "destructive",
-        });
+        toast({ title: "Access denied", description: "You don't have permission to access this page", variant: "destructive" });
         navigate("/");
         return;
       }
       await Promise.all([fetchProducts(), fetchOrders(), fetchUsers(), fetchStats(), fetchTickets(), fetchRatings()]);
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to verify admin access",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to verify admin access", variant: "destructive" });
       navigate("/");
     } finally {
       setLoading(false);
@@ -182,74 +187,44 @@ const Admin = () => {
   };
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("products").select("*").order("created_at", { ascending: false });
     if (!error && data) {
       setProducts(data);
       const lowStockProducts = data.filter(p => p.stock < 10 && p.stock > 0);
       const outOfStockProducts = data.filter(p => p.stock === 0);
       if (lowStockProducts.length > 0) {
-        toast({
-          title: "Low Stock Alert",
-          description: `${lowStockProducts.length} product(s) have low stock (< 10 items)`,
-          variant: "destructive",
-        });
+        toast({ title: "Low Stock Alert", description: `${lowStockProducts.length} product(s) have low stock`, variant: "destructive" });
       }
       if (outOfStockProducts.length > 0) {
-        toast({
-          title: "Out of Stock Alert",
-          description: `${outOfStockProducts.length} product(s) are out of stock`,
-          variant: "destructive",
-        });
+        toast({ title: "Out of Stock Alert", description: `${outOfStockProducts.length} product(s) are out of stock`, variant: "destructive" });
       }
     }
   };
 
   const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select(`*, products(name)`)
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("orders").select(`*, products(name)`).order("created_at", { ascending: false });
     if (!error && data) {
       const userIds = [...new Set(data.map((order: any) => order.user_id))];
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id, email, full_name")
-        .in("id", userIds);
+      const { data: profiles } = await supabase.from("profiles").select("id, email, full_name").in("id", userIds);
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
       const ordersWithDetails = data.map((order: any) => {
         const profile = profileMap.get(order.user_id);
-        return {
-          ...order,
-          product_name: order.products?.name || "Unknown",
-          customer_email: profile?.email || "Unknown",
-          customer_name: profile?.full_name || "Unknown",
-        };
+        return { ...order, product_name: order.products?.name || "Unknown", customer_email: profile?.email || "Unknown", customer_name: profile?.full_name || "Unknown" };
       });
       setOrders(ordersWithDetails);
     }
   };
 
   const fetchUsers = async () => {
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data: profiles } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
     if (profiles) {
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("user_id, role");
+      const { data: roles } = await supabase.from("user_roles").select("user_id, role");
       const roleMap = new Map<string, string[]>();
       roles?.forEach(r => {
         if (!roleMap.has(r.user_id)) roleMap.set(r.user_id, []);
         roleMap.get(r.user_id)?.push(r.role);
       });
-      const usersWithRoles = profiles.map(p => ({
-        ...p,
-        roles: roleMap.get(p.id) || [],
-      }));
+      const usersWithRoles = profiles.map(p => ({ ...p, roles: roleMap.get(p.id) || [] }));
       setUsers(usersWithRoles);
     }
   };
@@ -265,30 +240,24 @@ const Admin = () => {
   };
 
   const fetchTickets = async () => {
-    const { data, error } = await supabase
-      .from("support_tickets")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("support_tickets").select("*").order("created_at", { ascending: false });
     if (!error && data) {
       const userIds = [...new Set(data.map(t => t.user_id))];
       const { data: profiles } = await supabase.from("profiles").select("id, full_name, email").in("id", userIds);
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
       const ticketsWithProfiles = data.map(t => ({ ...t, profiles: profileMap.get(t.user_id) || null }));
-      setTickets(ticketsWithProfiles as any);
+      setTickets(ticketsWithProfiles as TicketRow[]);
     }
   };
 
   const fetchRatings = async () => {
-    const { data, error } = await supabase
-      .from("product_ratings")
-      .select("*, products(name)")
-      .order("created_at", { ascending: false });
+    const { data, error } = await supabase.from("product_ratings").select("*, products(name)").order("created_at", { ascending: false });
     if (!error && data) {
       const userIds = [...new Set(data.map(r => r.user_id))];
       const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
       const ratingsWithProfiles = data.map(r => ({ ...r, profiles: profileMap.get(r.user_id) || null }));
-      setRatings(ratingsWithProfiles as any);
+      setRatings(ratingsWithProfiles as RatingRow[]);
     }
   };
 
@@ -301,149 +270,57 @@ const Admin = () => {
         price: parseFloat(productForm.price),
         duration_days: parseInt(productForm.duration_days),
       });
-
       if (!validationResult.success) {
-        const firstError = validationResult.error.errors[0];
-        toast({
-          title: "Validation Error",
-          description: firstError.message,
-          variant: "destructive",
-        });
+        toast({ title: "Validation Error", description: validationResult.error.errors[0].message, variant: "destructive" });
         return;
       }
-
       const productData = validationResult.data;
-      
       if (editingProduct) {
-        const { error } = await supabase
-          .from("products")
-          .update(productData)
-          .eq("id", editingProduct.id);
+        const { error } = await supabase.from("products").update(productData).eq("id", editingProduct.id);
         if (error) throw error;
         toast({ title: "Product updated successfully" });
       } else {
-        const { error } = await supabase.from("products").insert([{ 
-          name: productData.name,
-          description: productData.description,
-          price: productData.price,
-          duration_days: productData.duration_days,
-          stock: 0 
-        }]);
+        const { error } = await supabase.from("products").insert([{ name: productData.name, description: productData.description, price: productData.price, duration_days: productData.duration_days, stock: 0 }]);
         if (error) throw error;
-        toast({ title: "Product created successfully. Use Stock Management to add stock." });
+        toast({ title: "Product created successfully" });
       }
       setProductForm({ name: "", description: "", price: "", duration_days: "" });
       setEditingProduct(null);
       setShowProductDialog(false);
       fetchProducts();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to save product",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleVerifyPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!verifyingOrder) return;
-    try {
-      const updateData: any = {
-        payment_status: verifyForm.status,
-        admin_notes: verifyForm.admin_notes,
-        verified_at: new Date().toISOString(),
-      };
-      if (verifyForm.status === "verified") {
-        if (verifyForm.redeem_codes.some(code => !code.trim())) {
-          toast({
-            title: "Error",
-            description: "Please fill in all redeem codes",
-            variant: "destructive",
-          });
-          return;
-        }
-        updateData.redeem_codes = verifyForm.redeem_codes;
-        updateData.status = "active";
-        const product = products.find(p => p.id === verifyingOrder.product_id);
-        if (product) {
-          await supabase
-            .from("products")
-            .update({ stock: Math.max(0, product.stock - verifyingOrder.quantity) })
-            .eq("id", product.id);
-        }
-      } else if (verifyForm.status === "rejected") {
-        updateData.status = "rejected";
-      }
-      const { error } = await supabase
-        .from("orders")
-        .update(updateData)
-        .eq("id", verifyingOrder.id);
-      if (error) throw error;
-      toast({ title: "Payment verification updated" });
-      setVerifyingOrder(null);
-      setVerifyDialogOpen(false);
-      setVerifyForm({ redeem_codes: [], admin_notes: "", status: "verified" });
-      fetchOrders();
-      fetchProducts();
-      fetchStats();
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to verify payment",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to save product", variant: "destructive" });
     }
   };
 
   const handleToggleRole = async (userId: string, role: "admin" | "staff", hasRole: boolean) => {
     try {
       if (hasRole) {
-        const { data } = await supabase
-          .from("user_roles")
-          .select("id")
-          .eq("user_id", userId)
-          .eq("role", role)
-          .maybeSingle();
-        if (data) {
-          await supabase.from("user_roles").delete().eq("id", data.id);
-        }
+        const { data } = await supabase.from("user_roles").select("id").eq("user_id", userId).eq("role", role).maybeSingle();
+        if (data) await supabase.from("user_roles").delete().eq("id", data.id);
       } else {
         await supabase.from("user_roles").insert({ user_id: userId, role: role as any });
       }
       toast({ title: `Role ${hasRole ? "removed" : "added"} successfully` });
       fetchUsers();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update role",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update role", variant: "destructive" });
     }
   };
 
   const handleToggleUserStatus = async (userId: string, currentStatus: boolean) => {
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_active: !currentStatus })
-        .eq("id", userId);
+      const { error } = await supabase.from("profiles").update({ is_active: !currentStatus }).eq("id", userId);
       if (error) throw error;
       toast({ title: `User ${!currentStatus ? "activated" : "deactivated"} successfully` });
       fetchUsers();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update user status",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update user status", variant: "destructive" });
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user? This action cannot be undone.")) {
-      return;
-    }
+    if (!confirm("Are you sure you want to delete this user?")) return;
     try {
       await supabase.from("orders").delete().eq("user_id", userId);
       await supabase.from("user_roles").delete().eq("user_id", userId);
@@ -452,20 +329,17 @@ const Admin = () => {
       toast({ title: "User deleted successfully" });
       fetchUsers();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete user",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to delete user", variant: "destructive" });
     }
   };
 
   const handleUpdateTicketStatus = async (ticketId: string, status: string) => {
     try {
-      const { error } = await supabase
-        .from("support_tickets")
-        .update({ status })
-        .eq("id", ticketId);
+      const updateData: any = { status };
+      if (status === 'resolved' || status === 'closed') {
+        updateData.resolved_at = new Date().toISOString();
+      }
+      const { error } = await supabase.from("support_tickets").update(updateData).eq("id", ticketId);
       if (error) throw error;
       toast({ title: "Ticket status updated" });
       fetchTickets();
@@ -476,10 +350,7 @@ const Admin = () => {
 
   const handleToggleRatingVisibility = async (ratingId: string, isVisible: boolean) => {
     try {
-      const { error } = await supabase
-        .from("product_ratings")
-        .update({ is_visible: !isVisible })
-        .eq("id", ratingId);
+      const { error } = await supabase.from("product_ratings").update({ is_visible: !isVisible }).eq("id", ratingId);
       if (error) throw error;
       toast({ title: "Rating visibility updated" });
       fetchRatings();
@@ -487,6 +358,59 @@ const Admin = () => {
       toast({ title: "Error updating rating", variant: "destructive" });
     }
   };
+
+  const getTicketStatusColor = (status: string) => {
+    switch (status) {
+      case 'open': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
+      case 'in_progress': return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      case 'resolved': return 'bg-green-500/10 text-green-500 border-green-500/20';
+      case 'closed': return 'bg-muted text-muted-foreground';
+      default: return '';
+    }
+  };
+
+  // Filtered data
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      const matchesSearch = !orderSearch || 
+        order.customer_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
+        order.customer_email.toLowerCase().includes(orderSearch.toLowerCase()) ||
+        order.product_name.toLowerCase().includes(orderSearch.toLowerCase());
+      const matchesStatus = orderStatusFilter === 'all' || order.payment_status === orderStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [orders, orderSearch, orderStatusFilter]);
+
+  const filteredUsers = useMemo(() => {
+    if (!userSearch) return users;
+    return users.filter(user => 
+      user.full_name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+      user.email.toLowerCase().includes(userSearch.toLowerCase())
+    );
+  }, [users, userSearch]);
+
+  const filteredTickets = useMemo(() => {
+    return tickets.filter(ticket => {
+      const matchesSearch = !ticketSearch || 
+        ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase()) ||
+        ticket.profiles?.full_name?.toLowerCase().includes(ticketSearch.toLowerCase()) ||
+        ticket.profiles?.email?.toLowerCase().includes(ticketSearch.toLowerCase());
+      const matchesStatus = ticketStatusFilter === 'all' || ticket.status === ticketStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [tickets, ticketSearch, ticketStatusFilter]);
+
+  const filteredRatings = useMemo(() => {
+    return ratings.filter(rating => {
+      const matchesSearch = !ratingSearch || 
+        rating.products?.name?.toLowerCase().includes(ratingSearch.toLowerCase()) ||
+        rating.profiles?.full_name?.toLowerCase().includes(ratingSearch.toLowerCase());
+      const matchesVisible = ratingVisibleFilter === 'all' || 
+        (ratingVisibleFilter === 'visible' && rating.is_visible) ||
+        (ratingVisibleFilter === 'hidden' && !rating.is_visible);
+      return matchesSearch && matchesVisible;
+    });
+  }, [ratings, ratingSearch, ratingVisibleFilter]);
 
   // Order columns
   const orderColumns: ColumnDef<Order>[] = useMemo(() => [
@@ -505,77 +429,43 @@ const Admin = () => {
       accessorKey: "payment_status",
       header: "Payment",
       cell: ({ row }) => (
-        <Badge variant={
-          row.original.payment_status === "verified" ? "default" :
-          row.original.payment_status === "rejected" ? "destructive" : "outline"
-        }>
+        <Badge variant={row.original.payment_status === "verified" ? "default" : row.original.payment_status === "rejected" ? "destructive" : "outline"}>
           {row.original.payment_status}
         </Badge>
       ),
     },
-    {
-      accessorKey: "quantity",
-      header: "Qty",
-      cell: ({ row }) => <span className="font-medium">{row.original.quantity}</span>,
-    },
+    { accessorKey: "quantity", header: "Qty", cell: ({ row }) => <span className="font-medium">{row.original.quantity}</span> },
     {
       accessorKey: "payment_proof",
       header: "Proof",
-      cell: ({ row }) => (
-        row.original.payment_proof ? (
-          <a
-            href={row.original.payment_proof}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline flex items-center gap-1 text-sm"
-          >
-            <ExternalLink className="h-3 w-3" />
-            View
-          </a>
-        ) : <span className="text-muted-foreground text-sm">-</span>
-      ),
+      cell: ({ row }) => row.original.payment_proof ? (
+        <a href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${row.original.payment_proof}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-sm">
+          <ExternalLink className="h-3 w-3" />View
+        </a>
+      ) : <span className="text-muted-foreground text-sm">-</span>,
     },
     {
       id: "redeem_codes",
       header: "Codes",
-      cell: ({ row }) => (
-        row.original.redeem_codes && row.original.redeem_codes.length > 0 ? (
-          <div className="flex flex-col gap-1">
-            {row.original.redeem_codes.map((code, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <code className="text-xs bg-muted px-2 py-1 rounded">{code}</code>
-                <CopyButton text={code} label="" />
-              </div>
-            ))}
-          </div>
-        ) : <span className="text-muted-foreground text-sm">-</span>
-      ),
+      cell: ({ row }) => row.original.redeem_codes && row.original.redeem_codes.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          {row.original.redeem_codes.map((code, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <code className="text-xs bg-muted px-2 py-1 rounded">****</code>
+              <CopyButton text={code} label="" />
+            </div>
+          ))}
+        </div>
+      ) : <span className="text-muted-foreground text-sm">-</span>,
     },
-    {
-      accessorKey: "created_at",
-      header: "Date",
-      cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString(),
-    },
+    { accessorKey: "created_at", header: "Date", cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString() },
     {
       id: "actions",
       header: "Actions",
-      cell: ({ row }) => (
-        row.original.payment_status === "pending" && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setVerifyingOrder(row.original);
-              const codes = Array.from({ length: row.original.quantity }, () => 
-                `RF-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
-              );
-              setVerifyForm({ redeem_codes: codes, admin_notes: "", status: "verified" });
-              setVerifyDialogOpen(true);
-            }}
-          >
-            Verify
-          </Button>
-        )
+      cell: ({ row }) => row.original.payment_status === "pending" && (
+        <Button variant="outline" size="sm" onClick={() => { setVerifyingOrder(row.original); setVerifyDialogOpen(true); }}>
+          Verify
+        </Button>
       ),
     },
   ], []);
@@ -587,21 +477,13 @@ const Admin = () => {
     {
       accessorKey: "is_active",
       header: "Status",
-      cell: ({ row }) => (
-        <Badge variant={row.original.is_active ? "default" : "destructive"}>
-          {row.original.is_active ? "Active" : "Inactive"}
-        </Badge>
-      ),
+      cell: ({ row }) => <Badge variant={row.original.is_active ? "default" : "destructive"}>{row.original.is_active ? "Active" : "Inactive"}</Badge>,
     },
     {
       accessorKey: "roles",
       header: "Roles",
       cell: ({ row }) => (
-        <div className="flex gap-1">
-          {row.original.roles.length > 0 ? (
-            row.original.roles.map((role) => <Badge key={role} variant="secondary">{role}</Badge>)
-          ) : <Badge variant="outline">user</Badge>}
-        </div>
+        <div className="flex gap-1">{row.original.roles.length > 0 ? row.original.roles.map((role) => <Badge key={role} variant="secondary">{role}</Badge>) : <Badge variant="outline">user</Badge>}</div>
       ),
     },
     {
@@ -609,23 +491,16 @@ const Admin = () => {
       header: "Actions",
       cell: ({ row }) => (
         <div className="flex gap-2 flex-wrap">
-          <Button
-            variant={row.original.roles.includes("admin") ? "destructive" : "outline"}
-            size="sm"
-            onClick={() => handleToggleRole(row.original.id, "admin", row.original.roles.includes("admin"))}
-          >
+          <Button variant={row.original.roles.includes("admin") ? "destructive" : "outline"} size="sm" onClick={() => handleToggleRole(row.original.id, "admin", row.original.roles.includes("admin"))}>
             {row.original.roles.includes("admin") ? "Remove" : "Make"} Admin
           </Button>
-          <Button
-            variant={row.original.roles.includes("staff") ? "destructive" : "outline"}
-            size="sm"
-            onClick={() => handleToggleRole(row.original.id, "staff", row.original.roles.includes("staff"))}
-          >
+          <Button variant={row.original.roles.includes("staff") ? "destructive" : "outline"} size="sm" onClick={() => handleToggleRole(row.original.id, "staff", row.original.roles.includes("staff"))}>
             {row.original.roles.includes("staff") ? "Remove" : "Make"} Staff
           </Button>
-          <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(row.original.id)}>
-            Delete
+          <Button variant="outline" size="sm" onClick={() => handleToggleUserStatus(row.original.id, row.original.is_active)}>
+            {row.original.is_active ? "Deactivate" : "Activate"}
           </Button>
+          <Button variant="destructive" size="sm" onClick={() => handleDeleteUser(row.original.id)}>Delete</Button>
         </div>
       ),
     },
@@ -643,126 +518,65 @@ const Admin = () => {
         </div>
       ),
     },
-    {
-      id: "user",
-      header: "User",
-      cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-",
-    },
+    { id: "user", header: "User", cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-" },
     {
       accessorKey: "status",
       header: "Status",
-      cell: ({ row }) => (
-        <Badge variant={row.original.status === 'resolved' ? 'default' : 'secondary'}>
-          {row.original.status}
-        </Badge>
-      ),
+      cell: ({ row }) => <Badge className={getTicketStatusColor(row.original.status)}>{row.original.status.replace("_", " ")}</Badge>,
     },
     {
-      accessorKey: "created_at",
-      header: "Created",
-      cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString(),
+      id: "attachment",
+      header: "Attachment",
+      cell: ({ row }) => row.original.image_proof ? (
+        <Button variant="ghost" size="sm" onClick={() => window.open(`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${row.original.image_proof}`, '_blank')}>
+          <Eye className="h-4 w-4" />
+        </Button>
+      ) : <span className="text-muted-foreground">-</span>,
     },
+    { accessorKey: "created_at", header: "Created", cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString() },
     {
       id: "actions",
-      header: "Action",
+      header: "Actions",
       cell: ({ row }) => (
-        <Select value={row.original.status} onValueChange={(val) => handleUpdateTicketStatus(row.original.id, val)}>
-          <SelectTrigger className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="open">Open</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
-            <SelectItem value="resolved">Resolved</SelectItem>
-            <SelectItem value="closed">Closed</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => { setSelectedTicket(row.original); setTicketConversationOpen(true); }}>
+            <MessageSquare className="h-4 w-4" />
+          </Button>
+          <Select value={row.original.status} onValueChange={(val) => handleUpdateTicketStatus(row.original.id, val)}>
+            <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="in_progress">In Progress</SelectItem>
+              <SelectItem value="resolved">Resolved</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       ),
     },
   ], []);
 
   // Rating columns
   const ratingColumns: ColumnDef<RatingRow>[] = useMemo(() => [
-    {
-      id: "product",
-      header: "Product",
-      cell: ({ row }) => row.original.products?.name || "-",
-    },
-    {
-      id: "user",
-      header: "User",
-      cell: ({ row }) => row.original.profiles?.full_name || "-",
-    },
+    { id: "product", header: "Product", cell: ({ row }) => row.original.products?.name || "-" },
+    { id: "user", header: "User", cell: ({ row }) => row.original.profiles?.full_name || "-" },
     {
       accessorKey: "rating",
       header: "Rating",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1">
-          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-          <span>{row.original.rating}</span>
-        </div>
-      ),
+      cell: ({ row }) => <div className="flex items-center gap-1"><Star className="h-4 w-4 fill-yellow-400 text-yellow-400" /><span>{row.original.rating}</span></div>,
     },
-    {
-      accessorKey: "review",
-      header: "Review",
-      cell: ({ row }) => <span className="max-w-xs truncate block">{row.original.review || "-"}</span>,
-    },
+    { accessorKey: "review", header: "Review", cell: ({ row }) => <span className="max-w-xs truncate block">{row.original.review || "-"}</span> },
     {
       accessorKey: "is_visible",
       header: "Visible",
-      cell: ({ row }) => (
-        <Badge variant={row.original.is_visible ? 'default' : 'secondary'}>
-          {row.original.is_visible ? 'Yes' : 'No'}
-        </Badge>
-      ),
+      cell: ({ row }) => <Badge variant={row.original.is_visible ? 'default' : 'secondary'}>{row.original.is_visible ? 'Yes' : 'No'}</Badge>,
     },
     {
       id: "actions",
       header: "Action",
-      cell: ({ row }) => (
-        <Button size="sm" variant="outline" onClick={() => handleToggleRatingVisibility(row.original.id, row.original.is_visible)}>
-          Toggle
-        </Button>
-      ),
+      cell: ({ row }) => <Button size="sm" variant="outline" onClick={() => handleToggleRatingVisibility(row.original.id, row.original.is_visible)}>Toggle</Button>,
     },
   ], []);
-
-  // Filtered data
-  const filteredOrders = useMemo(() => {
-    if (!orderSearch) return orders;
-    return orders.filter(order => 
-      order.customer_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
-      order.customer_email.toLowerCase().includes(orderSearch.toLowerCase()) ||
-      order.product_name.toLowerCase().includes(orderSearch.toLowerCase()) ||
-      order.payment_status.toLowerCase().includes(orderSearch.toLowerCase())
-    );
-  }, [orders, orderSearch]);
-
-  const filteredUsers = useMemo(() => {
-    if (!userSearch) return users;
-    return users.filter(user => 
-      user.full_name.toLowerCase().includes(userSearch.toLowerCase()) ||
-      user.email.toLowerCase().includes(userSearch.toLowerCase()) ||
-      user.roles.some(role => role.toLowerCase().includes(userSearch.toLowerCase()))
-    );
-  }, [users, userSearch]);
-
-  const filteredTickets = useMemo(() => {
-    if (!ticketSearch) return tickets;
-    return tickets.filter(ticket => 
-      ticket.subject.toLowerCase().includes(ticketSearch.toLowerCase()) ||
-      ticket.status.toLowerCase().includes(ticketSearch.toLowerCase())
-    );
-  }, [tickets, ticketSearch]);
-
-  const filteredRatings = useMemo(() => {
-    if (!ratingSearch) return ratings;
-    return ratings.filter(rating => 
-      rating.products?.name.toLowerCase().includes(ratingSearch.toLowerCase()) ||
-      rating.profiles?.full_name?.toLowerCase().includes(ratingSearch.toLowerCase())
-    );
-  }, [ratings, ratingSearch]);
 
   // Tables
   const orderTable = useReactTable({
@@ -817,9 +631,7 @@ const Admin = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container mx-auto px-4 py-8 text-center">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+        <div className="container mx-auto px-4 py-8 text-center"><p className="text-muted-foreground">Loading...</p></div>
       </div>
     );
   }
@@ -832,98 +644,48 @@ const Admin = () => {
         <Tabs defaultValue="dashboard" className="space-y-6">
           <div className="w-full overflow-x-auto pb-2">
             <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-8">
-              <TabsTrigger value="dashboard" className="flex-shrink-0">
-                <LayoutDashboard className="h-4 w-4 mr-2" />
-                <span>Dashboard</span>
-              </TabsTrigger>
-              <TabsTrigger value="orders" className="flex-shrink-0">
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                <span>Orders</span>
-              </TabsTrigger>
-              <TabsTrigger value="products" className="flex-shrink-0">
-                <Package className="h-4 w-4 mr-2" />
-                <span>Products</span>
-              </TabsTrigger>
-              <TabsTrigger value="users" className="flex-shrink-0">
-                <Users className="h-4 w-4 mr-2" />
-                <span>Users</span>
-              </TabsTrigger>
-              <TabsTrigger value="tickets" className="flex-shrink-0">
-                <Ticket className="h-4 w-4 mr-2" />
-                <span>Tickets</span>
-              </TabsTrigger>
-              <TabsTrigger value="ratings" className="flex-shrink-0">
-                <Star className="h-4 w-4 mr-2" />
-                <span>Ratings</span>
-              </TabsTrigger>
-              <TabsTrigger value="audit" className="flex-shrink-0">
-                <History className="h-4 w-4 mr-2" />
-                <span>Audit</span>
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="flex-shrink-0">
-                <Settings className="h-4 w-4 mr-2" />
-                <span>Settings</span>
-              </TabsTrigger>
+              <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" /><span>Dashboard</span></TabsTrigger>
+              <TabsTrigger value="orders"><ShoppingCart className="h-4 w-4 mr-2" /><span>Orders</span></TabsTrigger>
+              <TabsTrigger value="products"><Package className="h-4 w-4 mr-2" /><span>Products</span></TabsTrigger>
+              <TabsTrigger value="users"><Users className="h-4 w-4 mr-2" /><span>Users</span></TabsTrigger>
+              <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-2" /><span>Tickets</span></TabsTrigger>
+              <TabsTrigger value="ratings"><Star className="h-4 w-4 mr-2" /><span>Ratings</span></TabsTrigger>
+              <TabsTrigger value="audit"><History className="h-4 w-4 mr-2" /><span>Audit</span></TabsTrigger>
+              <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-2" /><span>Settings</span></TabsTrigger>
             </TabsList>
           </div>
 
           <TabsContent value="dashboard" className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                  <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total Orders</CardTitle><ShoppingCart className="h-4 w-4 text-muted-foreground" /></CardHeader>
                 <CardContent><div className="text-2xl font-bold">{stats.totalOrders}</div></CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Pending Payments</CardTitle><Clock className="h-4 w-4 text-muted-foreground" /></CardHeader>
                 <CardContent><div className="text-2xl font-bold">{stats.pendingPayments}</div></CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Verified Orders</CardTitle>
-                  <CheckCircle className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Verified Orders</CardTitle><CheckCircle className="h-4 w-4 text-muted-foreground" /></CardHeader>
                 <CardContent><div className="text-2xl font-bold">{stats.totalRevenue}</div></CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total Users</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader>
                 <CardContent><div className="text-2xl font-bold">{stats.totalUsers}</div></CardContent>
               </Card>
             </div>
             <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest orders and transactions</CardDescription>
-              </CardHeader>
+              <CardHeader><CardTitle>Recent Activity</CardTitle><CardDescription>Latest orders</CardDescription></CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Customer</TableHead>
-                        <TableHead>Product</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                    <TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Product</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {orders.slice(0, 5).map((order) => (
                         <TableRow key={order.id}>
                           <TableCell>{order.customer_name}</TableCell>
                           <TableCell>{order.product_name}</TableCell>
-                          <TableCell>
-                            <Badge variant={order.payment_status === "verified" ? "default" : "outline"}>
-                              {order.payment_status}
-                            </Badge>
-                          </TableCell>
+                          <TableCell><Badge variant={order.payment_status === "verified" ? "default" : "outline"}>{order.payment_status}</Badge></TableCell>
                           <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
                         </TableRow>
                       ))}
@@ -939,35 +701,26 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Order Management</CardTitle>
                 <CardDescription>Verify payments and issue redeem codes</CardDescription>
-                <div className="flex items-center gap-2 mt-4">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search by customer, product, or status..." value={orderSearch} onChange={(e) => setOrderSearch(e.target.value)} className="max-w-sm" />
-                </div>
+                <DataTableFilters
+                  searchValue={orderSearch}
+                  onSearchChange={setOrderSearch}
+                  searchPlaceholder="Search by customer, product..."
+                  statusValue={orderStatusFilter}
+                  onStatusChange={setOrderStatusFilter}
+                  statusOptions={[
+                    { value: "all", label: "All Status" },
+                    { value: "pending", label: "Pending" },
+                    { value: "verified", label: "Verified" },
+                    { value: "rejected", label: "Rejected" },
+                  ]}
+                />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      {orderTable.getHeaderGroups().map(headerGroup => (
-                        <TableRow key={headerGroup.id}>
-                          {headerGroup.headers.map(header => (
-                            <TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>
-                          ))}
-                        </TableRow>
-                      ))}
-                    </TableHeader>
+                    <TableHeader>{orderTable.getHeaderGroups().map(headerGroup => (<TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>))}</TableHeader>
                     <TableBody>
-                      {orderTable.getRowModel().rows.length ? (
-                        orderTable.getRowModel().rows.map(row => (
-                          <TableRow key={row.id}>
-                            {row.getVisibleCells().map(cell => (
-                              <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
-                            ))}
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow><TableCell colSpan={orderColumns.length} className="text-center">No orders found</TableCell></TableRow>
-                      )}
+                      {orderTable.getRowModel().rows.length ? orderTable.getRowModel().rows.map(row => (<TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>)) : (<TableRow><TableCell colSpan={orderColumns.length} className="text-center">No orders found</TableCell></TableRow>)}
                     </TableBody>
                   </Table>
                 </div>
@@ -998,9 +751,7 @@ const Admin = () => {
                 <div className="flex items-center gap-2 mb-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search products..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="max-w-sm" /></div>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      <TableRow><TableHead>Name</TableHead><TableHead>Price</TableHead><TableHead>Duration</TableHead><TableHead>Stock</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow>
-                    </TableHeader>
+                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Price</TableHead><TableHead>Duration</TableHead><TableHead>Stock</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).map((product) => (
                         <TableRow key={product.id}>
@@ -1035,23 +786,13 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>User Management</CardTitle>
                 <CardDescription>Manage user accounts and roles</CardDescription>
-                <div className="flex items-center gap-2 mt-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search by name, email, or role..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="max-w-sm" /></div>
+                <div className="flex items-center gap-2 mt-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search by name or email..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="max-w-sm" /></div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      {userTable.getHeaderGroups().map(headerGroup => (
-                        <TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {userTable.getRowModel().rows.length ? (
-                        userTable.getRowModel().rows.map(row => (
-                          <TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>
-                        ))
-                      ) : (<TableRow><TableCell colSpan={userColumns.length} className="text-center">No users found</TableCell></TableRow>)}
-                    </TableBody>
+                    <TableHeader>{userTable.getHeaderGroups().map(headerGroup => (<TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>))}</TableHeader>
+                    <TableBody>{userTable.getRowModel().rows.length ? userTable.getRowModel().rows.map(row => (<TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>)) : (<TableRow><TableCell colSpan={userColumns.length} className="text-center">No users found</TableCell></TableRow>)}</TableBody>
                   </Table>
                 </div>
                 <DataTablePagination table={userTable} />
@@ -1064,23 +805,26 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Support Tickets</CardTitle>
                 <CardDescription>Manage customer support requests</CardDescription>
-                <div className="flex items-center gap-2 mt-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search tickets..." value={ticketSearch} onChange={(e) => setTicketSearch(e.target.value)} className="max-w-sm" /></div>
+                <DataTableFilters
+                  searchValue={ticketSearch}
+                  onSearchChange={setTicketSearch}
+                  searchPlaceholder="Search tickets..."
+                  statusValue={ticketStatusFilter}
+                  onStatusChange={setTicketStatusFilter}
+                  statusOptions={[
+                    { value: "all", label: "All Status" },
+                    { value: "open", label: "Open" },
+                    { value: "in_progress", label: "In Progress" },
+                    { value: "resolved", label: "Resolved" },
+                    { value: "closed", label: "Closed" },
+                  ]}
+                />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      {ticketTable.getHeaderGroups().map(headerGroup => (
-                        <TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {ticketTable.getRowModel().rows.length ? (
-                        ticketTable.getRowModel().rows.map(row => (
-                          <TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>
-                        ))
-                      ) : (<TableRow><TableCell colSpan={ticketColumns.length} className="text-center">No tickets found</TableCell></TableRow>)}
-                    </TableBody>
+                    <TableHeader>{ticketTable.getHeaderGroups().map(headerGroup => (<TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>))}</TableHeader>
+                    <TableBody>{ticketTable.getRowModel().rows.length ? ticketTable.getRowModel().rows.map(row => (<TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>)) : (<TableRow><TableCell colSpan={ticketColumns.length} className="text-center">No tickets found</TableCell></TableRow>)}</TableBody>
                   </Table>
                 </div>
                 <DataTablePagination table={ticketTable} />
@@ -1093,23 +837,24 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>Product Ratings & Reviews</CardTitle>
                 <CardDescription>Manage customer ratings and reviews</CardDescription>
-                <div className="flex items-center gap-2 mt-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search ratings..." value={ratingSearch} onChange={(e) => setRatingSearch(e.target.value)} className="max-w-sm" /></div>
+                <DataTableFilters
+                  searchValue={ratingSearch}
+                  onSearchChange={setRatingSearch}
+                  searchPlaceholder="Search by product or user..."
+                  statusValue={ratingVisibleFilter}
+                  onStatusChange={setRatingVisibleFilter}
+                  statusOptions={[
+                    { value: "all", label: "All" },
+                    { value: "visible", label: "Visible" },
+                    { value: "hidden", label: "Hidden" },
+                  ]}
+                />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader>
-                      {ratingTable.getHeaderGroups().map(headerGroup => (
-                        <TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>
-                      ))}
-                    </TableHeader>
-                    <TableBody>
-                      {ratingTable.getRowModel().rows.length ? (
-                        ratingTable.getRowModel().rows.map(row => (
-                          <TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>
-                        ))
-                      ) : (<TableRow><TableCell colSpan={ratingColumns.length} className="text-center">No ratings found</TableCell></TableRow>)}
-                    </TableBody>
+                    <TableHeader>{ratingTable.getHeaderGroups().map(headerGroup => (<TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>))}</TableHeader>
+                    <TableBody>{ratingTable.getRowModel().rows.length ? ratingTable.getRowModel().rows.map(row => (<TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>)) : (<TableRow><TableCell colSpan={ratingColumns.length} className="text-center">No ratings found</TableCell></TableRow>)}</TableBody>
                   </Table>
                 </div>
                 <DataTablePagination table={ratingTable} />
@@ -1119,110 +864,60 @@ const Admin = () => {
 
           <TabsContent value="audit"><StockActivityLog /></TabsContent>
 
-          <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Web Settings</CardTitle>
-                <CardDescription>Customize static content and site configuration</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Site Name</Label>
-                    <Input defaultValue="Redfinger Store" placeholder="Your site name" />
-                    <p className="text-xs text-muted-foreground">Displayed in header and browser tab</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Support Email</Label>
-                    <Input defaultValue="support@redfinger.store" placeholder="support@example.com" />
-                    <p className="text-xs text-muted-foreground">For customer support inquiries</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>WhatsApp Number</Label>
-                    <Input defaultValue="+62812345678" placeholder="+62..." />
-                    <p className="text-xs text-muted-foreground">For WhatsApp support link</p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Redeem Site URL</Label>
-                    <Input defaultValue="https://redfinger.com/redeem" placeholder="https://..." />
-                    <p className="text-xs text-muted-foreground">URL for customers to redeem codes</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Hero Title</Label>
-                  <Input defaultValue="Cloud Phone Solutions for Everyone" placeholder="Main headline" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Hero Description</Label>
-                  <Textarea defaultValue="Get premium Redfinger cloud phone services at competitive prices. Perfect for gaming, social media, and more." placeholder="Subheadline text" rows={3} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Footer Text</Label>
-                  <Input defaultValue="© 2024 Redfinger Store. All rights reserved." placeholder="Footer copyright text" />
-                </div>
-                <div className="flex gap-2">
-                  <Button>Save Settings</Button>
-                  <Button variant="outline">Reset to Default</Button>
-                </div>
-                <p className="text-sm text-muted-foreground">Note: Settings will be saved to the database and applied across all pages.</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
+          <TabsContent value="settings"><WebSettingsEditor /></TabsContent>
         </Tabs>
       </div>
 
-      {/* Verify Payment Dialog */}
-      <Dialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Verify Payment</DialogTitle>
-            <DialogDescription>Review payment proof and issue redeem codes</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleVerifyPayment} className="space-y-4">
-            {verifyingOrder?.payment_proof && (
-              <div>
-                <Label>Payment Proof</Label>
-                <a href={verifyingOrder.payment_proof} target="_blank" rel="noopener noreferrer" className="text-primary underline text-sm block">View Payment Proof</a>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select value={verifyForm.status} onValueChange={(val) => setVerifyForm({ ...verifyForm, status: val })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="verified">Verified</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {verifyForm.status === "verified" && (
-              <div className="space-y-2">
-                <Label>Redeem Codes (one per quantity ordered)</Label>
-                {verifyForm.redeem_codes.map((code, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground">#{index + 1}</span>
-                    <Input value={code} onChange={(e) => { const newCodes = [...verifyForm.redeem_codes]; newCodes[index] = e.target.value; setVerifyForm({ ...verifyForm, redeem_codes: newCodes }); }} placeholder={`Redeem code ${index + 1}`} />
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label>Admin Notes</Label>
-              <Textarea value={verifyForm.admin_notes} onChange={(e) => setVerifyForm({ ...verifyForm, admin_notes: e.target.value })} placeholder="Optional notes for this verification" />
-            </div>
-            <Button type="submit" className="w-full">{verifyForm.status === "verified" ? "Verify & Issue Codes" : "Reject Payment"}</Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Order Verification Dialog */}
+      {verifyingOrder && (
+        <OrderVerificationDialog
+          open={verifyDialogOpen}
+          onOpenChange={setVerifyDialogOpen}
+          order={{
+            id: verifyingOrder.id,
+            product_id: verifyingOrder.product_id,
+            quantity: verifyingOrder.quantity,
+            payment_proof: verifyingOrder.payment_proof,
+            product_name: verifyingOrder.product_name,
+            customer_name: verifyingOrder.customer_name,
+          }}
+          onSuccess={() => { fetchOrders(); fetchProducts(); fetchStats(); }}
+        />
+      )}
 
       {/* Stock Management Dialog */}
       {selectedProductForStock && (
         <StockManagement
-          product={selectedProductForStock}
           open={stockManagementOpen}
           onOpenChange={setStockManagementOpen}
+          product={selectedProductForStock}
           onSuccess={fetchProducts}
         />
+      )}
+
+      {/* Ticket Conversation Dialog */}
+      {selectedTicket && (
+        <Dialog open={ticketConversationOpen} onOpenChange={setTicketConversationOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{selectedTicket.subject}</DialogTitle>
+              <DialogDescription>
+                {selectedTicket.profiles?.full_name || selectedTicket.profiles?.email} • {selectedTicket.status}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-4 bg-muted rounded-lg">
+                <p className="text-sm">{selectedTicket.description}</p>
+                {selectedTicket.image_proof && (
+                  <div className="mt-4">
+                    <FilePreview filePath={selectedTicket.image_proof} bucket="payment-proofs" />
+                  </div>
+                )}
+              </div>
+              <TicketConversation ticketId={selectedTicket.id} ticketStatus={selectedTicket.status} />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import heroImage from "@/assets/hero-cloud-phone.jpg";
-import { Smartphone, Cloud, Shield, Zap, Star, Quote, TrendingUp } from "lucide-react";
+import { Smartphone, Cloud, Shield, Zap, Star, Quote, TrendingUp, Mail, Phone, MessageCircle, Facebook, Instagram, Twitter, ArrowRight, CheckCircle } from "lucide-react";
 
 interface Product {
   id: string;
@@ -24,25 +24,94 @@ interface Rating {
   rating: number;
   review: string | null;
   created_at: string;
-  profiles: {
-    full_name: string | null;
-  };
-  products: {
-    name: string;
-  };
+  profiles: { full_name: string | null };
+  products: { name: string };
 }
+
+interface WebSettings {
+  hero_title: string;
+  hero_description: string;
+  hero_cta_primary: string;
+  hero_cta_secondary: string;
+  features: Array<{ icon: string; title: string; description: string }>;
+  cta_title: string;
+  cta_description: string;
+  cta_button: string;
+  contact_email: string;
+  contact_phone: string;
+  contact_whatsapp: string;
+  social_facebook: string;
+  social_instagram: string;
+  social_twitter: string;
+  footer_text: string;
+  redeem_url: string;
+}
+
+const defaultSettings: WebSettings = {
+  hero_title: "Premium Redfinger Cloud Phone Services",
+  hero_description: "Experience seamless cloud gaming and app automation with our reliable Redfinger subscriptions",
+  hero_cta_primary: "Browse Store",
+  hero_cta_secondary: "Sign In",
+  features: [
+    { icon: "smartphone", title: "Multiple Devices", description: "Run multiple cloud phones simultaneously" },
+    { icon: "cloud", title: "24/7 Uptime", description: "Always-on cloud infrastructure" },
+    { icon: "shield", title: "Secure & Reliable", description: "Enterprise-grade security standards" },
+    { icon: "zap", title: "High Performance", description: "Optimized for speed and efficiency" },
+  ],
+  cta_title: "Ready to Get Started?",
+  cta_description: "Join thousands of satisfied customers using our premium Redfinger cloud phone services",
+  cta_button: "View Plans & Pricing",
+  contact_email: "support@redfinger.store",
+  contact_phone: "+62812345678",
+  contact_whatsapp: "+62812345678",
+  social_facebook: "",
+  social_instagram: "",
+  social_twitter: "",
+  footer_text: "© 2024 Redfinger Store. All rights reserved.",
+  redeem_url: "https://redfinger.com/redeem",
+};
+
+const iconMap: Record<string, React.ReactNode> = {
+  smartphone: <Smartphone className="h-6 w-6 text-primary" />,
+  cloud: <Cloud className="h-6 w-6 text-primary" />,
+  shield: <Shield className="h-6 w-6 text-primary" />,
+  zap: <Zap className="h-6 w-6 text-primary" />,
+};
 
 const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [bestSellerId, setBestSellerId] = useState<string | null>(null);
+  const [settings, setSettings] = useState<WebSettings>(defaultSettings);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchProducts();
     fetchRatings();
     fetchBestSeller();
+    fetchSettings();
   }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("web_settings")
+        .select("key, value");
+      
+      if (!error && data) {
+        const settingsObj: Record<string, any> = {};
+        data.forEach(item => {
+          settingsObj[item.key] = item.value;
+        });
+        setSettings(prev => ({
+          ...prev,
+          ...settingsObj.site_settings,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching settings:", error);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -52,7 +121,6 @@ const Index = () => {
         .eq("is_active", true)
         .order("price", { ascending: true })
         .limit(3);
-
       if (error) throw error;
       setProducts(data || []);
     } catch (error) {
@@ -67,7 +135,6 @@ const Index = () => {
         .select("id, rating, review, created_at, user_id, product_id")
         .eq("is_visible", true)
         .order("created_at", { ascending: false });
-
       if (error) throw error;
 
       const userIds = [...new Set(data?.map(r => r.user_id) || [])];
@@ -122,35 +189,44 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background">
       <Navbar />
       
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img
-            src={heroImage}
-            alt="Cloud Phone Hero"
-            className="w-full h-full object-cover opacity-20"
-          />
+          <img src={heroImage} alt="Cloud Phone Hero" className="w-full h-full object-cover opacity-20" />
           <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-background/90" />
         </div>
         
         <div className="relative container mx-auto px-4 py-24 lg:py-32">
           <div className="max-w-3xl mx-auto text-center space-y-8">
-            <h1 className="text-4xl lg:text-6xl font-bold tracking-tight">
-              Premium Redfinger Cloud Phone Services
+            <Badge variant="secondary" className="px-4 py-2">
+              <Star className="h-4 w-4 mr-2 fill-yellow-400 text-yellow-400" />
+              Trusted by 10,000+ customers
+            </Badge>
+            <h1 className="text-4xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+              {settings.hero_title}
             </h1>
-            <p className="text-xl text-muted-foreground">
-              Experience seamless cloud gaming and app automation with our reliable Redfinger subscriptions
-            </p>
+            <p className="text-xl text-muted-foreground">{settings.hero_description}</p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <Button size="lg" onClick={() => navigate("/store")} className="text-lg px-8">
-                Browse Store
+              <Button size="lg" onClick={() => navigate("/store")} className="text-lg px-8 gap-2">
+                {settings.hero_cta_primary} <ArrowRight className="h-5 w-5" />
               </Button>
               <Button size="lg" variant="outline" onClick={() => navigate("/auth/signin")}>
-                Sign In
+                {settings.hero_cta_secondary}
               </Button>
+            </div>
+            <div className="flex flex-wrap gap-6 justify-center pt-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle className="h-4 w-4 text-green-500" /> Instant Delivery
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle className="h-4 w-4 text-green-500" /> 24/7 Support
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle className="h-4 w-4 text-green-500" /> Secure Payment
+              </div>
             </div>
           </div>
         </div>
@@ -164,53 +240,17 @@ const Index = () => {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="border-2 hover:border-primary/50 transition-all">
-            <CardContent className="pt-6 text-center space-y-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Smartphone className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg">Multiple Devices</h3>
-              <p className="text-sm text-muted-foreground">
-                Run multiple cloud phones simultaneously
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 hover:border-primary/50 transition-all">
-            <CardContent className="pt-6 text-center space-y-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Cloud className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg">24/7 Uptime</h3>
-              <p className="text-sm text-muted-foreground">
-                Always-on cloud infrastructure
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 hover:border-primary/50 transition-all">
-            <CardContent className="pt-6 text-center space-y-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Shield className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg">Secure & Reliable</h3>
-              <p className="text-sm text-muted-foreground">
-                Enterprise-grade security standards
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 hover:border-primary/50 transition-all">
-            <CardContent className="pt-6 text-center space-y-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Zap className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="font-semibold text-lg">High Performance</h3>
-              <p className="text-sm text-muted-foreground">
-                Optimized for speed and efficiency
-              </p>
-            </CardContent>
-          </Card>
+          {settings.features.map((feature, index) => (
+            <Card key={index} className="border-2 hover:border-primary/50 transition-all hover:shadow-lg">
+              <CardContent className="pt-6 text-center space-y-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                  {iconMap[feature.icon] || <Zap className="h-6 w-6 text-primary" />}
+                </div>
+                <h3 className="font-semibold text-lg">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">{feature.description}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </section>
 
@@ -224,45 +264,41 @@ const Index = () => {
 
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {products.map((product) => (
-              <Card key={product.id} className="relative border-2 hover:border-primary/50 transition-all">
+              <Card key={product.id} className="relative border-2 hover:border-primary/50 transition-all hover:shadow-xl">
                 {bestSellerId === product.id && (
                   <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
-                    <TrendingUp className="h-3 w-3 mr-1" />
-                    Best Seller
+                    <TrendingUp className="h-3 w-3 mr-1" />Best Seller
                   </Badge>
                 )}
                 <CardContent className="pt-6 space-y-4">
                   <div className="text-center space-y-2">
                     <h3 className="text-2xl font-bold">{product.name}</h3>
-                    {product.description && (
-                      <p className="text-sm text-muted-foreground">{product.description}</p>
-                    )}
+                    {product.description && <p className="text-sm text-muted-foreground">{product.description}</p>}
                   </div>
                   <div className="text-center py-4">
-                    <div className="text-4xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                    <div className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                       Rp {product.price.toLocaleString('id-ID')}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {product.duration_days} days validity
-                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">{product.duration_days} days validity</p>
                   </div>
                   <Badge variant={product.stock > 0 ? "default" : "secondary"} className="w-full justify-center">
                     {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
                   </Badge>
+                  <Button className="w-full" onClick={() => navigate("/store")} disabled={product.stock === 0}>
+                    {product.stock > 0 ? "Order Now" : "Out of Stock"}
+                  </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
 
           <div className="text-center mt-8">
-            <Button size="lg" onClick={() => navigate("/store")}>
-              View All Products
-            </Button>
+            <Button size="lg" variant="outline" onClick={() => navigate("/store")}>View All Products</Button>
           </div>
         </section>
       )}
 
-      {/* Testimonials Slider Section */}
+      {/* Testimonials Section */}
       {ratings.length > 0 && (
         <section className="container mx-auto px-4 py-16 lg:py-24">
           <div className="text-center mb-12">
@@ -271,43 +307,22 @@ const Index = () => {
           </div>
 
           <div className="max-w-6xl mx-auto">
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full"
-            >
+            <Carousel opts={{ align: "start", loop: true }} className="w-full">
               <CarouselContent>
                 {ratings.map((rating) => (
                   <CarouselItem key={rating.id} className="md:basis-1/2 lg:basis-1/3">
-                    <Card className="relative h-full">
+                    <Card className="relative h-full border-2">
                       <CardContent className="pt-6 space-y-4 h-full flex flex-col">
                         <Quote className="h-8 w-8 text-primary/20 absolute top-4 right-4" />
                         <div className="flex items-center gap-1">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${
-                                i < rating.rating
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : "text-muted-foreground"
-                              }`}
-                            />
+                            <Star key={i} className={`h-4 w-4 ${i < rating.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
                           ))}
                         </div>
-                        {rating.review && (
-                          <p className="text-sm text-muted-foreground line-clamp-4 flex-grow">
-                            "{rating.review}"
-                          </p>
-                        )}
+                        {rating.review && <p className="text-sm text-muted-foreground line-clamp-4 flex-grow">"{rating.review}"</p>}
                         <div className="pt-4 border-t mt-auto">
-                          <p className="font-semibold text-sm">
-                            {rating.profiles.full_name || "Anonymous"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {rating.products.name}
-                          </p>
+                          <p className="font-semibold text-sm">{rating.profiles.full_name || "Anonymous"}</p>
+                          <p className="text-xs text-muted-foreground">{rating.products.name}</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -322,19 +337,87 @@ const Index = () => {
       )}
 
       {/* CTA Section */}
-      <section className="container mx-auto px-4 py-16 text-center">
-        <Card className="border-2 border-primary/20 bg-primary/5">
-          <CardContent className="py-12 space-y-6">
-            <h2 className="text-3xl lg:text-4xl font-bold">Ready to Get Started?</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Join thousands of satisfied customers using our premium Redfinger cloud phone services
-            </p>
-            <Button size="lg" onClick={() => navigate("/store")} className="text-lg px-8">
-              View Plans & Pricing
+      <section className="container mx-auto px-4 py-16">
+        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+          <CardContent className="py-12 space-y-6 text-center">
+            <h2 className="text-3xl lg:text-4xl font-bold">{settings.cta_title}</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{settings.cta_description}</p>
+            <Button size="lg" onClick={() => navigate("/store")} className="text-lg px-8 gap-2">
+              {settings.cta_button} <ArrowRight className="h-5 w-5" />
             </Button>
           </CardContent>
         </Card>
       </section>
+
+      {/* Contact Section */}
+      <section className="container mx-auto px-4 py-16 border-t">
+        <div className="grid md:grid-cols-3 gap-8 text-center">
+          {settings.contact_email && (
+            <div className="space-y-2">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <Mail className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold">Email</h3>
+              <a href={`mailto:${settings.contact_email}`} className="text-muted-foreground hover:text-primary transition-colors">
+                {settings.contact_email}
+              </a>
+            </div>
+          )}
+          {settings.contact_phone && (
+            <div className="space-y-2">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <Phone className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold">Phone</h3>
+              <a href={`tel:${settings.contact_phone}`} className="text-muted-foreground hover:text-primary transition-colors">
+                {settings.contact_phone}
+              </a>
+            </div>
+          )}
+          {settings.contact_whatsapp && (
+            <div className="space-y-2">
+              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+                <MessageCircle className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="font-semibold">WhatsApp</h3>
+              <a 
+                href={`https://wa.me/${settings.contact_whatsapp.replace(/[^0-9]/g, '')}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Chat with us
+              </a>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t bg-muted/30">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">{settings.footer_text}</p>
+            <div className="flex items-center gap-4">
+              {settings.social_facebook && (
+                <a href={settings.social_facebook} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                  <Facebook className="h-5 w-5" />
+                </a>
+              )}
+              {settings.social_instagram && (
+                <a href={settings.social_instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                  <Instagram className="h-5 w-5" />
+                </a>
+              )}
+              {settings.social_twitter && (
+                <a href={settings.social_twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                  <Twitter className="h-5 w-5" />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
