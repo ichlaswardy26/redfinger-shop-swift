@@ -18,6 +18,7 @@ import { FilePreview } from "@/components/FilePreview";
 import { DataTableFilters } from "@/components/DataTableFilters";
 import { OrderVerificationDialog } from "@/components/OrderVerificationDialog";
 import { format } from "date-fns";
+import { exportToCSV } from "@/lib/exportUtils";
 import { useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, flexRender, ColumnDef, SortingState } from "@tanstack/react-table";
 import { DataTablePagination } from "@/components/DataTablePagination";
 
@@ -200,6 +201,51 @@ const Staff = () => {
     });
   }, [ratings, ratingSearch, ratingVisibleFilter]);
 
+  // Export handlers
+  const exportTickets = () => {
+    exportToCSV(filteredTickets.map(t => ({
+      ...t,
+      user_name: t.profiles?.full_name || '',
+      user_email: t.profiles?.email || ''
+    })), [
+      { key: "subject", header: "Subject" },
+      { key: "user_name", header: "Customer" },
+      { key: "user_email", header: "Email" },
+      { key: "status", header: "Status" },
+      { key: "created_at", header: "Created At" },
+    ], "staff_tickets");
+  };
+
+  const exportOrders = () => {
+    exportToCSV(filteredOrders.map(o => ({
+      ...o,
+      product_name: o.products?.name || '',
+      user_name: o.profiles?.full_name || '',
+      user_email: o.profiles?.email || ''
+    })), [
+      { key: "user_name", header: "Customer" },
+      { key: "user_email", header: "Email" },
+      { key: "product_name", header: "Product" },
+      { key: "quantity", header: "Quantity" },
+      { key: "payment_status", header: "Payment Status" },
+      { key: "created_at", header: "Created At" },
+    ], "staff_orders");
+  };
+
+  const exportRatings = () => {
+    exportToCSV(filteredRatings.map(r => ({
+      ...r,
+      product_name: r.products?.name || '',
+      user_name: r.profiles?.full_name || '',
+    })), [
+      { key: "product_name", header: "Product" },
+      { key: "user_name", header: "Customer" },
+      { key: "rating", header: "Rating" },
+      { key: "review", header: "Review" },
+      { key: "is_visible", header: "Visible" },
+    ], "staff_ratings");
+  };
+
   const ticketColumns: ColumnDef<TicketRow>[] = useMemo(() => [
     { accessorKey: "subject", header: "Subject", cell: ({ row }) => (
       <div className="cursor-pointer hover:text-primary" onClick={() => { setSelectedTicket(row.original); setTicketDialogOpen(true); }}>
@@ -282,7 +328,8 @@ const Staff = () => {
                 <CardDescription>Manage customer support requests</CardDescription>
                 <DataTableFilters searchValue={ticketSearch} onSearchChange={setTicketSearch} searchPlaceholder="Search tickets..."
                   filters={[{ key: 'status', label: 'Status', value: ticketStatusFilter, options: [{ label: 'Open', value: 'open' }, { label: 'In Progress', value: 'in_progress' }, { label: 'Resolved', value: 'resolved' }, { label: 'Closed', value: 'closed' }], onChange: setTicketStatusFilter }]}
-                  onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); }} />
+                  onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); }}
+                  onExport={exportTickets} />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -303,7 +350,8 @@ const Staff = () => {
                 <CardDescription>Verify payments and issue redeem codes</CardDescription>
                 <DataTableFilters searchValue={orderSearch} onSearchChange={setOrderSearch} searchPlaceholder="Search orders..."
                   filters={[{ key: 'status', label: 'Status', value: orderStatusFilter, options: [{ label: 'Pending', value: 'pending' }, { label: 'Verified', value: 'verified' }, { label: 'Rejected', value: 'rejected' }], onChange: setOrderStatusFilter }]}
-                  onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); }} />
+                  onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); }}
+                  onExport={exportOrders} />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -324,7 +372,8 @@ const Staff = () => {
                 <CardDescription>Manage product reviews visibility</CardDescription>
                 <DataTableFilters searchValue={ratingSearch} onSearchChange={setRatingSearch} searchPlaceholder="Search ratings..."
                   filters={[{ key: 'visible', label: 'Visibility', value: ratingVisibleFilter, options: [{ label: 'Visible', value: 'visible' }, { label: 'Hidden', value: 'hidden' }], onChange: setRatingVisibleFilter }]}
-                  onReset={() => { setRatingSearch(""); setRatingVisibleFilter("all"); }} />
+                  onReset={() => { setRatingSearch(""); setRatingVisibleFilter("all"); }}
+                  onExport={exportRatings} />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -362,7 +411,7 @@ const Staff = () => {
       <Dialog open={ticketDialogOpen} onOpenChange={setTicketDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="flex items-center gap-2"><MessageSquare className="h-5 w-5" />{selectedTicket?.subject}</DialogTitle></DialogHeader>
-          {selectedTicket && <TicketConversation ticketId={selectedTicket.id} ticketStatus={selectedTicket.status} ticketOwnerId={selectedTicket.user_id} imageProof={selectedTicket.image_proof} />}
+          {selectedTicket && <TicketConversation ticketId={selectedTicket.id} ticketStatus={selectedTicket.status} ticketOwnerId={selectedTicket.user_id} imageProof={selectedTicket.image_proof} viewerRole="staff" />}
         </DialogContent>
       </Dialog>
 

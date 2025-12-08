@@ -12,6 +12,8 @@ import { TicketConversation } from "@/components/TicketConversation";
 import { FilePreview } from "@/components/FilePreview";
 import { WebSettingsEditor } from "@/components/WebSettingsEditor";
 import { productSchema } from "@/lib/validations";
+import { exportToCSV } from "@/lib/exportUtils";
+import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -412,6 +414,69 @@ const Admin = () => {
     });
   }, [ratings, ratingSearch, ratingVisibleFilter]);
 
+  // Export handlers
+  const exportOrders = () => {
+    exportToCSV(filteredOrders, [
+      { key: "customer_name", header: "Customer" },
+      { key: "customer_email", header: "Email" },
+      { key: "product_name", header: "Product" },
+      { key: "quantity", header: "Quantity" },
+      { key: "payment_status", header: "Payment Status" },
+      { key: "status", header: "Order Status" },
+      { key: "created_at", header: "Created At" },
+    ], "orders");
+  };
+
+  const exportUsers = () => {
+    exportToCSV(filteredUsers, [
+      { key: "full_name", header: "Name" },
+      { key: "email", header: "Email" },
+      { key: "roles", header: "Roles" },
+      { key: "is_active", header: "Active" },
+      { key: "created_at", header: "Joined At" },
+    ], "users");
+  };
+
+  const exportTickets = () => {
+    exportToCSV(filteredTickets.map(t => ({
+      ...t,
+      user_name: t.profiles?.full_name || '',
+      user_email: t.profiles?.email || ''
+    })), [
+      { key: "subject", header: "Subject" },
+      { key: "user_name", header: "Customer" },
+      { key: "user_email", header: "Email" },
+      { key: "status", header: "Status" },
+      { key: "created_at", header: "Created At" },
+    ], "tickets");
+  };
+
+  const exportRatings = () => {
+    exportToCSV(filteredRatings.map(r => ({
+      ...r,
+      product_name: r.products?.name || '',
+      user_name: r.profiles?.full_name || '',
+    })), [
+      { key: "product_name", header: "Product" },
+      { key: "user_name", header: "Customer" },
+      { key: "rating", header: "Rating" },
+      { key: "review", header: "Review" },
+      { key: "is_visible", header: "Visible" },
+      { key: "created_at", header: "Created At" },
+    ], "ratings");
+  };
+
+  const exportProducts = () => {
+    exportToCSV(products, [
+      { key: "name", header: "Name" },
+      { key: "description", header: "Description" },
+      { key: "price", header: "Price (IDR)" },
+      { key: "duration_days", header: "Duration (Days)" },
+      { key: "stock", header: "Stock" },
+      { key: "is_active", header: "Active" },
+    ], "products");
+  };
+
   // Order columns
   const orderColumns: ColumnDef<Order>[] = useMemo(() => [
     {
@@ -717,6 +782,7 @@ const Admin = () => {
                     onChange: setOrderStatusFilter
                   }]}
                   onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); }}
+                  onExport={exportOrders}
                 />
               </CardHeader>
               <CardContent>
@@ -752,7 +818,12 @@ const Admin = () => {
                     </form>
                   </DialogContent>
                 </Dialog>
-                <div className="flex items-center gap-2 mb-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search products..." value={productSearch} onChange={(e) => setProductSearch(e.target.value)} className="max-w-sm" /></div>
+                <DataTableFilters
+                  searchValue={productSearch}
+                  onSearchChange={setProductSearch}
+                  searchPlaceholder="Search products..."
+                  onExport={exportProducts}
+                />
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Price</TableHead><TableHead>Duration</TableHead><TableHead>Stock</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
@@ -790,7 +861,12 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle>User Management</CardTitle>
                 <CardDescription>Manage user accounts and roles</CardDescription>
-                <div className="flex items-center gap-2 mt-4"><Search className="h-4 w-4 text-muted-foreground" /><Input placeholder="Search by name or email..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="max-w-sm" /></div>
+                <DataTableFilters
+                  searchValue={userSearch}
+                  onSearchChange={setUserSearch}
+                  searchPlaceholder="Search by name or email..."
+                  onExport={exportUsers}
+                />
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -826,6 +902,7 @@ const Admin = () => {
                     onChange: setTicketStatusFilter
                   }]}
                   onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); }}
+                  onExport={exportTickets}
                 />
               </CardHeader>
               <CardContent>
@@ -860,6 +937,7 @@ const Admin = () => {
                     onChange: setRatingVisibleFilter
                   }]}
                   onReset={() => { setRatingSearch(""); setRatingVisibleFilter("all"); }}
+                  onExport={exportRatings}
                 />
               </CardHeader>
               <CardContent>
@@ -948,6 +1026,7 @@ const Admin = () => {
                 ticketStatus={selectedTicket.status}
                 ticketOwnerId={selectedTicket.user_id}
                 imageProof={selectedTicket.image_proof}
+                viewerRole="staff"
               />
             </div>
           </DialogContent>

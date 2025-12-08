@@ -22,6 +22,7 @@ interface TicketConversationProps {
   ticketStatus: string;
   ticketOwnerId: string;
   imageProof?: string | null;
+  viewerRole?: 'owner' | 'staff'; // owner = customer viewing their ticket, staff = admin/staff viewing
   onClose?: () => void;
 }
 
@@ -30,6 +31,7 @@ export const TicketConversation = ({
   ticketStatus, 
   ticketOwnerId, 
   imageProof,
+  viewerRole = 'owner',
   onClose 
 }: TicketConversationProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -221,16 +223,23 @@ export const TicketConversation = ({
           </div>
         ) : (
           messages.map((msg) => {
-            const isCurrentUser = msg.user_id === currentUserId;
             const isStaffMessage = staffUserIds.has(msg.user_id);
+            const isTicketOwnerMessage = msg.user_id === ticketOwnerId;
+            
+            // Determine alignment based on viewer role
+            // If viewer is owner: owner messages on right, staff on left
+            // If viewer is staff: staff messages on right, owner on left
+            const isRightAligned = viewerRole === 'owner' 
+              ? isTicketOwnerMessage 
+              : isStaffMessage;
             
             return (
               <div 
                 key={msg.id} 
-                className={`flex ${isCurrentUser ? 'justify-end' : 'justify-start'}`}
+                className={`flex ${isRightAligned ? 'justify-end' : 'justify-start'}`}
               >
                 <Card className={`max-w-[80%] p-3 ${
-                  isCurrentUser 
+                  isRightAligned 
                     ? 'bg-primary text-primary-foreground' 
                     : 'bg-muted'
                 }`}>
@@ -251,7 +260,7 @@ export const TicketConversation = ({
                   </div>
                   <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
                   <p className={`text-[10px] mt-1 ${
-                    isCurrentUser ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                    isRightAligned ? 'text-primary-foreground/70' : 'text-muted-foreground'
                   }`}>
                     {format(new Date(msg.created_at), 'PP p')}
                   </p>
