@@ -40,6 +40,7 @@ interface Ticket {
   image_proof: string | null;
   created_at: string;
   resolved_at: string | null;
+  user_id: string;
 }
 
 const ITEMS_PER_PAGE = 6;
@@ -403,11 +404,16 @@ const Transactions = () => {
                 <p className="text-sm">{selectedTicket.description}</p>
                 {selectedTicket.image_proof && (
                   <div className="mt-4">
-                    <FilePreview filePath={selectedTicket.image_proof} bucket="payment-proofs" />
+                    <FilePreview filePath={selectedTicket.image_proof} />
                   </div>
                 )}
               </div>
-              <TicketConversation ticketId={selectedTicket.id} ticketStatus={selectedTicket.status} />
+              <TicketConversation 
+                ticketId={selectedTicket.id} 
+                ticketStatus={selectedTicket.status}
+                ticketOwnerId={selectedTicket.user_id}
+                imageProof={selectedTicket.image_proof}
+              />
             </div>
           </DialogContent>
         </Dialog>

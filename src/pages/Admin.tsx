@@ -705,14 +705,18 @@ const Admin = () => {
                   searchValue={orderSearch}
                   onSearchChange={setOrderSearch}
                   searchPlaceholder="Search by customer, product..."
-                  statusValue={orderStatusFilter}
-                  onStatusChange={setOrderStatusFilter}
-                  statusOptions={[
-                    { value: "all", label: "All Status" },
-                    { value: "pending", label: "Pending" },
-                    { value: "verified", label: "Verified" },
-                    { value: "rejected", label: "Rejected" },
-                  ]}
+                  filters={[{
+                    key: "status",
+                    label: "Status",
+                    value: orderStatusFilter,
+                    options: [
+                      { value: "pending", label: "Pending" },
+                      { value: "verified", label: "Verified" },
+                      { value: "rejected", label: "Rejected" },
+                    ],
+                    onChange: setOrderStatusFilter
+                  }]}
+                  onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); }}
                 />
               </CardHeader>
               <CardContent>
@@ -809,15 +813,19 @@ const Admin = () => {
                   searchValue={ticketSearch}
                   onSearchChange={setTicketSearch}
                   searchPlaceholder="Search tickets..."
-                  statusValue={ticketStatusFilter}
-                  onStatusChange={setTicketStatusFilter}
-                  statusOptions={[
-                    { value: "all", label: "All Status" },
-                    { value: "open", label: "Open" },
-                    { value: "in_progress", label: "In Progress" },
-                    { value: "resolved", label: "Resolved" },
-                    { value: "closed", label: "Closed" },
-                  ]}
+                  filters={[{
+                    key: "status",
+                    label: "Status",
+                    value: ticketStatusFilter,
+                    options: [
+                      { value: "open", label: "Open" },
+                      { value: "in_progress", label: "In Progress" },
+                      { value: "resolved", label: "Resolved" },
+                      { value: "closed", label: "Closed" },
+                    ],
+                    onChange: setTicketStatusFilter
+                  }]}
+                  onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); }}
                 />
               </CardHeader>
               <CardContent>
@@ -841,13 +849,17 @@ const Admin = () => {
                   searchValue={ratingSearch}
                   onSearchChange={setRatingSearch}
                   searchPlaceholder="Search by product or user..."
-                  statusValue={ratingVisibleFilter}
-                  onStatusChange={setRatingVisibleFilter}
-                  statusOptions={[
-                    { value: "all", label: "All" },
-                    { value: "visible", label: "Visible" },
-                    { value: "hidden", label: "Hidden" },
-                  ]}
+                  filters={[{
+                    key: "visibility",
+                    label: "Visibility",
+                    value: ratingVisibleFilter,
+                    options: [
+                      { value: "visible", label: "Visible" },
+                      { value: "hidden", label: "Hidden" },
+                    ],
+                    onChange: setRatingVisibleFilter
+                  }]}
+                  onReset={() => { setRatingSearch(""); setRatingVisibleFilter("all"); }}
                 />
               </CardHeader>
               <CardContent>
@@ -875,13 +887,30 @@ const Admin = () => {
           onOpenChange={setVerifyDialogOpen}
           order={{
             id: verifyingOrder.id,
-            product_id: verifyingOrder.product_id,
             quantity: verifyingOrder.quantity,
             payment_proof: verifyingOrder.payment_proof,
             product_name: verifyingOrder.product_name,
             customer_name: verifyingOrder.customer_name,
+            created_at: verifyingOrder.created_at,
           }}
-          onSuccess={() => { fetchOrders(); fetchProducts(); fetchStats(); }}
+          onVerify={async (orderId, redeemCodes, adminNotes) => {
+            const { data: { user } } = await supabase.auth.getUser();
+            await supabase.from("orders").update({
+              payment_status: "verified",
+              redeem_codes: redeemCodes,
+              admin_notes: adminNotes,
+              verified_at: new Date().toISOString(),
+              verified_by: user?.id
+            }).eq("id", orderId);
+            fetchOrders(); fetchProducts(); fetchStats();
+          }}
+          onReject={async (orderId, reason) => {
+            await supabase.from("orders").update({
+              payment_status: "rejected",
+              admin_notes: reason
+            }).eq("id", orderId);
+            fetchOrders(); fetchStats();
+          }}
         />
       )}
 
@@ -910,11 +939,16 @@ const Admin = () => {
                 <p className="text-sm">{selectedTicket.description}</p>
                 {selectedTicket.image_proof && (
                   <div className="mt-4">
-                    <FilePreview filePath={selectedTicket.image_proof} bucket="payment-proofs" />
+                    <FilePreview filePath={selectedTicket.image_proof} />
                   </div>
                 )}
               </div>
-              <TicketConversation ticketId={selectedTicket.id} ticketStatus={selectedTicket.status} />
+              <TicketConversation 
+                ticketId={selectedTicket.id} 
+                ticketStatus={selectedTicket.status}
+                ticketOwnerId={selectedTicket.user_id}
+                imageProof={selectedTicket.image_proof}
+              />
             </div>
           </DialogContent>
         </Dialog>
