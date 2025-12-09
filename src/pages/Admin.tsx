@@ -130,9 +130,11 @@ const Admin = () => {
   // Filters
   const [orderSearch, setOrderSearch] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [orderDateRange, setOrderDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [userSearch, setUserSearch] = useState("");
   const [ticketSearch, setTicketSearch] = useState("");
   const [ticketStatusFilter, setTicketStatusFilter] = useState("all");
+  const [ticketDateRange, setTicketDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [ratingSearch, setRatingSearch] = useState("");
   const [ratingVisibleFilter, setRatingVisibleFilter] = useState("all");
   const [productSearch, setProductSearch] = useState("");
@@ -379,9 +381,12 @@ const Admin = () => {
         order.customer_email.toLowerCase().includes(orderSearch.toLowerCase()) ||
         order.product_name.toLowerCase().includes(orderSearch.toLowerCase());
       const matchesStatus = orderStatusFilter === 'all' || order.payment_status === orderStatusFilter;
-      return matchesSearch && matchesStatus;
+      const orderDate = new Date(order.created_at);
+      const matchesDateFrom = !orderDateRange.from || orderDate >= orderDateRange.from;
+      const matchesDateTo = !orderDateRange.to || orderDate <= new Date(orderDateRange.to.getTime() + 86400000);
+      return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
     });
-  }, [orders, orderSearch, orderStatusFilter]);
+  }, [orders, orderSearch, orderStatusFilter, orderDateRange]);
 
   const filteredUsers = useMemo(() => {
     if (!userSearch) return users;
@@ -398,9 +403,12 @@ const Admin = () => {
         ticket.profiles?.full_name?.toLowerCase().includes(ticketSearch.toLowerCase()) ||
         ticket.profiles?.email?.toLowerCase().includes(ticketSearch.toLowerCase());
       const matchesStatus = ticketStatusFilter === 'all' || ticket.status === ticketStatusFilter;
-      return matchesSearch && matchesStatus;
+      const ticketDate = new Date(ticket.created_at);
+      const matchesDateFrom = !ticketDateRange.from || ticketDate >= ticketDateRange.from;
+      const matchesDateTo = !ticketDateRange.to || ticketDate <= new Date(ticketDateRange.to.getTime() + 86400000);
+      return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
     });
-  }, [tickets, ticketSearch, ticketStatusFilter]);
+  }, [tickets, ticketSearch, ticketStatusFilter, ticketDateRange]);
 
   const filteredRatings = useMemo(() => {
     return ratings.filter(rating => {
@@ -781,7 +789,10 @@ const Admin = () => {
                     ],
                     onChange: setOrderStatusFilter
                   }]}
-                  onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); }}
+                  showDateFilter
+                  dateRange={orderDateRange}
+                  onDateRangeChange={setOrderDateRange}
+                  onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); setOrderDateRange({ from: undefined, to: undefined }); }}
                   onExport={exportOrders}
                 />
               </CardHeader>
@@ -901,7 +912,10 @@ const Admin = () => {
                     ],
                     onChange: setTicketStatusFilter
                   }]}
-                  onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); }}
+                  showDateFilter
+                  dateRange={ticketDateRange}
+                  onDateRangeChange={setTicketDateRange}
+                  onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); setTicketDateRange({ from: undefined, to: undefined }); }}
                   onExport={exportTickets}
                 />
               </CardHeader>
