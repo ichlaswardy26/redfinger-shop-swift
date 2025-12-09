@@ -79,15 +79,17 @@ const Staff = () => {
   // Filters
   const [ticketSearch, setTicketSearch] = useState("");
   const [ticketStatusFilter, setTicketStatusFilter] = useState("all");
+  const [ticketDateRange, setTicketDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [orderSearch, setOrderSearch] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
+  const [orderDateRange, setOrderDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [ratingSearch, setRatingSearch] = useState("");
   const [ratingVisibleFilter, setRatingVisibleFilter] = useState("all");
   
   const [ticketSorting, setTicketSorting] = useState<SortingState>([]);
   const [orderSorting, setOrderSorting] = useState<SortingState>([]);
   const [ratingSorting, setRatingSorting] = useState<SortingState>([]);
-  
+
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -177,18 +179,24 @@ const Staff = () => {
         t.profiles?.full_name?.toLowerCase().includes(ticketSearch.toLowerCase()) || 
         t.profiles?.email?.toLowerCase().includes(ticketSearch.toLowerCase());
       const matchesStatus = ticketStatusFilter === 'all' || t.status === ticketStatusFilter;
-      return matchesSearch && matchesStatus;
+      const ticketDate = new Date(t.created_at);
+      const matchesDateFrom = !ticketDateRange.from || ticketDate >= ticketDateRange.from;
+      const matchesDateTo = !ticketDateRange.to || ticketDate <= new Date(ticketDateRange.to.getTime() + 86400000);
+      return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
     });
-  }, [tickets, ticketSearch, ticketStatusFilter]);
+  }, [tickets, ticketSearch, ticketStatusFilter, ticketDateRange]);
 
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
       const matchesSearch = o.products?.name?.toLowerCase().includes(orderSearch.toLowerCase()) ||
         o.profiles?.full_name?.toLowerCase().includes(orderSearch.toLowerCase());
       const matchesStatus = orderStatusFilter === 'all' || o.payment_status === orderStatusFilter;
-      return matchesSearch && matchesStatus;
+      const orderDate = new Date(o.created_at);
+      const matchesDateFrom = !orderDateRange.from || orderDate >= orderDateRange.from;
+      const matchesDateTo = !orderDateRange.to || orderDate <= new Date(orderDateRange.to.getTime() + 86400000);
+      return matchesSearch && matchesStatus && matchesDateFrom && matchesDateTo;
     });
-  }, [orders, orderSearch, orderStatusFilter]);
+  }, [orders, orderSearch, orderStatusFilter, orderDateRange]);
 
   const filteredRatings = useMemo(() => {
     return ratings.filter(r => {
@@ -328,7 +336,8 @@ const Staff = () => {
                 <CardDescription>Manage customer support requests</CardDescription>
                 <DataTableFilters searchValue={ticketSearch} onSearchChange={setTicketSearch} searchPlaceholder="Search tickets..."
                   filters={[{ key: 'status', label: 'Status', value: ticketStatusFilter, options: [{ label: 'Open', value: 'open' }, { label: 'In Progress', value: 'in_progress' }, { label: 'Resolved', value: 'resolved' }, { label: 'Closed', value: 'closed' }], onChange: setTicketStatusFilter }]}
-                  onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); }}
+                  showDateFilter dateRange={ticketDateRange} onDateRangeChange={setTicketDateRange}
+                  onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); setTicketDateRange({ from: undefined, to: undefined }); }}
                   onExport={exportTickets} />
               </CardHeader>
               <CardContent>
@@ -350,7 +359,8 @@ const Staff = () => {
                 <CardDescription>Verify payments and issue redeem codes</CardDescription>
                 <DataTableFilters searchValue={orderSearch} onSearchChange={setOrderSearch} searchPlaceholder="Search orders..."
                   filters={[{ key: 'status', label: 'Status', value: orderStatusFilter, options: [{ label: 'Pending', value: 'pending' }, { label: 'Verified', value: 'verified' }, { label: 'Rejected', value: 'rejected' }], onChange: setOrderStatusFilter }]}
-                  onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); }}
+                  showDateFilter dateRange={orderDateRange} onDateRangeChange={setOrderDateRange}
+                  onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); setOrderDateRange({ from: undefined, to: undefined }); }}
                   onExport={exportOrders} />
               </CardHeader>
               <CardContent>

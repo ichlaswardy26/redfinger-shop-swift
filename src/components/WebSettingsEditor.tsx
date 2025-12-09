@@ -11,6 +11,19 @@ import { Separator } from "@/components/ui/separator";
 import { Save, Plus, Trash2, Loader2 } from "lucide-react";
 
 interface WebSettings {
+  site: {
+    name: string;
+    tagline: string;
+    description: string;
+    logo: string;
+    favicon: string;
+  };
+  header: {
+    showLogo: boolean;
+    showTagline: boolean;
+    backgroundColor: string;
+    textColor: string;
+  };
   hero: {
     title: string;
     subtitle: string;
@@ -49,6 +62,19 @@ interface WebSettings {
 }
 
 const defaultSettings: WebSettings = {
+  site: {
+    name: "Redfinger Store",
+    tagline: "Cloud Phone Services",
+    description: "Premium cloud gaming and app automation services",
+    logo: "",
+    favicon: ""
+  },
+  header: {
+    showLogo: true,
+    showTagline: false,
+    backgroundColor: "",
+    textColor: ""
+  },
   hero: {
     title: "Premium Redfinger Cloud Phone Services",
     subtitle: "Experience seamless cloud gaming and app automation",
@@ -216,9 +242,11 @@ export const WebSettingsEditor = () => {
   }
 
   return (
-    <Tabs defaultValue="hero" className="w-full">
+    <Tabs defaultValue="site" className="w-full">
       <div className="overflow-x-auto pb-2">
         <TabsList className="inline-flex w-auto">
+          <TabsTrigger value="site">Site</TabsTrigger>
+          <TabsTrigger value="header">Header</TabsTrigger>
           <TabsTrigger value="hero">Hero</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
           <TabsTrigger value="cta">CTA</TabsTrigger>
@@ -227,6 +255,128 @@ export const WebSettingsEditor = () => {
           <TabsTrigger value="footer">Footer</TabsTrigger>
         </TabsList>
       </div>
+
+      {/* Site Settings */}
+      <TabsContent value="site">
+        <Card>
+          <CardHeader>
+            <CardTitle>Site Settings</CardTitle>
+            <CardDescription>Configure your website's basic information</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="site-name">Site Name</Label>
+              <Input
+                id="site-name"
+                value={settings.site.name}
+                onChange={(e) => updateSetting('site', 'name', e.target.value)}
+                placeholder="Your Store Name"
+              />
+            </div>
+            <div>
+              <Label htmlFor="site-tagline">Tagline</Label>
+              <Input
+                id="site-tagline"
+                value={settings.site.tagline}
+                onChange={(e) => updateSetting('site', 'tagline', e.target.value)}
+                placeholder="Short tagline for your store"
+              />
+            </div>
+            <div>
+              <Label htmlFor="site-description">Site Description (SEO)</Label>
+              <Textarea
+                id="site-description"
+                value={settings.site.description}
+                onChange={(e) => updateSetting('site', 'description', e.target.value)}
+                placeholder="A brief description of your website for search engines"
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="site-logo">Logo URL</Label>
+                <Input
+                  id="site-logo"
+                  value={settings.site.logo}
+                  onChange={(e) => updateSetting('site', 'logo', e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <Label htmlFor="site-favicon">Favicon URL</Label>
+                <Input
+                  id="site-favicon"
+                  value={settings.site.favicon}
+                  onChange={(e) => updateSetting('site', 'favicon', e.target.value)}
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+            <Button onClick={() => handleSave('site')} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Site Settings
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Header Settings */}
+      <TabsContent value="header">
+        <Card>
+          <CardHeader>
+            <CardTitle>Header Settings</CardTitle>
+            <CardDescription>Customize the header appearance</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="show-logo"
+                  checked={settings.header.showLogo}
+                  onChange={(e) => updateSetting('header', 'showLogo', e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="show-logo">Show Logo</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="show-tagline"
+                  checked={settings.header.showTagline}
+                  onChange={(e) => updateSetting('header', 'showTagline', e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="show-tagline">Show Tagline</Label>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="header-bg">Background Color (HSL)</Label>
+                <Input
+                  id="header-bg"
+                  value={settings.header.backgroundColor}
+                  onChange={(e) => updateSetting('header', 'backgroundColor', e.target.value)}
+                  placeholder="e.g., 220 14% 10%"
+                />
+              </div>
+              <div>
+                <Label htmlFor="header-text">Text Color (HSL)</Label>
+                <Input
+                  id="header-text"
+                  value={settings.header.textColor}
+                  onChange={(e) => updateSetting('header', 'textColor', e.target.value)}
+                  placeholder="e.g., 0 0% 100%"
+                />
+              </div>
+            </div>
+            <Button onClick={() => handleSave('header')} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Header Settings
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
       {/* Hero Settings */}
       <TabsContent value="hero">

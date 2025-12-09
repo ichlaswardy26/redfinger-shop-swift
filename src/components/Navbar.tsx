@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,14 +14,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { 
   LogOut, 
-  User as UserIcon, 
   Shield, 
   Briefcase, 
   ShoppingBag,
   Home,
   Menu,
   LogIn,
-  UserPlus
+  UserPlus,
+  Bell
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -28,6 +29,8 @@ const Navbar = () => {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isStaff, setIsStaff] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [openTicketsCount, setOpenTicketsCount] = useState(0);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -47,11 +50,43 @@ const Navbar = () => {
       } else {
         setIsAdmin(false);
         setIsStaff(false);
+        setPendingCount(0);
+        setOpenTicketsCount(0);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (isAdmin || isStaff) {
+      fetchNotificationCounts();
+      const channel = supabase
+        .channel('navbar-notifications')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchNotificationCounts)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'support_tickets' }, fetchNotificationCounts)
+        .subscribe();
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [isAdmin, isStaff]);
+
+  const fetchNotificationCounts = async () => {
+    try {
+      const { data: pendingOrders } = await supabase
+        .from("orders")
+        .select("id", { count: 'exact' })
+        .eq("payment_status", "pending");
+      setPendingCount(pendingOrders?.length || 0);
+
+      const { data: openTickets } = await supabase
+        .from("support_tickets")
+        .select("id", { count: 'exact' })
+        .eq("status", "open");
+      setOpenTicketsCount(openTickets?.length || 0);
+    } catch (error) {
+      console.error('Error fetching notification counts:', error);
+    }
+  };
 
   const checkRoles = async (userId: string) => {
     try {
@@ -89,6 +124,7 @@ const Navbar = () => {
   };
 
   const isActive = (path: string) => location.pathname === path;
+  const totalNotifications = pendingCount + openTicketsCount;
 
   return (
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -119,23 +155,33 @@ const Navbar = () => {
                 </Link>
                 {isAdmin && (
                   <Link to="/admin">
-                    <Button variant="ghost" className={isActive('/admin') ? 'bg-muted' : ''}>
+                    <Button variant="ghost" className={`${isActive('/admin') ? 'bg-muted' : ''} relative`}>
                       <Shield className="mr-2 h-4 w-4" />
                       Admin
+                      {totalNotifications > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                          {totalNotifications > 99 ? '99+' : totalNotifications}
+                        </Badge>
+                      )}
                     </Button>
                   </Link>
                 )}
-                {isStaff && (
+                {isStaff && !isAdmin && (
                   <Link to="/staff">
-                    <Button variant="ghost" className={isActive('/staff') ? 'bg-muted' : ''}>
+                    <Button variant="ghost" className={`${isActive('/staff') ? 'bg-muted' : ''} relative`}>
                       <Briefcase className="mr-2 h-4 w-4" />
                       Staff
+                      {totalNotifications > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                          {totalNotifications > 99 ? '99+' : totalNotifications}
+                        </Badge>
+                      )}
                     </Button>
                   </Link>
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full">
+                    <Button variant="ghost" size="icon" className="rounded-full relative">
                       <Avatar className="h-8 w-8">
                         <AvatarFallback>
                           {user.email?.charAt(0).toUpperCase()}
@@ -162,8 +208,13 @@ const Navbar = () => {
           <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="relative">
                   <Menu className="h-5 w-5" />
+                  {(isAdmin || isStaff) && totalNotifications > 0 && (
+                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px]">
+                      {totalNotifications > 9 ? '9+' : totalNotifications}
+                    </Badge>
+                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-popover">
@@ -192,16 +243,26 @@ const Navbar = () => {
                     </DropdownMenuItem>
                     
                     {isAdmin && (
-                      <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      <DropdownMenuItem onClick={() => navigate("/admin")} className="relative">
                         <Shield className="mr-2 h-4 w-4" />
                         Admin Panel
+                        {totalNotifications > 0 && (
+                          <Badge variant="destructive" className="ml-auto text-xs">
+                            {totalNotifications}
+                          </Badge>
+                        )}
                       </DropdownMenuItem>
                     )}
                     
-                    {isStaff && (
-                      <DropdownMenuItem onClick={() => navigate("/staff")}>
+                    {isStaff && !isAdmin && (
+                      <DropdownMenuItem onClick={() => navigate("/staff")} className="relative">
                         <Briefcase className="mr-2 h-4 w-4" />
                         Staff Panel
+                        {totalNotifications > 0 && (
+                          <Badge variant="destructive" className="ml-auto text-xs">
+                            {totalNotifications}
+                          </Badge>
+                        )}
                       </DropdownMenuItem>
                     )}
                     
