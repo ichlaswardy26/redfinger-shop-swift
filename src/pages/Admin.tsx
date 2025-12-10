@@ -11,6 +11,8 @@ import { OrderVerificationDialog } from "@/components/OrderVerificationDialog";
 import { TicketConversation } from "@/components/TicketConversation";
 import { FilePreview } from "@/components/FilePreview";
 import { WebSettingsEditor } from "@/components/WebSettingsEditor";
+import { BulkOrderVerification } from "@/components/BulkOrderVerification";
+import { CategoryManager } from "@/components/CategoryManager";
 import { productSchema } from "@/lib/validations";
 import { exportToCSV } from "@/lib/exportUtils";
 import { format } from "date-fns";
@@ -26,7 +28,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   ShoppingCart, Users, Package, LayoutDashboard, CheckCircle, XCircle, Clock, Search, 
-  ExternalLink, AlertTriangle, Ticket, Star, Settings, History, Eye, MessageSquare
+  ExternalLink, AlertTriangle, Ticket, Star, Settings, History, Eye, MessageSquare, BarChart3, Layers, ListChecks
 } from "lucide-react";
 import { 
   useReactTable, 
@@ -127,6 +129,8 @@ const Admin = () => {
   const [selectedTicket, setSelectedTicket] = useState<TicketRow | null>(null);
   const [ticketConversationOpen, setTicketConversationOpen] = useState(false);
   
+  // Bulk verification
+  const [bulkVerifyOpen, setBulkVerifyOpen] = useState(false);
   // Filters
   const [orderSearch, setOrderSearch] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
@@ -714,12 +718,21 @@ const Admin = () => {
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <h1 className="text-3xl font-bold mb-8">Admin Panel</h1>
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button variant="outline" onClick={() => navigate("/admin/analytics")}>
+            <BarChart3 className="h-4 w-4 mr-2" />Analytics
+          </Button>
+          <Button variant="outline" onClick={() => setBulkVerifyOpen(true)}>
+            <ListChecks className="h-4 w-4 mr-2" />Bulk Verify
+          </Button>
+        </div>
         <Tabs defaultValue="dashboard" className="space-y-6">
           <div className="w-full overflow-x-auto pb-2">
-            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-8">
+            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-9">
               <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" /><span>Dashboard</span></TabsTrigger>
               <TabsTrigger value="orders"><ShoppingCart className="h-4 w-4 mr-2" /><span>Orders</span></TabsTrigger>
               <TabsTrigger value="products"><Package className="h-4 w-4 mr-2" /><span>Products</span></TabsTrigger>
+              <TabsTrigger value="categories"><Layers className="h-4 w-4 mr-2" /><span>Categories</span></TabsTrigger>
               <TabsTrigger value="users"><Users className="h-4 w-4 mr-2" /><span>Users</span></TabsTrigger>
               <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-2" /><span>Tickets</span></TabsTrigger>
               <TabsTrigger value="ratings"><Star className="h-4 w-4 mr-2" /><span>Ratings</span></TabsTrigger>

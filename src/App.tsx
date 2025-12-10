@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ProtectedRoute, GuestRoute } from "@/components/ProtectedRoute";
+import Index from "./pages/Index";
 import Store from "./pages/Store";
 import Auth from "./pages/Auth";
 import SignIn from "./pages/SignIn";
@@ -11,6 +12,7 @@ import SignUp from "./pages/SignUp";
 import Transactions from "./pages/Transactions";
 import Admin from "./pages/Admin";
 import Staff from "./pages/Staff";
+import Analytics from "./pages/Analytics";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,7 +24,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Store />} />
+          <Route path="/" element={<Index />} />
           <Route path="/store" element={<Store />} />
           <Route path="/auth" element={<GuestRoute><Auth /></GuestRoute>} />
           <Route path="/auth/signin" element={<GuestRoute><SignIn /></GuestRoute>} />
@@ -40,6 +42,14 @@ const App = () => (
             element={
               <ProtectedRoute requireAuth requireAdmin>
                 <Admin />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin/analytics" 
+            element={
+              <ProtectedRoute requireAuth requireAdmin>
+                <Analytics />
               </ProtectedRoute>
             } 
           />
