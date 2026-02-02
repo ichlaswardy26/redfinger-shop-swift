@@ -71,6 +71,20 @@ interface WebSettings {
     copyrightText: string;
     links: Array<{ label: string; url: string }>;
   };
+  trustIndicators: {
+    happyCustomers: string;
+    ordersCompleted: string;
+    successRate: string;
+    supportAvailability: string;
+  };
+  faq: {
+    title: string;
+    subtitle: string;
+    items: Array<{
+      question: string;
+      answer: string;
+    }>;
+  };
 }
 
 const defaultSettings: WebSettings = {
@@ -116,7 +130,18 @@ const defaultSettings: WebSettings = {
   },
   contact: { email: "", phone: "", whatsapp: "" },
   social: { facebook: "", instagram: "", twitter: "", youtube: "" },
-  footer: { copyrightText: "", links: [] }
+  footer: { copyrightText: "", links: [] },
+  trustIndicators: {
+    happyCustomers: "10,000+",
+    ordersCompleted: "50,000+",
+    successRate: "99.9%",
+    supportAvailability: "24/7"
+  },
+  faq: {
+    title: "Frequently Asked Questions",
+    subtitle: "Find answers to common questions",
+    items: []
+  }
 };
 
 export const WebSettingsEditor = () => {
@@ -304,6 +329,8 @@ export const WebSettingsEditor = () => {
           <TabsTrigger value="features">Features</TabsTrigger>
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
+          <TabsTrigger value="trust">Trust Stats</TabsTrigger>
+          <TabsTrigger value="faq">FAQ</TabsTrigger>
           <TabsTrigger value="cta">CTA</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
           <TabsTrigger value="social">Social</TabsTrigger>
@@ -668,6 +695,175 @@ export const WebSettingsEditor = () => {
             <Button onClick={() => handleSave('testimonials')} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save Testimonials Settings
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Trust Indicators Settings */}
+      <TabsContent value="trust">
+        <Card>
+          <CardHeader>
+            <CardTitle>Trust Indicators</CardTitle>
+            <CardDescription>Configure the trust statistics displayed on your landing page</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="trust-customers">Happy Customers</Label>
+                <Input
+                  id="trust-customers"
+                  value={settings.trustIndicators?.happyCustomers || ''}
+                  onChange={(e) => updateSetting('trustIndicators', 'happyCustomers', e.target.value)}
+                  placeholder="10,000+"
+                />
+              </div>
+              <div>
+                <Label htmlFor="trust-orders">Orders Completed</Label>
+                <Input
+                  id="trust-orders"
+                  value={settings.trustIndicators?.ordersCompleted || ''}
+                  onChange={(e) => updateSetting('trustIndicators', 'ordersCompleted', e.target.value)}
+                  placeholder="50,000+"
+                />
+              </div>
+              <div>
+                <Label htmlFor="trust-success">Success Rate</Label>
+                <Input
+                  id="trust-success"
+                  value={settings.trustIndicators?.successRate || ''}
+                  onChange={(e) => updateSetting('trustIndicators', 'successRate', e.target.value)}
+                  placeholder="99.9%"
+                />
+              </div>
+              <div>
+                <Label htmlFor="trust-support">Support Availability</Label>
+                <Input
+                  id="trust-support"
+                  value={settings.trustIndicators?.supportAvailability || ''}
+                  onChange={(e) => updateSetting('trustIndicators', 'supportAvailability', e.target.value)}
+                  placeholder="24/7"
+                />
+              </div>
+            </div>
+            <Button onClick={() => handleSave('trustIndicators')} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Trust Indicators
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* FAQ Settings */}
+      <TabsContent value="faq">
+        <Card>
+          <CardHeader>
+            <CardTitle>FAQ Section</CardTitle>
+            <CardDescription>Manage frequently asked questions</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="faq-title">Section Title</Label>
+              <Input
+                id="faq-title"
+                value={settings.faq?.title || ''}
+                onChange={(e) => updateSetting('faq', 'title', e.target.value)}
+                placeholder="Frequently Asked Questions"
+              />
+            </div>
+            <div>
+              <Label htmlFor="faq-subtitle">Section Subtitle</Label>
+              <Input
+                id="faq-subtitle"
+                value={settings.faq?.subtitle || ''}
+                onChange={(e) => updateSetting('faq', 'subtitle', e.target.value)}
+                placeholder="Find answers to common questions"
+              />
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label>FAQ Items</Label>
+                <Button variant="outline" size="sm" onClick={() => {
+                  setSettings(prev => ({
+                    ...prev,
+                    faq: {
+                      ...prev.faq,
+                      items: [...(prev.faq?.items || []), { question: "", answer: "" }]
+                    }
+                  }));
+                }}>
+                  <Plus className="h-4 w-4 mr-1" /> Add FAQ
+                </Button>
+              </div>
+              
+              {(settings.faq?.items || []).map((item, index) => (
+                <Card key={index} className="p-4">
+                  <div className="space-y-3">
+                    <div>
+                      <Label>Question</Label>
+                      <Input
+                        value={item.question}
+                        onChange={(e) => {
+                          setSettings(prev => ({
+                            ...prev,
+                            faq: {
+                              ...prev.faq,
+                              items: prev.faq.items.map((faq, i) => 
+                                i === index ? { ...faq, question: e.target.value } : faq
+                              )
+                            }
+                          }));
+                        }}
+                        placeholder="What is your question?"
+                      />
+                    </div>
+                    <div>
+                      <Label>Answer</Label>
+                      <Textarea
+                        value={item.answer}
+                        onChange={(e) => {
+                          setSettings(prev => ({
+                            ...prev,
+                            faq: {
+                              ...prev.faq,
+                              items: prev.faq.items.map((faq, i) => 
+                                i === index ? { ...faq, answer: e.target.value } : faq
+                              )
+                            }
+                          }));
+                        }}
+                        placeholder="Your answer here..."
+                        rows={3}
+                      />
+                    </div>
+                    <div className="flex justify-end">
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => {
+                          setSettings(prev => ({
+                            ...prev,
+                            faq: {
+                              ...prev.faq,
+                              items: prev.faq.items.filter((_, i) => i !== index)
+                            }
+                          }));
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" /> Remove
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+
+            <Button onClick={() => handleSave('faq')} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save FAQ Settings
             </Button>
           </CardContent>
         </Card>
