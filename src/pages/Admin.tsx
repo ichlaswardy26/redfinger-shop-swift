@@ -602,11 +602,7 @@ const Admin = () => {
     {
       id: "attachment",
       header: "Attachment",
-      cell: ({ row }) => row.original.image_proof ? (
-        <Button variant="ghost" size="sm" onClick={() => window.open(`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${row.original.image_proof}`, '_blank')}>
-          <Eye className="h-4 w-4" />
-        </Button>
-      ) : <span className="text-muted-foreground">-</span>,
+      cell: ({ row }) => <PaymentProofLink filePath={row.original.image_proof || ""} />,
     },
     { accessorKey: "created_at", header: "Created", cell: ({ row }) => new Date(row.original.created_at).toLocaleDateString() },
     {

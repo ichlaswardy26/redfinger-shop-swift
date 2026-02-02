@@ -204,28 +204,20 @@ const Index = () => {
 
   const fetchRatings = async () => {
     try {
+      // Use the secure public_product_ratings view instead of product_ratings table
       const { data, error } = await supabase
-        .from("product_ratings")
-        .select("id, rating, review, created_at, user_id, product_id")
-        .eq("is_visible", true)
-        .order("created_at", { ascending: false });
+        .from("public_product_ratings")
+        .select("id, rating, review, created_at, product_id, reviewer_name, product_name")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
       if (error) throw error;
 
-      const userIds = [...new Set(data?.map(r => r.user_id) || [])];
-      const productIds = [...new Set(data?.map(r => r.product_id) || [])];
-
-      const [profilesRes, productsRes] = await Promise.all([
-        supabase.from("profiles").select("id, full_name").in("id", userIds),
-        supabase.from("products").select("id, name").in("id", productIds)
-      ]);
-
-      const profileMap = new Map(profilesRes.data?.map(p => [p.id, p]) || []);
-      const productMap = new Map(productsRes.data?.map(p => [p.id, p]) || []);
-
+      // Transform to match expected format
       const enrichedRatings = (data || []).map(rating => ({
         ...rating,
-        profiles: { full_name: profileMap.get(rating.user_id)?.full_name || null },
-        products: { name: productMap.get(rating.product_id)?.name || "" }
+        profiles: { full_name: rating.reviewer_name || null },
+        products: { name: rating.product_name || "" }
       }));
 
       setRatings(enrichedRatings);
