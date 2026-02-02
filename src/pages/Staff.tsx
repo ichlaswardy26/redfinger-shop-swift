@@ -389,7 +389,7 @@ const Staff = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Support Tickets</CardTitle>
-                <CardDescription>Manage customer support requests</CardDescription>
+                <CardDescription>Manage tickets assigned to you or unassigned tickets</CardDescription>
                 <DataTableFilters searchValue={ticketSearch} onSearchChange={setTicketSearch} searchPlaceholder="Search tickets..."
                   filters={[{ key: 'status', label: 'Status', value: ticketStatusFilter, options: [{ label: 'Open', value: 'open' }, { label: 'In Progress', value: 'in_progress' }, { label: 'Resolved', value: 'resolved' }, { label: 'Closed', value: 'closed' }], onChange: setTicketStatusFilter }]}
                   showDateFilter dateRange={ticketDateRange} onDateRangeChange={setTicketDateRange}
@@ -397,13 +397,23 @@ const Staff = () => {
                   onExport={exportTickets} />
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>{ticketTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
-                    <TableBody>{ticketTable.getRowModel().rows.length ? ticketTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={ticketColumns.length} className="text-center">No tickets found</TableCell></TableRow>}</TableBody>
-                  </Table>
-                </div>
-                <DataTablePagination table={ticketTable} />
+                {filteredTickets.length === 0 && tickets.length === 0 ? (
+                  <div className="text-center py-12 space-y-3">
+                    <Ticket className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                    <p className="text-muted-foreground">No tickets assigned to you yet</p>
+                    <p className="text-sm text-muted-foreground/70">Unassigned tickets will appear here when customers create them</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>{ticketTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                        <TableBody>{ticketTable.getRowModel().rows.length ? ticketTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={ticketColumns.length} className="text-center py-8 text-muted-foreground">No tickets match your filters</TableCell></TableRow>}</TableBody>
+                      </Table>
+                    </div>
+                    <DataTablePagination table={ticketTable} />
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -412,7 +422,9 @@ const Staff = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Order Verification</CardTitle>
-                <CardDescription>Verify payments and issue redeem codes</CardDescription>
+                <CardDescription>
+                  Verify payments and issue redeem codes for orders linked to your assigned tickets
+                </CardDescription>
                 <DataTableFilters searchValue={orderSearch} onSearchChange={setOrderSearch} searchPlaceholder="Search orders..."
                   filters={[{ key: 'status', label: 'Status', value: orderStatusFilter, options: [{ label: 'Pending', value: 'pending' }, { label: 'Verified', value: 'verified' }, { label: 'Rejected', value: 'rejected' }], onChange: setOrderStatusFilter }]}
                   showDateFilter dateRange={orderDateRange} onDateRangeChange={setOrderDateRange}
@@ -420,13 +432,23 @@ const Staff = () => {
                   onExport={exportOrders} />
               </CardHeader>
               <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>{orderTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
-                    <TableBody>{orderTable.getRowModel().rows.length ? orderTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={orderColumns.length} className="text-center">No orders found</TableCell></TableRow>}</TableBody>
-                  </Table>
-                </div>
-                <DataTablePagination table={orderTable} />
+                {filteredOrders.length === 0 && orders.length === 0 ? (
+                  <div className="text-center py-12 space-y-3">
+                    <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                    <p className="text-muted-foreground">No orders linked to your assigned tickets</p>
+                    <p className="text-sm text-muted-foreground/70">Orders appear here when customers create support tickets for their orders</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>{orderTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                        <TableBody>{orderTable.getRowModel().rows.length ? orderTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={orderColumns.length} className="text-center py-8 text-muted-foreground">No orders match your filters</TableCell></TableRow>}</TableBody>
+                      </Table>
+                    </div>
+                    <DataTablePagination table={orderTable} />
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

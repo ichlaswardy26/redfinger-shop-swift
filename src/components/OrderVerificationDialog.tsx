@@ -134,6 +134,17 @@ export const OrderVerificationDialog = ({
 
   const handleVerify = async () => {
     if (!order) return;
+    
+    // Validate all codes are filled
+    if (redeemCodes.length !== order.quantity) {
+      toast({
+        title: "Error",
+        description: `Please provide exactly ${order.quantity} redeem codes`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (redeemCodes.some(code => !code.trim())) {
       toast({
         title: "Error",
@@ -143,10 +154,28 @@ export const OrderVerificationDialog = ({
       return;
     }
     
+    // Check for duplicate codes
+    const uniqueCodes = new Set(redeemCodes.map(c => c.trim().toLowerCase()));
+    if (uniqueCodes.size !== redeemCodes.length) {
+      toast({
+        title: "Error",
+        description: "Duplicate codes detected. Each code must be unique.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSubmitting(true);
     try {
       await onVerify(order.id, redeemCodes, adminNotes);
+      toast({ title: "Order verified successfully" });
       onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to verify order",
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -163,10 +192,22 @@ export const OrderVerificationDialog = ({
       return;
     }
     
+    // Confirm rejection
+    if (!window.confirm(`Are you sure you want to reject this order? This will notify the customer.`)) {
+      return;
+    }
+    
     setSubmitting(true);
     try {
       await onReject(order.id, rejectReason);
+      toast({ title: "Order rejected", description: "Customer has been notified" });
       onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to reject order",
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
@@ -176,6 +217,7 @@ export const OrderVerificationDialog = ({
     const newCodes = [...redeemCodes];
     newCodes[index] = value;
     setRedeemCodes(newCodes);
+    setUseAutoDelivery(false); // Mark as modified when user edits
   };
 
   const copyCode = (code: string) => {
