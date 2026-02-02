@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { z } from "zod";
 
 const signInSchema = z.object({
@@ -20,6 +21,7 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { settings: siteSettings } = useSiteSettings();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -81,9 +83,9 @@ const SignIn = () => {
 
       <Card className="w-full max-w-md relative">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-black text-center">
+          <CardTitle className="text-2xl sm:text-3xl font-black text-center">
             <span className="bg-primary text-primary-foreground px-3 py-1 inline-block border-2 border-border shadow-brutal-sm">
-              Redfinger Store
+              {siteSettings.name}
             </span>
           </CardTitle>
           <CardDescription className="text-center pt-4 font-medium">
