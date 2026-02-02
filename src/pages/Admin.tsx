@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MotionStatCard, MotionContainer, MotionItem, MotionPage, motion } from "@/components/ui/motion";
+import { PaymentProofLink } from "@/components/PaymentProofLink";
 import { 
   ShoppingCart, Users, Package, LayoutDashboard, CheckCircle, XCircle, Clock, Search, 
   ExternalLink, AlertTriangle, Ticket, Star, Settings, History, Eye, MessageSquare, BarChart3, Layers, ListChecks
@@ -516,11 +517,7 @@ const Admin = () => {
     {
       accessorKey: "payment_proof",
       header: "Proof",
-      cell: ({ row }) => row.original.payment_proof ? (
-        <a href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${row.original.payment_proof}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1 text-sm">
-          <ExternalLink className="h-3 w-3" />View
-        </a>
-      ) : <span className="text-muted-foreground text-sm">-</span>,
+      cell: ({ row }) => <PaymentProofLink filePath={row.original.payment_proof || ""} />,
     },
     {
       id: "redeem_codes",

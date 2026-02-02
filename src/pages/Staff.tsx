@@ -18,6 +18,7 @@ import { FilePreview } from "@/components/FilePreview";
 import { DataTableFilters } from "@/components/DataTableFilters";
 import { OrderVerificationDialog } from "@/components/OrderVerificationDialog";
 import { MotionCard, MotionPage, MotionContainer, motion } from "@/components/ui/motion";
+import { PaymentProofLink } from "@/components/PaymentProofLink";
 import { format } from "date-fns";
 import { exportToCSV } from "@/lib/exportUtils";
 import { useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, flexRender, ColumnDef, SortingState } from "@tanstack/react-table";
@@ -267,9 +268,9 @@ const Staff = () => {
       <Badge className={getTicketStatusColor(row.original.status)}>{row.original.status.replace("_", " ")}</Badge>
     )},
     { accessorKey: "created_at", header: "Created", cell: ({ row }) => format(new Date(row.original.created_at), 'PP') },
-    { id: "attachment", header: "Attachment", cell: ({ row }) => row.original.image_proof ? (
-      <a href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${row.original.image_proof}`} target="_blank" className="text-primary hover:underline flex items-center gap-1"><ExternalLink className="h-3 w-3" />View</a>
-    ) : "-" },
+    { id: "attachment", header: "Attachment", cell: ({ row }) => 
+      row.original.image_proof ? <PaymentProofLink filePath={row.original.image_proof} /> : "-" 
+    },
     { id: "actions", header: "Action", cell: ({ row }) => (
       <Select value={row.original.status} onValueChange={(val) => handleUpdateTicketStatus(row.original.id, val)}>
         <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
@@ -291,9 +292,9 @@ const Staff = () => {
       <Badge variant={row.original.payment_status === 'verified' ? 'default' : row.original.payment_status === 'rejected' ? 'destructive' : 'secondary'}>{row.original.payment_status}</Badge>
     )},
     { accessorKey: "created_at", header: "Date", cell: ({ row }) => format(new Date(row.original.created_at), 'PP') },
-    { id: "proof", header: "Proof", cell: ({ row }) => row.original.payment_proof ? (
-      <a href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${row.original.payment_proof}`} target="_blank" className="text-primary hover:underline flex items-center gap-1"><ExternalLink className="h-3 w-3" />View</a>
-    ) : "-" },
+    { id: "proof", header: "Proof", cell: ({ row }) => 
+      row.original.payment_proof ? <PaymentProofLink filePath={row.original.payment_proof} /> : "-" 
+    },
     { id: "actions", header: "Action", cell: ({ row }) => row.original.payment_status === 'pending' && (
       <Button size="sm" onClick={() => { setVerifyingOrder(row.original); setVerifyDialogOpen(true); }}>Verify</Button>
     )},
