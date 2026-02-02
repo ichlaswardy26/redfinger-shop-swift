@@ -979,6 +979,18 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="categories">
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Categories</CardTitle>
+                <CardDescription>Manage product categories and organization</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CategoryManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="audit"><StockActivityLog /></TabsContent>
 
           <TabsContent value="settings"><WebSettingsEditor /></TabsContent>
@@ -1059,6 +1071,13 @@ const Admin = () => {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Bulk Order Verification Dialog */}
+      <BulkOrderVerification
+        open={bulkVerifyOpen}
+        onOpenChange={setBulkVerifyOpen}
+        onSuccess={() => { fetchOrders(); fetchProducts(); fetchStats(); }}
+      />
     </div>
   );
 };

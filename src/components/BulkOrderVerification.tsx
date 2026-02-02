@@ -1,15 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import { Loader2, CheckCircle, AlertTriangle, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 
 interface Order {
@@ -22,14 +21,15 @@ interface Order {
   customer_email: string;
 }
 
-interface BulkOrderVerificationProps {
-  orders: Order[];
+export interface BulkOrderVerificationProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onVerified: () => void;
+  onSuccess?: () => void;
 }
 
-export const BulkOrderVerification = ({ orders, open, onOpenChange, onVerified }: BulkOrderVerificationProps) => {
+export const BulkOrderVerification = ({ open, onOpenChange, onSuccess }: BulkOrderVerificationProps) => {
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [redeemCodes, setRedeemCodes] = useState<Record<string, string>>({});
   const [processing, setProcessing] = useState(false);
@@ -37,6 +37,54 @@ export const BulkOrderVerification = ({ orders, open, onOpenChange, onVerified }
   const { toast } = useToast();
 
   const pendingOrders = orders.filter(o => o.payment_status === "pending");
+
+  useEffect(() => {
+    if (open) {
+      fetchPendingOrders();
+    }
+  }, [open]);
+
+  const fetchPendingOrders = async () => {
+    setLoading(true);
+    try {
+      const { data: ordersData, error } = await supabase
+        .from("orders")
+        .select("id, quantity, payment_status, created_at, product_id, user_id")
+        .eq("payment_status", "pending")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      // Fetch product and user details
+      const productIds = [...new Set(ordersData?.map(o => o.product_id) || [])];
+      const userIds = [...new Set(ordersData?.map(o => o.user_id) || [])];
+
+      const [productsRes, profilesRes] = await Promise.all([
+        supabase.from("products").select("id, name").in("id", productIds),
+        supabase.from("profiles").select("id, full_name, email").in("id", userIds),
+      ]);
+
+      const productMap = new Map(productsRes.data?.map(p => [p.id, p]) || []);
+      const profileMap = new Map(profilesRes.data?.map(p => [p.id, p]) || []);
+
+      const enrichedOrders = (ordersData || []).map(order => ({
+        id: order.id,
+        quantity: order.quantity,
+        payment_status: order.payment_status,
+        created_at: order.created_at,
+        product_name: productMap.get(order.product_id)?.name || "Unknown Product",
+        customer_name: profileMap.get(order.user_id)?.full_name || "",
+        customer_email: profileMap.get(order.user_id)?.email || "",
+      }));
+
+      setOrders(enrichedOrders);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast({ title: "Error loading orders", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleOrder = (orderId: string) => {
     setSelectedOrders(prev => 
@@ -137,12 +185,20 @@ export const BulkOrderVerification = ({ orders, open, onOpenChange, onVerified }
     if (successCount === selectedOrders.length) {
       setSelectedOrders([]);
       setRedeemCodes({});
-      onVerified();
+      onSuccess?.();
+      fetchPendingOrders();
     }
   };
 
+  const handleClose = () => {
+    setSelectedOrders([]);
+    setRedeemCodes({});
+    setResults([]);
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Bulk Order Verification</DialogTitle>
@@ -160,13 +216,23 @@ export const BulkOrderVerification = ({ orders, open, onOpenChange, onVerified }
               />
               <span className="text-sm">Select All ({pendingOrders.length} pending)</span>
             </div>
-            <Badge variant="secondary">
-              {selectedOrders.length} selected
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={fetchPendingOrders} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Badge variant="secondary">
+                {selectedOrders.length} selected
+              </Badge>
+            </div>
           </div>
 
           <ScrollArea className="h-[400px] border rounded-lg p-4">
-            {pendingOrders.length === 0 ? (
+            {loading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : pendingOrders.length === 0 ? (
               <p className="text-center text-muted-foreground py-8">No pending orders to verify</p>
             ) : (
               <div className="space-y-4">
@@ -243,7 +309,7 @@ export const BulkOrderVerification = ({ orders, open, onOpenChange, onVerified }
           </ScrollArea>
 
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={handleClose}>
               Cancel
             </Button>
             <Button 

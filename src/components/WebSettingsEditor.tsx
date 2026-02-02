@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Save, Plus, Trash2, Loader2 } from "lucide-react";
 
 interface WebSettings {
@@ -29,6 +30,8 @@ interface WebSettings {
     subtitle: string;
     buttonText: string;
     secondaryButtonText: string;
+    trustedText: string;
+    badges: string[];
   };
   features: {
     title: string;
@@ -38,6 +41,15 @@ interface WebSettings {
       title: string;
       description: string;
     }>;
+  };
+  products: {
+    title: string;
+    subtitle: string;
+    showCategories: boolean;
+  };
+  testimonials: {
+    title: string;
+    subtitle: string;
   };
   cta: {
     title: string;
@@ -79,12 +91,23 @@ const defaultSettings: WebSettings = {
     title: "Premium Redfinger Cloud Phone Services",
     subtitle: "Experience seamless cloud gaming and app automation",
     buttonText: "Browse Store",
-    secondaryButtonText: "Sign In"
+    secondaryButtonText: "Sign In",
+    trustedText: "Trusted by 10,000+ customers",
+    badges: ["Instant Delivery", "24/7 Support", "Secure Payment"]
   },
   features: {
     title: "Why Choose Us?",
     subtitle: "Premium features for the best experience",
     items: []
+  },
+  products: {
+    title: "Our Plans",
+    subtitle: "Choose the perfect plan for your needs",
+    showCategories: true
+  },
+  testimonials: {
+    title: "Customer Testimonials",
+    subtitle: "See what our customers are saying"
   },
   cta: {
     title: "Ready to Get Started?",
@@ -233,6 +256,36 @@ export const WebSettingsEditor = () => {
     }));
   };
 
+  const addHeroBadge = () => {
+    setSettings(prev => ({
+      ...prev,
+      hero: {
+        ...prev.hero,
+        badges: [...(prev.hero.badges || []), "New Badge"]
+      }
+    }));
+  };
+
+  const updateHeroBadge = (index: number, value: string) => {
+    setSettings(prev => ({
+      ...prev,
+      hero: {
+        ...prev.hero,
+        badges: prev.hero.badges.map((badge, i) => i === index ? value : badge)
+      }
+    }));
+  };
+
+  const removeHeroBadge = (index: number) => {
+    setSettings(prev => ({
+      ...prev,
+      hero: {
+        ...prev.hero,
+        badges: prev.hero.badges.filter((_, i) => i !== index)
+      }
+    }));
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -249,6 +302,8 @@ export const WebSettingsEditor = () => {
           <TabsTrigger value="header">Header</TabsTrigger>
           <TabsTrigger value="hero">Hero</TabsTrigger>
           <TabsTrigger value="features">Features</TabsTrigger>
+          <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
           <TabsTrigger value="cta">CTA</TabsTrigger>
           <TabsTrigger value="contact">Contact</TabsTrigger>
           <TabsTrigger value="social">Social</TabsTrigger>
@@ -330,22 +385,18 @@ export const WebSettingsEditor = () => {
           <CardContent className="space-y-4">
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
+                <Switch
                   id="show-logo"
                   checked={settings.header.showLogo}
-                  onChange={(e) => updateSetting('header', 'showLogo', e.target.checked)}
-                  className="h-4 w-4"
+                  onCheckedChange={(checked) => updateSetting('header', 'showLogo', checked)}
                 />
                 <Label htmlFor="show-logo">Show Logo</Label>
               </div>
               <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
+                <Switch
                   id="show-tagline"
                   checked={settings.header.showTagline}
-                  onChange={(e) => updateSetting('header', 'showTagline', e.target.checked)}
-                  className="h-4 w-4"
+                  onCheckedChange={(checked) => updateSetting('header', 'showTagline', checked)}
                 />
                 <Label htmlFor="show-tagline">Show Tagline</Label>
               </div>
@@ -405,6 +456,15 @@ export const WebSettingsEditor = () => {
                 rows={3}
               />
             </div>
+            <div>
+              <Label htmlFor="hero-trusted">Trusted Text (Badge)</Label>
+              <Input
+                id="hero-trusted"
+                value={settings.hero.trustedText || ''}
+                onChange={(e) => updateSetting('hero', 'trustedText', e.target.value)}
+                placeholder="e.g., Trusted by 10,000+ customers"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="hero-btn">Primary Button Text</Label>
@@ -423,6 +483,30 @@ export const WebSettingsEditor = () => {
                 />
               </div>
             </div>
+            
+            <Separator />
+            
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Trust Badges (below buttons)</Label>
+                <Button variant="outline" size="sm" onClick={addHeroBadge}>
+                  <Plus className="h-4 w-4 mr-1" /> Add Badge
+                </Button>
+              </div>
+              {(settings.hero.badges || []).map((badge, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    value={badge}
+                    onChange={(e) => updateHeroBadge(index, e.target.value)}
+                    placeholder="e.g., Instant Delivery"
+                  />
+                  <Button variant="destructive" size="icon" onClick={() => removeHeroBadge(index)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
             <Button onClick={() => handleSave('hero')} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save Hero Settings
@@ -504,10 +588,86 @@ export const WebSettingsEditor = () => {
                 </Card>
               ))}
             </div>
-            
+
             <Button onClick={() => handleSave('features')} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save Features Settings
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Products Settings */}
+      <TabsContent value="products">
+        <Card>
+          <CardHeader>
+            <CardTitle>Products Section</CardTitle>
+            <CardDescription>Customize the products section on your landing page</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="products-title">Section Title</Label>
+              <Input
+                id="products-title"
+                value={settings.products?.title || ''}
+                onChange={(e) => updateSetting('products', 'title', e.target.value)}
+                placeholder="Our Plans"
+              />
+            </div>
+            <div>
+              <Label htmlFor="products-subtitle">Section Subtitle</Label>
+              <Input
+                id="products-subtitle"
+                value={settings.products?.subtitle || ''}
+                onChange={(e) => updateSetting('products', 'subtitle', e.target.value)}
+                placeholder="Choose the perfect plan for your needs"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show-categories"
+                checked={settings.products?.showCategories !== false}
+                onCheckedChange={(checked) => updateSetting('products', 'showCategories', checked)}
+              />
+              <Label htmlFor="show-categories">Show products grouped by categories</Label>
+            </div>
+            <Button onClick={() => handleSave('products')} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Products Settings
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Testimonials Settings */}
+      <TabsContent value="testimonials">
+        <Card>
+          <CardHeader>
+            <CardTitle>Testimonials Section</CardTitle>
+            <CardDescription>Customize the testimonials section on your landing page</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="testimonials-title">Section Title</Label>
+              <Input
+                id="testimonials-title"
+                value={settings.testimonials?.title || ''}
+                onChange={(e) => updateSetting('testimonials', 'title', e.target.value)}
+                placeholder="Customer Testimonials"
+              />
+            </div>
+            <div>
+              <Label htmlFor="testimonials-subtitle">Section Subtitle</Label>
+              <Input
+                id="testimonials-subtitle"
+                value={settings.testimonials?.subtitle || ''}
+                onChange={(e) => updateSetting('testimonials', 'subtitle', e.target.value)}
+                placeholder="See what our customers are saying"
+              />
+            </div>
+            <Button onClick={() => handleSave('testimonials')} disabled={saving}>
+              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Testimonials Settings
             </Button>
           </CardContent>
         </Card>
@@ -517,7 +677,7 @@ export const WebSettingsEditor = () => {
       <TabsContent value="cta">
         <Card>
           <CardHeader>
-            <CardTitle>Call to Action Section</CardTitle>
+            <CardTitle>Call-to-Action Section</CardTitle>
             <CardDescription>Customize the CTA section</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -559,7 +719,7 @@ export const WebSettingsEditor = () => {
         <Card>
           <CardHeader>
             <CardTitle>Contact Information</CardTitle>
-            <CardDescription>Set your business contact details</CardDescription>
+            <CardDescription>Set your contact details</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -578,16 +738,16 @@ export const WebSettingsEditor = () => {
                 id="contact-phone"
                 value={settings.contact.phone}
                 onChange={(e) => updateSetting('contact', 'phone', e.target.value)}
-                placeholder="+62 xxx-xxxx-xxxx"
+                placeholder="+62..."
               />
             </div>
             <div>
-              <Label htmlFor="contact-wa">WhatsApp</Label>
+              <Label htmlFor="contact-whatsapp">WhatsApp</Label>
               <Input
-                id="contact-wa"
+                id="contact-whatsapp"
                 value={settings.contact.whatsapp}
                 onChange={(e) => updateSetting('contact', 'whatsapp', e.target.value)}
-                placeholder="+62 xxx-xxxx-xxxx"
+                placeholder="+62..."
               />
             </div>
             <Button onClick={() => handleSave('contact')} disabled={saving}>
@@ -603,43 +763,43 @@ export const WebSettingsEditor = () => {
         <Card>
           <CardHeader>
             <CardTitle>Social Media Links</CardTitle>
-            <CardDescription>Add your social media profile URLs</CardDescription>
+            <CardDescription>Add your social media profiles</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="social-fb">Facebook</Label>
+              <Label htmlFor="social-facebook">Facebook</Label>
               <Input
-                id="social-fb"
+                id="social-facebook"
                 value={settings.social.facebook}
                 onChange={(e) => updateSetting('social', 'facebook', e.target.value)}
-                placeholder="https://facebook.com/yourpage"
+                placeholder="https://facebook.com/..."
               />
             </div>
             <div>
-              <Label htmlFor="social-ig">Instagram</Label>
+              <Label htmlFor="social-instagram">Instagram</Label>
               <Input
-                id="social-ig"
+                id="social-instagram"
                 value={settings.social.instagram}
                 onChange={(e) => updateSetting('social', 'instagram', e.target.value)}
-                placeholder="https://instagram.com/yourhandle"
+                placeholder="https://instagram.com/..."
               />
             </div>
             <div>
-              <Label htmlFor="social-tw">Twitter / X</Label>
+              <Label htmlFor="social-twitter">Twitter</Label>
               <Input
-                id="social-tw"
+                id="social-twitter"
                 value={settings.social.twitter}
                 onChange={(e) => updateSetting('social', 'twitter', e.target.value)}
-                placeholder="https://twitter.com/yourhandle"
+                placeholder="https://twitter.com/..."
               />
             </div>
             <div>
-              <Label htmlFor="social-yt">YouTube</Label>
+              <Label htmlFor="social-youtube">YouTube</Label>
               <Input
-                id="social-yt"
+                id="social-youtube"
                 value={settings.social.youtube}
                 onChange={(e) => updateSetting('social', 'youtube', e.target.value)}
-                placeholder="https://youtube.com/yourchannel"
+                placeholder="https://youtube.com/..."
               />
             </div>
             <Button onClick={() => handleSave('social')} disabled={saving}>
@@ -655,7 +815,7 @@ export const WebSettingsEditor = () => {
         <Card>
           <CardHeader>
             <CardTitle>Footer Settings</CardTitle>
-            <CardDescription>Customize footer content and links</CardDescription>
+            <CardDescription>Customize your website footer</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -679,23 +839,19 @@ export const WebSettingsEditor = () => {
               </div>
               
               {settings.footer.links.map((link, index) => (
-                <div key={index} className="flex gap-3 items-end">
-                  <div className="flex-1">
-                    <Label>Label</Label>
-                    <Input
-                      value={link.label}
-                      onChange={(e) => updateFooterLink(index, 'label', e.target.value)}
-                      placeholder="Privacy Policy"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <Label>URL</Label>
-                    <Input
-                      value={link.url}
-                      onChange={(e) => updateFooterLink(index, 'url', e.target.value)}
-                      placeholder="/privacy"
-                    />
-                  </div>
+                <div key={index} className="flex items-center gap-2">
+                  <Input
+                    value={link.label}
+                    onChange={(e) => updateFooterLink(index, 'label', e.target.value)}
+                    placeholder="Link Label"
+                    className="flex-1"
+                  />
+                  <Input
+                    value={link.url}
+                    onChange={(e) => updateFooterLink(index, 'url', e.target.value)}
+                    placeholder="https://..."
+                    className="flex-1"
+                  />
                   <Button 
                     variant="destructive" 
                     size="icon"
@@ -706,7 +862,7 @@ export const WebSettingsEditor = () => {
                 </div>
               ))}
             </div>
-            
+
             <Button onClick={() => handleSave('footer')} disabled={saving}>
               {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
               Save Footer Settings
