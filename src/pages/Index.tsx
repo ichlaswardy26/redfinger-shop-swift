@@ -87,6 +87,11 @@ interface WebSettings {
   footer: {
     copyrightText: string;
   };
+  faq?: {
+    title: string;
+    subtitle: string;
+    items: Array<{ question: string; answer: string }>;
+  };
 }
 
 const defaultSettings: WebSettings = {
@@ -565,7 +570,11 @@ const Index = () => {
       <TrustIndicators />
 
       {/* FAQ Section */}
-      <FAQSection />
+      <FAQSection 
+        title={settings.faq?.title}
+        subtitle={settings.faq?.subtitle}
+        items={settings.faq?.items && settings.faq.items.length > 0 ? settings.faq.items : undefined}
+      />
 
       {/* Contact Section */}
       <section className="container mx-auto px-4 py-16 border-t-2 border-border">

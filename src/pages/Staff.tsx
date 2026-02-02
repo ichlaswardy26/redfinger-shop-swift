@@ -179,6 +179,16 @@ const Staff = () => {
     if (product) {
       await supabase.from("products").update({ stock: Math.max(0, product.stock - order.quantity) }).eq("id", product.id);
     }
+    
+    // Send email notification
+    try {
+      await supabase.functions.invoke("send-notification", {
+        body: { type: "order_verified", orderId },
+      });
+    } catch (err) {
+      console.error("Failed to send notification:", err);
+    }
+    
     toast({ title: "Order verified" }); fetchData();
   };
 
@@ -187,6 +197,16 @@ const Staff = () => {
       payment_status: "rejected", status: "rejected", admin_notes: reason
     }).eq("id", orderId);
     if (error) { toast({ title: "Error rejecting", variant: "destructive" }); return; }
+    
+    // Send email notification
+    try {
+      await supabase.functions.invoke("send-notification", {
+        body: { type: "order_rejected", orderId, additionalData: { reason } },
+      });
+    } catch (err) {
+      console.error("Failed to send notification:", err);
+    }
+    
     toast({ title: "Order rejected" }); fetchData();
   };
 

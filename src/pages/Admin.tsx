@@ -1106,6 +1106,16 @@ const Admin = () => {
               verified_at: new Date().toISOString(),
               verified_by: user?.id
             }).eq("id", orderId);
+            
+            // Send email notification
+            try {
+              await supabase.functions.invoke("send-notification", {
+                body: { type: "order_verified", orderId },
+              });
+            } catch (err) {
+              console.error("Failed to send notification:", err);
+            }
+            
             fetchOrders(); fetchProducts(); fetchStats();
           }}
           onReject={async (orderId, reason) => {
@@ -1113,6 +1123,16 @@ const Admin = () => {
               payment_status: "rejected",
               admin_notes: reason
             }).eq("id", orderId);
+            
+            // Send email notification
+            try {
+              await supabase.functions.invoke("send-notification", {
+                body: { type: "order_rejected", orderId, additionalData: { reason } },
+              });
+            } catch (err) {
+              console.error("Failed to send notification:", err);
+            }
+            
             fetchOrders(); fetchStats();
           }}
         />
