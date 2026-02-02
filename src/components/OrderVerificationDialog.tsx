@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { CheckCircle, XCircle, ExternalLink, Copy, RefreshCw } from "lucide-react";
+import { CheckCircle, XCircle, ExternalLink, Copy, RefreshCw, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getSignedUrl } from "@/hooks/useSignedUrl";
 
 interface Order {
   id: string;
@@ -40,6 +41,8 @@ export const OrderVerificationDialog = ({
   const [adminNotes, setAdminNotes] = useState("");
   const [rejectReason, setRejectReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+  const [proofLoading, setProofLoading] = useState(false);
   const { toast } = useToast();
 
   // Generate codes when order changes
@@ -50,6 +53,19 @@ export const OrderVerificationDialog = ({
     );
     setRedeemCodes(codes);
   };
+
+  // Load signed URL for payment proof
+  useEffect(() => {
+    if (open && order?.payment_proof) {
+      setProofLoading(true);
+      getSignedUrl("payment-proofs", order.payment_proof).then((url) => {
+        setProofUrl(url);
+        setProofLoading(false);
+      });
+    } else {
+      setProofUrl(null);
+    }
+  }, [open, order?.payment_proof]);
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen && order) {
@@ -146,15 +162,24 @@ export const OrderVerificationDialog = ({
           </div>
           {order.payment_proof && (
             <div className="mt-3 pt-3 border-t">
-              <a
-                href={`${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${order.payment_proof}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline flex items-center gap-1 text-sm"
-              >
-                <ExternalLink className="h-4 w-4" />
-                View Payment Proof
-              </a>
+              {proofLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading proof...
+                </div>
+              ) : proofUrl ? (
+                <a
+                  href={proofUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1 text-sm"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View Payment Proof
+                </a>
+              ) : (
+                <span className="text-muted-foreground text-sm">Unable to load payment proof</span>
+              )}
             </div>
           )}
         </Card>

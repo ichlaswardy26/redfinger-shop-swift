@@ -1,4 +1,5 @@
-import { FileImage, FileVideo, FileText, ExternalLink } from "lucide-react";
+import { FileImage, FileVideo, FileText, ExternalLink, Loader2 } from "lucide-react";
+import { useSignedUrl } from "@/hooks/useSignedUrl";
 
 interface FilePreviewProps {
   filePath: string;
@@ -6,9 +7,26 @@ interface FilePreviewProps {
 }
 
 export const FilePreview = ({ filePath, className = "" }: FilePreviewProps) => {
+  const { signedUrl, loading, error } = useSignedUrl("payment-proofs", filePath);
+
   if (!filePath) return null;
 
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${filePath}`;
+  if (loading) {
+    return (
+      <div className={`bg-muted rounded-lg p-4 flex items-center justify-center ${className}`}>
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error || !signedUrl) {
+    return (
+      <div className={`bg-muted rounded-lg p-3 text-muted-foreground text-sm ${className}`}>
+        Unable to load attachment
+      </div>
+    );
+  }
+
   const ext = filePath.split('.').pop()?.toLowerCase();
 
   // Image preview
@@ -19,10 +37,10 @@ export const FilePreview = ({ filePath, className = "" }: FilePreviewProps) => {
           <FileImage className="h-3 w-3" /> Image Attachment
         </p>
         <img 
-          src={url} 
+          src={signedUrl} 
           alt="Attachment" 
           className="max-w-full max-h-48 rounded-lg cursor-pointer hover:opacity-80 transition-opacity object-contain"
-          onClick={() => window.open(url, '_blank')}
+          onClick={() => window.open(signedUrl, '_blank')}
         />
       </div>
     );
@@ -36,7 +54,7 @@ export const FilePreview = ({ filePath, className = "" }: FilePreviewProps) => {
           <FileVideo className="h-3 w-3" /> Video Attachment
         </p>
         <video 
-          src={url} 
+          src={signedUrl} 
           controls 
           className="max-w-full max-h-48 rounded-lg"
         />
@@ -49,7 +67,7 @@ export const FilePreview = ({ filePath, className = "" }: FilePreviewProps) => {
     return (
       <div className={`bg-muted rounded-lg p-3 ${className}`}>
         <a 
-          href={url} 
+          href={signedUrl} 
           target="_blank" 
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-primary hover:underline"
@@ -66,7 +84,7 @@ export const FilePreview = ({ filePath, className = "" }: FilePreviewProps) => {
   return (
     <div className={`bg-muted rounded-lg p-3 ${className}`}>
       <a 
-        href={url} 
+        href={signedUrl} 
         target="_blank" 
         rel="noopener noreferrer"
         className="flex items-center gap-2 text-primary hover:underline"
