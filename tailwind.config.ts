@@ -63,6 +63,22 @@ export default {
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      borderWidth: {
+        brutal: "2px",
+        "brutal-thick": "3px",
+      },
+      boxShadow: {
+        brutal: "4px 4px 0px hsl(var(--border))",
+        "brutal-sm": "2px 2px 0px hsl(var(--border))",
+        "brutal-lg": "6px 6px 0px hsl(var(--border))",
+        "brutal-xl": "8px 8px 0px hsl(var(--border))",
+        "brutal-primary": "4px 4px 0px hsl(var(--primary))",
+        "brutal-accent": "4px 4px 0px hsl(var(--accent))",
+        "brutal-hover": "6px 6px 0px hsl(var(--border))",
+        "brutal-active": "2px 2px 0px hsl(var(--border))",
+        glass: "0 8px 32px 0 rgba(0, 0, 0, 0.1)",
+        "glass-lg": "0 12px 48px 0 rgba(0, 0, 0, 0.15)",
+      },
       keyframes: {
         "accordion-down": {
           from: {
@@ -80,10 +96,46 @@ export default {
             height: "0",
           },
         },
+        "brutal-bounce": {
+          "0%, 100%": {
+            transform: "translate(0, 0)",
+          },
+          "50%": {
+            transform: "translate(-2px, -2px)",
+          },
+        },
+        "brutal-shake": {
+          "0%, 100%": {
+            transform: "translateX(0)",
+          },
+          "25%": {
+            transform: "translateX(-4px)",
+          },
+          "75%": {
+            transform: "translateX(4px)",
+          },
+        },
+        "brutal-press": {
+          "0%": {
+            transform: "translate(0, 0)",
+            boxShadow: "4px 4px 0px hsl(var(--border))",
+          },
+          "100%": {
+            transform: "translate(2px, 2px)",
+            boxShadow: "2px 2px 0px hsl(var(--border))",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "brutal-bounce": "brutal-bounce 0.5s ease-in-out",
+        "brutal-shake": "brutal-shake 0.3s ease-in-out",
+        "brutal-press": "brutal-press 0.1s ease-out forwards",
+      },
+      backdropBlur: {
+        glass: "12px",
+        "glass-lg": "20px",
       },
     },
   },

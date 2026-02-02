@@ -31,15 +31,15 @@ const ProductCard = ({
   isBestSeller = false
 }: ProductCardProps) => {
   return (
-    <Card className="flex flex-col h-full transition-all duration-300 hover:shadow-[0_10px_40px_-10px_hsl(var(--primary)/0.2)] hover:-translate-y-1 relative">
+    <Card className="flex flex-col h-full relative bg-card">
       {isBestSeller && (
-        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 z-10">
+        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-accent text-accent-foreground z-10 shadow-brutal-sm">
           <TrendingUp className="h-3 w-3 mr-1" />
           Best Seller
         </Badge>
       )}
       <CardHeader>
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-2xl">{name}</CardTitle>
           <Badge variant={stock > 0 ? "default" : "destructive"}>
             {stock > 0 ? `${stock} Available` : "Out of Stock"}
@@ -51,17 +51,17 @@ const ProductCard = ({
         <div className="space-y-3">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Clock className="h-4 w-4" />
-            <span>{duration_days} days validity</span>
+            <span className="font-medium">{duration_days} days validity</span>
           </div>
           <div className="flex items-center gap-2 text-muted-foreground">
             <Package className="h-4 w-4" />
-            <span>Digital Redeem Code</span>
+            <span className="font-medium">Digital Redeem Code</span>
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex flex-col gap-3 pt-6 border-t">
+      <CardFooter className="flex flex-col gap-4 pt-6 border-t-2 border-border">
         <div className="flex items-center justify-between w-full">
-          <div className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <div className="text-3xl font-black text-primary">
             Rp {price.toLocaleString('id-ID')}
           </div>
           {isAuthenticated && stock > 0 && (
@@ -69,21 +69,21 @@ const ProductCard = ({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9"
                 onClick={() => onQuantityChange(id, -1)}
                 disabled={quantity <= 1}
               >
-                <Minus className="h-3 w-3" />
+                <Minus className="h-4 w-4" />
               </Button>
-              <span className="font-semibold min-w-[2ch] text-center text-lg">{quantity}</span>
+              <span className="font-black min-w-[2ch] text-center text-lg">{quantity}</span>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8"
+                className="h-9 w-9"
                 onClick={() => onQuantityChange(id, 1)}
                 disabled={quantity >= stock}
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
           )}

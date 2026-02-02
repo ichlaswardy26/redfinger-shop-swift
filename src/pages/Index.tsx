@@ -282,22 +282,29 @@ const Index = () => {
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img src={heroImage} alt="Cloud Phone Hero" className="w-full h-full object-cover opacity-20" />
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-background/90" />
+          <img src={heroImage} alt="Cloud Phone Hero" className="w-full h-full object-cover opacity-10" />
+          <div className="absolute inset-0 bg-background/80" />
+        </div>
+        
+        {/* Decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-20 left-10 w-32 h-32 bg-primary/20 border-2 border-border rotate-12" />
+          <div className="absolute top-60 right-20 w-24 h-24 bg-accent/40 border-2 border-border -rotate-6" />
+          <div className="absolute bottom-20 left-1/4 w-20 h-20 bg-primary/10 border-2 border-border rotate-45" />
         </div>
         
         <div className="relative container mx-auto px-4 py-24 lg:py-32">
           <div className="max-w-3xl mx-auto text-center space-y-8">
-            <Badge variant="secondary" className="px-4 py-2">
-              <Star className="h-4 w-4 mr-2 fill-yellow-400 text-yellow-400" />
+            <Badge variant="accent" className="px-4 py-2 text-sm">
+              <Star className="h-4 w-4 mr-2 fill-current" />
               {settings.hero.trustedText || defaultSettings.hero.trustedText}
             </Badge>
-            <h1 className="text-4xl lg:text-6xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+            <h1 className="text-4xl lg:text-6xl font-black tracking-tight">
               {settings.hero.title || defaultSettings.hero.title}
             </h1>
-            <p className="text-xl text-muted-foreground">{settings.hero.subtitle || defaultSettings.hero.subtitle}</p>
+            <p className="text-xl text-muted-foreground font-medium">{settings.hero.subtitle || defaultSettings.hero.subtitle}</p>
             <div className="flex flex-wrap gap-4 justify-center">
-              <Button size="lg" onClick={() => navigate("/store")} className="text-lg px-8 gap-2">
+              <Button size="lg" variant="hero" onClick={() => navigate("/store")} className="text-lg px-8 gap-2">
                 {settings.hero.buttonText || defaultSettings.hero.buttonText} <ArrowRight className="h-5 w-5" />
               </Button>
               <Button size="lg" variant="outline" onClick={() => navigate("/auth/signin")}>
@@ -306,9 +313,9 @@ const Index = () => {
             </div>
             <div className="flex flex-wrap gap-6 justify-center pt-4">
               {(settings.hero.badges || defaultSettings.hero.badges).map((badge, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle className="h-4 w-4 text-green-500" /> {badge}
-                </div>
+                <Badge key={idx} variant="outline" className="gap-2 text-sm py-1.5">
+                  <CheckCircle className="h-4 w-4 text-primary" /> {badge}
+                </Badge>
               ))}
             </div>
           </div>
@@ -318,18 +325,18 @@ const Index = () => {
       {/* Features Section */}
       <section className="container mx-auto px-4 py-16 lg:py-24">
         <div className="text-center mb-12">
-          <h2 className="text-3xl lg:text-4xl font-bold mb-4">{settings.features.title || defaultSettings.features.title}</h2>
-          <p className="text-muted-foreground text-lg">{settings.features.subtitle || defaultSettings.features.subtitle}</p>
+          <h2 className="text-3xl lg:text-4xl font-black mb-4">{settings.features.title || defaultSettings.features.title}</h2>
+          <p className="text-muted-foreground text-lg font-medium">{settings.features.subtitle || defaultSettings.features.subtitle}</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {(settings.features.items?.length > 0 ? settings.features.items : defaultSettings.features.items).map((feature, index) => (
-            <Card key={index} className="border-2 hover:border-primary/50 transition-all hover:shadow-lg">
-              <CardContent className="pt-6 text-center space-y-4">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                  {iconMap[feature.icon] || <Zap className="h-6 w-6 text-primary" />}
+            <Card key={index} className="text-center">
+              <CardContent className="pt-6 space-y-4">
+                <div className="w-14 h-14 bg-accent border-2 border-border shadow-brutal-sm flex items-center justify-center mx-auto">
+                  {iconMap[feature.icon] || <Zap className="h-6 w-6 text-accent-foreground" />}
                 </div>
-                <h3 className="font-semibold text-lg">{feature.title}</h3>
+                <h3 className="font-bold text-lg">{feature.title}</h3>
                 <p className="text-sm text-muted-foreground">{feature.description}</p>
               </CardContent>
             </Card>
@@ -339,10 +346,10 @@ const Index = () => {
 
       {/* Products by Category Section */}
       {(settings.products?.showCategories !== false) && categories.length > 0 && (
-        <section className="container mx-auto px-4 py-16 lg:py-24 bg-muted/20">
+        <section className="container mx-auto px-4 py-16 lg:py-24 bg-muted/30">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">{settings.products?.title || defaultSettings.products.title}</h2>
-            <p className="text-muted-foreground text-lg">{settings.products?.subtitle || defaultSettings.products.subtitle}</p>
+            <h2 className="text-3xl lg:text-4xl font-black mb-4">{settings.products?.title || defaultSettings.products.title}</h2>
+            <p className="text-muted-foreground text-lg font-medium">{settings.products?.subtitle || defaultSettings.products.subtitle}</p>
           </div>
 
           <div className="space-y-16">
@@ -353,22 +360,24 @@ const Index = () => {
               return (
                 <div key={category.id}>
                   <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                      {getCategoryIcon(category.icon)}
+                    <div className="w-12 h-12 bg-primary border-2 border-border shadow-brutal-sm flex items-center justify-center">
+                      <div className="text-primary-foreground">
+                        {getCategoryIcon(category.icon)}
+                      </div>
                     </div>
                     <div>
-                      <h3 className="text-2xl font-bold">{category.name}</h3>
+                      <h3 className="text-2xl font-black">{category.name}</h3>
                       {category.description && (
-                        <p className="text-muted-foreground text-sm">{category.description}</p>
+                        <p className="text-muted-foreground text-sm font-medium">{category.description}</p>
                       )}
                     </div>
                   </div>
                   
                   <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {categoryProducts.slice(0, 3).map((product) => (
-                      <Card key={product.id} className="relative border-2 hover:border-primary/50 transition-all hover:shadow-xl">
+                      <Card key={product.id} className="relative">
                         {bestSellerId === product.id && (
-                          <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
+                          <Badge variant="accent" className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                             <TrendingUp className="h-3 w-3 mr-1" />Best Seller
                           </Badge>
                         )}
@@ -378,10 +387,10 @@ const Index = () => {
                             {product.description && <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>}
                           </div>
                           <div className="text-center py-4">
-                            <div className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                            <div className="text-3xl font-black text-primary">
                               Rp {product.price.toLocaleString('id-ID')}
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">{product.duration_days} days validity</p>
+                            <p className="text-sm text-muted-foreground mt-1 font-medium">{product.duration_days} days validity</p>
                           </div>
                           <Badge variant={product.stock > 0 ? "default" : "secondary"} className="w-full justify-center">
                             {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
@@ -409,19 +418,19 @@ const Index = () => {
             {uncategorizedProducts.length > 0 && (
               <div>
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                    <Layers className="h-6 w-6 text-primary" />
+                  <div className="w-12 h-12 bg-secondary border-2 border-border shadow-brutal-sm flex items-center justify-center">
+                    <Layers className="h-6 w-6 text-secondary-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold">Other Products</h3>
+                    <h3 className="text-2xl font-black">Other Products</h3>
                   </div>
                 </div>
                 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {uncategorizedProducts.slice(0, 3).map((product) => (
-                    <Card key={product.id} className="relative border-2 hover:border-primary/50 transition-all hover:shadow-xl">
+                    <Card key={product.id} className="relative">
                       {bestSellerId === product.id && (
-                        <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
+                        <Badge variant="accent" className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                           <TrendingUp className="h-3 w-3 mr-1" />Best Seller
                         </Badge>
                       )}
@@ -431,10 +440,10 @@ const Index = () => {
                           {product.description && <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>}
                         </div>
                         <div className="text-center py-4">
-                          <div className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                          <div className="text-3xl font-black text-primary">
                             Rp {product.price.toLocaleString('id-ID')}
                           </div>
-                          <p className="text-sm text-muted-foreground mt-1">{product.duration_days} days validity</p>
+                          <p className="text-sm text-muted-foreground mt-1 font-medium">{product.duration_days} days validity</p>
                         </div>
                         <Badge variant={product.stock > 0 ? "default" : "secondary"} className="w-full justify-center">
                           {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
@@ -458,17 +467,17 @@ const Index = () => {
 
       {/* Fallback if no categories - show all products */}
       {(settings.products?.showCategories === false || categories.length === 0) && products.length > 0 && (
-        <section className="container mx-auto px-4 py-16 lg:py-24 bg-muted/20">
+        <section className="container mx-auto px-4 py-16 lg:py-24 bg-muted/30">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">{settings.products?.title || defaultSettings.products.title}</h2>
-            <p className="text-muted-foreground text-lg">{settings.products?.subtitle || defaultSettings.products.subtitle}</p>
+            <h2 className="text-3xl lg:text-4xl font-black mb-4">{settings.products?.title || defaultSettings.products.title}</h2>
+            <p className="text-muted-foreground text-lg font-medium">{settings.products?.subtitle || defaultSettings.products.subtitle}</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {products.slice(0, 3).map((product) => (
-              <Card key={product.id} className="relative border-2 hover:border-primary/50 transition-all hover:shadow-xl">
+              <Card key={product.id} className="relative">
                 {bestSellerId === product.id && (
-                  <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
+                  <Badge variant="accent" className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                     <TrendingUp className="h-3 w-3 mr-1" />Best Seller
                   </Badge>
                 )}
@@ -478,10 +487,10 @@ const Index = () => {
                     {product.description && <p className="text-sm text-muted-foreground">{product.description}</p>}
                   </div>
                   <div className="text-center py-4">
-                    <div className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                    <div className="text-4xl font-black text-primary">
                       Rp {product.price.toLocaleString('id-ID')}
                     </div>
-                    <p className="text-sm text-muted-foreground mt-2">{product.duration_days} days validity</p>
+                    <p className="text-sm text-muted-foreground mt-2 font-medium">{product.duration_days} days validity</p>
                   </div>
                   <Badge variant={product.stock > 0 ? "default" : "secondary"} className="w-full justify-center">
                     {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
@@ -504,8 +513,8 @@ const Index = () => {
       {ratings.length > 0 && (
         <section className="container mx-auto px-4 py-16 lg:py-24">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4">{settings.testimonials?.title || defaultSettings.testimonials.title}</h2>
-            <p className="text-muted-foreground text-lg">{settings.testimonials?.subtitle || defaultSettings.testimonials.subtitle}</p>
+            <h2 className="text-3xl lg:text-4xl font-black mb-4">{settings.testimonials?.title || defaultSettings.testimonials.title}</h2>
+            <p className="text-muted-foreground text-lg font-medium">{settings.testimonials?.subtitle || defaultSettings.testimonials.subtitle}</p>
           </div>
 
           <div className="max-w-6xl mx-auto">
@@ -513,17 +522,17 @@ const Index = () => {
               <CarouselContent>
                 {ratings.map((rating) => (
                   <CarouselItem key={rating.id} className="md:basis-1/2 lg:basis-1/3">
-                    <Card className="relative h-full border-2">
+                    <Card className="relative h-full">
                       <CardContent className="pt-6 space-y-4 h-full flex flex-col">
-                        <Quote className="h-8 w-8 text-primary/20 absolute top-4 right-4" />
+                        <Quote className="h-8 w-8 text-primary/30 absolute top-4 right-4" />
                         <div className="flex items-center gap-1">
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={`h-4 w-4 ${i < rating.rating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground"}`} />
+                            <Star key={i} className={`h-4 w-4 ${i < rating.rating ? "fill-accent text-accent" : "text-muted-foreground"}`} />
                           ))}
                         </div>
                         {rating.review && <p className="text-sm text-muted-foreground line-clamp-4 flex-grow">"{rating.review}"</p>}
-                        <div className="pt-4 border-t mt-auto">
-                          <p className="font-semibold text-sm">{rating.profiles.full_name || "Anonymous"}</p>
+                        <div className="pt-4 border-t-2 border-border mt-auto">
+                          <p className="font-bold text-sm">{rating.profiles.full_name || "Anonymous"}</p>
                           <p className="text-xs text-muted-foreground">{rating.products.name}</p>
                         </div>
                       </CardContent>
@@ -540,11 +549,11 @@ const Index = () => {
 
       {/* CTA Section */}
       <section className="container mx-auto px-4 py-16">
-        <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10">
+        <Card className="bg-primary text-primary-foreground">
           <CardContent className="py-12 space-y-6 text-center">
-            <h2 className="text-3xl lg:text-4xl font-bold">{settings.cta?.title || defaultSettings.cta.title}</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">{settings.cta?.subtitle || defaultSettings.cta.subtitle}</p>
-            <Button size="lg" onClick={() => navigate("/store")} className="text-lg px-8 gap-2">
+            <h2 className="text-3xl lg:text-4xl font-black">{settings.cta?.title || defaultSettings.cta.title}</h2>
+            <p className="text-lg opacity-90 max-w-2xl mx-auto font-medium">{settings.cta?.subtitle || defaultSettings.cta.subtitle}</p>
+            <Button size="lg" variant="brutal" onClick={() => navigate("/store")} className="text-lg px-8 gap-2">
               {settings.cta?.buttonText || defaultSettings.cta.buttonText} <ArrowRight className="h-5 w-5" />
             </Button>
           </CardContent>
@@ -552,41 +561,41 @@ const Index = () => {
       </section>
 
       {/* Contact Section */}
-      <section className="container mx-auto px-4 py-16 border-t">
+      <section className="container mx-auto px-4 py-16 border-t-2 border-border">
         <div className="grid md:grid-cols-3 gap-8 text-center">
           {(settings.contact?.email || defaultSettings.contact.email) && (
-            <div className="space-y-2">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Mail className="h-6 w-6 text-primary" />
+            <div className="space-y-3">
+              <div className="w-14 h-14 bg-primary border-2 border-border shadow-brutal-sm flex items-center justify-center mx-auto">
+                <Mail className="h-6 w-6 text-primary-foreground" />
               </div>
-              <h3 className="font-semibold">Email</h3>
-              <a href={`mailto:${settings.contact?.email || defaultSettings.contact.email}`} className="text-muted-foreground hover:text-primary transition-colors">
+              <h3 className="font-bold">Email</h3>
+              <a href={`mailto:${settings.contact?.email || defaultSettings.contact.email}`} className="text-muted-foreground hover:text-primary transition-colors font-medium">
                 {settings.contact?.email || defaultSettings.contact.email}
               </a>
             </div>
           )}
           {(settings.contact?.phone || defaultSettings.contact.phone) && (
-            <div className="space-y-2">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <Phone className="h-6 w-6 text-primary" />
+            <div className="space-y-3">
+              <div className="w-14 h-14 bg-accent border-2 border-border shadow-brutal-sm flex items-center justify-center mx-auto">
+                <Phone className="h-6 w-6 text-accent-foreground" />
               </div>
-              <h3 className="font-semibold">Phone</h3>
-              <a href={`tel:${settings.contact?.phone || defaultSettings.contact.phone}`} className="text-muted-foreground hover:text-primary transition-colors">
+              <h3 className="font-bold">Phone</h3>
+              <a href={`tel:${settings.contact?.phone || defaultSettings.contact.phone}`} className="text-muted-foreground hover:text-primary transition-colors font-medium">
                 {settings.contact?.phone || defaultSettings.contact.phone}
               </a>
             </div>
           )}
           {(settings.contact?.whatsapp || defaultSettings.contact.whatsapp) && (
-            <div className="space-y-2">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
-                <MessageCircle className="h-6 w-6 text-primary" />
+            <div className="space-y-3">
+              <div className="w-14 h-14 bg-secondary border-2 border-border shadow-brutal-sm flex items-center justify-center mx-auto">
+                <MessageCircle className="h-6 w-6 text-secondary-foreground" />
               </div>
-              <h3 className="font-semibold">WhatsApp</h3>
+              <h3 className="font-bold">WhatsApp</h3>
               <a 
                 href={`https://wa.me/${(settings.contact?.whatsapp || defaultSettings.contact.whatsapp).replace(/[^0-9]/g, '')}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="text-muted-foreground hover:text-primary transition-colors"
+                className="text-muted-foreground hover:text-primary transition-colors font-medium"
               >
                 Chat with us
               </a>
@@ -596,23 +605,23 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="border-t bg-muted/30">
+      <footer className="border-t-2 border-border bg-muted/30">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-muted-foreground">{settings.footer?.copyrightText || defaultSettings.footer.copyrightText}</p>
+            <p className="text-sm text-muted-foreground font-medium">{settings.footer?.copyrightText || defaultSettings.footer.copyrightText}</p>
             <div className="flex items-center gap-4">
               {(settings.social?.facebook || defaultSettings.social.facebook) && (
-                <a href={settings.social?.facebook || defaultSettings.social.facebook} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                <a href={settings.social?.facebook || defaultSettings.social.facebook} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-background border-2 border-border shadow-brutal-sm flex items-center justify-center hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-brutal transition-all">
                   <Facebook className="h-5 w-5" />
                 </a>
               )}
               {(settings.social?.instagram || defaultSettings.social.instagram) && (
-                <a href={settings.social?.instagram || defaultSettings.social.instagram} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                <a href={settings.social?.instagram || defaultSettings.social.instagram} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-background border-2 border-border shadow-brutal-sm flex items-center justify-center hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-brutal transition-all">
                   <Instagram className="h-5 w-5" />
                 </a>
               )}
               {(settings.social?.twitter || defaultSettings.social.twitter) && (
-                <a href={settings.social?.twitter || defaultSettings.social.twitter} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                <a href={settings.social?.twitter || defaultSettings.social.twitter} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-background border-2 border-border shadow-brutal-sm flex items-center justify-center hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-brutal transition-all">
                   <Twitter className="h-5 w-5" />
                 </a>
               )}

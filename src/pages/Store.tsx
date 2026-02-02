@@ -359,18 +359,23 @@ const Store = () => {
       
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-accent/20 to-background z-0" />
+        <div className="absolute inset-0 bg-muted/30 z-0" />
+        {/* Decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-10 right-10 w-24 h-24 bg-primary/20 border-2 border-border rotate-12" />
+          <div className="absolute bottom-20 left-20 w-20 h-20 bg-accent/30 border-2 border-border -rotate-6" />
+        </div>
         <div className="container mx-auto px-4 py-20 relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
-              <h1 className="text-5xl md:text-6xl font-bold leading-tight">
-                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              <h1 className="text-5xl md:text-6xl font-black leading-tight">
+                <span className="bg-primary text-primary-foreground px-2 inline-block border-2 border-border shadow-brutal">
                   Redfinger Cloud Phone
                 </span>
                 <br />
-                <span className="text-foreground">Redeem Codes</span>
+                <span className="text-foreground mt-2 inline-block">Redeem Codes</span>
               </h1>
-              <p className="text-xl text-muted-foreground">
+              <p className="text-xl text-muted-foreground font-medium">
                 Access your virtual Android device anywhere, anytime. Run apps 24/7 in the cloud with premium performance.
               </p>
               <div className="flex gap-4">
@@ -388,47 +393,48 @@ const Store = () => {
               </div>
             </div>
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/30 to-accent/30 blur-3xl" />
-              <img 
-                src={heroImage} 
-                alt="Cloud Phone Technology" 
-                className="relative rounded-2xl shadow-2xl w-full"
-              />
+              <div className="border-2 border-border shadow-brutal-lg overflow-hidden">
+                <img 
+                  src={heroImage} 
+                  alt="Cloud Phone Technology" 
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20 bg-card/50">
+      <section className="py-20 bg-muted/20">
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-4 gap-8">
             <div className="text-center space-y-3">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Cloud className="h-6 w-6 text-primary" />
+              <div className="mx-auto w-14 h-14 bg-primary border-2 border-border shadow-brutal-sm flex items-center justify-center">
+                <Cloud className="h-6 w-6 text-primary-foreground" />
               </div>
-              <h3 className="font-semibold">Cloud Based</h3>
+              <h3 className="font-bold">Cloud Based</h3>
               <p className="text-sm text-muted-foreground">Access anywhere with internet</p>
             </div>
             <div className="text-center space-y-3">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Zap className="h-6 w-6 text-primary" />
+              <div className="mx-auto w-14 h-14 bg-accent border-2 border-border shadow-brutal-sm flex items-center justify-center">
+                <Zap className="h-6 w-6 text-accent-foreground" />
               </div>
-              <h3 className="font-semibold">Ultra Fast</h3>
+              <h3 className="font-bold">Ultra Fast</h3>
               <p className="text-sm text-muted-foreground">High performance virtual device</p>
             </div>
             <div className="text-center space-y-3">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Smartphone className="h-6 w-6 text-primary" />
+              <div className="mx-auto w-14 h-14 bg-secondary border-2 border-border shadow-brutal-sm flex items-center justify-center">
+                <Smartphone className="h-6 w-6 text-secondary-foreground" />
               </div>
-              <h3 className="font-semibold">24/7 Runtime</h3>
+              <h3 className="font-bold">24/7 Runtime</h3>
               <p className="text-sm text-muted-foreground">Keep your apps running always</p>
             </div>
             <div className="text-center space-y-3">
-              <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <Shield className="h-6 w-6 text-primary" />
+              <div className="mx-auto w-14 h-14 bg-primary border-2 border-border shadow-brutal-sm flex items-center justify-center">
+                <Shield className="h-6 w-6 text-primary-foreground" />
               </div>
-              <h3 className="font-semibold">Secure</h3>
+              <h3 className="font-bold">Secure</h3>
               <p className="text-sm text-muted-foreground">Your data is safe and private</p>
             </div>
           </div>

@@ -21,7 +21,6 @@ import {
   Menu,
   LogIn,
   UserPlus,
-  Bell
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -127,9 +126,9 @@ const Navbar = () => {
   const totalNotifications = pendingCount + openTicketsCount;
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="sticky top-0 z-50 border-b-2 border-border bg-background/70 backdrop-blur-glass">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+        <Link to="/" className="text-xl font-black tracking-tight px-3 py-1 bg-primary text-primary-foreground border-2 border-border shadow-brutal-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-brutal transition-all">
           Redfinger Store
         </Link>
 
@@ -148,18 +147,18 @@ const Navbar = () => {
             ) : (
               <>
                 <Link to="/transactions">
-                  <Button variant="ghost" className={isActive('/transactions') ? 'bg-muted' : ''}>
+                  <Button variant={isActive('/transactions') ? 'default' : 'outline'}>
                     <ShoppingBag className="mr-2 h-4 w-4" />
                     My Orders
                   </Button>
                 </Link>
                 {isAdmin && (
                   <Link to="/admin">
-                    <Button variant="ghost" className={`${isActive('/admin') ? 'bg-muted' : ''} relative`}>
+                    <Button variant={isActive('/admin') ? 'default' : 'outline'} className="relative">
                       <Shield className="mr-2 h-4 w-4" />
                       Admin
                       {totalNotifications > 0 && (
-                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                        <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
                           {totalNotifications > 99 ? '99+' : totalNotifications}
                         </Badge>
                       )}
@@ -168,11 +167,11 @@ const Navbar = () => {
                 )}
                 {isStaff && !isAdmin && (
                   <Link to="/staff">
-                    <Button variant="ghost" className={`${isActive('/staff') ? 'bg-muted' : ''} relative`}>
+                    <Button variant={isActive('/staff') ? 'default' : 'outline'} className="relative">
                       <Briefcase className="mr-2 h-4 w-4" />
                       Staff
                       {totalNotifications > 0 && (
-                        <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs">
+                        <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
                           {totalNotifications > 99 ? '99+' : totalNotifications}
                         </Badge>
                       )}
@@ -181,20 +180,20 @@ const Navbar = () => {
                 )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full relative">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>
+                    <Button variant="outline" size="icon" className="rounded-full relative">
+                      <Avatar className="h-8 w-8 border-2 border-border">
+                        <AvatarFallback className="font-bold bg-accent text-accent-foreground">
                           {user.email?.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 bg-popover">
-                    <DropdownMenuItem disabled className="text-muted-foreground text-xs">
+                  <DropdownMenuContent align="end" className="w-48 bg-popover border-2 border-border shadow-brutal">
+                    <DropdownMenuItem disabled className="text-muted-foreground text-xs font-medium">
                       {user.email}
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                    <DropdownMenuSeparator className="bg-border" />
+                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive font-bold">
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign Out
                     </DropdownMenuItem>
@@ -208,42 +207,42 @@ const Navbar = () => {
           <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
+                <Button variant="outline" size="icon" className="relative">
                   <Menu className="h-5 w-5" />
                   {(isAdmin || isStaff) && totalNotifications > 0 && (
-                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[10px]">
+                    <Badge variant="destructive" className="absolute -top-2 -right-2 h-4 w-4 flex items-center justify-center p-0 text-[10px]">
                       {totalNotifications > 9 ? '9+' : totalNotifications}
                     </Badge>
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 bg-popover">
-                <DropdownMenuItem onClick={() => navigate("/")}>
+              <DropdownMenuContent align="end" className="w-56 bg-popover border-2 border-border shadow-brutal">
+                <DropdownMenuItem onClick={() => navigate("/")} className="font-medium">
                   <Home className="mr-2 h-4 w-4" />
                   Home
                 </DropdownMenuItem>
                 
                 {!user ? (
                   <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate("/auth/signin")}>
+                    <DropdownMenuSeparator className="bg-border" />
+                    <DropdownMenuItem onClick={() => navigate("/auth/signin")} className="font-medium">
                       <LogIn className="mr-2 h-4 w-4" />
                       Sign In
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/auth/signup")}>
+                    <DropdownMenuItem onClick={() => navigate("/auth/signup")} className="font-medium">
                       <UserPlus className="mr-2 h-4 w-4" />
                       Sign Up
                     </DropdownMenuItem>
                   </>
                 ) : (
                   <>
-                    <DropdownMenuItem onClick={() => navigate("/transactions")}>
+                    <DropdownMenuItem onClick={() => navigate("/transactions")} className="font-medium">
                       <ShoppingBag className="mr-2 h-4 w-4" />
                       My Orders
                     </DropdownMenuItem>
                     
                     {isAdmin && (
-                      <DropdownMenuItem onClick={() => navigate("/admin")} className="relative">
+                      <DropdownMenuItem onClick={() => navigate("/admin")} className="relative font-medium">
                         <Shield className="mr-2 h-4 w-4" />
                         Admin Panel
                         {totalNotifications > 0 && (
@@ -255,7 +254,7 @@ const Navbar = () => {
                     )}
                     
                     {isStaff && !isAdmin && (
-                      <DropdownMenuItem onClick={() => navigate("/staff")} className="relative">
+                      <DropdownMenuItem onClick={() => navigate("/staff")} className="relative font-medium">
                         <Briefcase className="mr-2 h-4 w-4" />
                         Staff Panel
                         {totalNotifications > 0 && (
@@ -266,11 +265,11 @@ const Navbar = () => {
                       </DropdownMenuItem>
                     )}
                     
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="bg-border" />
                     <DropdownMenuItem disabled className="text-muted-foreground text-xs">
                       {user.email}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive">
+                    <DropdownMenuItem onClick={handleSignOut} className="text-destructive font-bold">
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign Out
                     </DropdownMenuItem>
