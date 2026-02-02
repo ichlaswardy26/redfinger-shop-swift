@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MotionPage, MotionContainer, motion } from "@/components/ui/motion";
 
 interface Order {
   id: string;
@@ -229,10 +230,16 @@ const Transactions = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <MotionPage className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <h1 className="text-3xl font-bold mb-8">My Dashboard</h1>
+        <motion.h1 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-3xl font-bold mb-8"
+        >
+          My Dashboard
+        </motion.h1>
         
         {/* Support Tickets Section */}
         {tickets.length > 0 && (
@@ -320,8 +327,8 @@ const Transactions = () => {
               <p className="text-center text-muted-foreground py-12">No orders match your search.</p>
             ) : (
               <>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {paginatedOrders.map((order) => (
+                <MotionContainer className="grid md:grid-cols-2 gap-4">
+                  {paginatedOrders.map((order, index) => (
                     <OrderCard
                       key={order.id}
                       order={{ ...order, product_id: order.product_id, product: order.products, ticket: order.support_tickets }}
@@ -331,7 +338,7 @@ const Transactions = () => {
                       onCreateTicket={(orderId) => { setSelectedOrderId(orderId); setTicketDialogOpen(true); }}
                     />
                   ))}
-                </div>
+                </MotionContainer>
 
                 {totalOrderPages > 1 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t gap-4">
@@ -418,7 +425,7 @@ const Transactions = () => {
           </DialogContent>
         </Dialog>
       )}
-    </div>
+    </MotionPage>
   );
 };
 
