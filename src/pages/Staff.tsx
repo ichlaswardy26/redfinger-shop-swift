@@ -151,6 +151,27 @@ const Staff = () => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return;
     const product = products.find(p => p.id === order.product_id);
+    
+    // Mark inventory codes as used if they match
+    const { data: inventoryCodes } = await supabase
+      .from("redeem_code_inventory")
+      .select("id, code")
+      .eq("product_id", order.product_id)
+      .eq("is_used", false)
+      .in("code", redeemCodes);
+    
+    if (inventoryCodes && inventoryCodes.length > 0) {
+      const codeIds = inventoryCodes.map(c => c.id);
+      await supabase
+        .from("redeem_code_inventory")
+        .update({ 
+          is_used: true, 
+          used_at: new Date().toISOString(),
+          order_id: orderId 
+        })
+        .in("id", codeIds);
+    }
+    
     const { error } = await supabase.from("orders").update({
       payment_status: "verified", status: "active", redeem_codes: redeemCodes, admin_notes: adminNotes, verified_at: new Date().toISOString()
     }).eq("id", orderId);

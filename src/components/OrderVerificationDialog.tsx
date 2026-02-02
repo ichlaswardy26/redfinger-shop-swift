@@ -7,18 +7,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { CheckCircle, XCircle, ExternalLink, Copy, RefreshCw, Loader2 } from "lucide-react";
+import { CheckCircle, XCircle, ExternalLink, Copy, RefreshCw, Loader2, Zap, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getSignedUrl } from "@/hooks/useSignedUrl";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Order {
   id: string;
   quantity: number;
+  product_id?: string;
   product_name?: string;
   customer_name?: string;
   customer_email?: string;
   payment_proof?: string | null;
   created_at: string;
+  auto_delivery?: boolean;
+}
+
+interface InventoryCode {
+  id: string;
+  code: string;
 }
 
 interface OrderVerificationDialogProps {
@@ -43,18 +51,50 @@ export const OrderVerificationDialog = ({
   const [submitting, setSubmitting] = useState(false);
   const [proofUrl, setProofUrl] = useState<string | null>(null);
   const [proofLoading, setProofLoading] = useState(false);
+  const [inventoryCodes, setInventoryCodes] = useState<InventoryCode[]>([]);
+  const [loadingInventory, setLoadingInventory] = useState(false);
+  const [useAutoDelivery, setUseAutoDelivery] = useState(false);
   const { toast } = useToast();
 
-  // Generate codes when order changes
+  // Fetch available codes from inventory for this product
+  const fetchInventoryCodes = async () => {
+    if (!order?.product_id) return;
+    
+    setLoadingInventory(true);
+    try {
+      const { data, error } = await supabase
+        .from("redeem_code_inventory")
+        .select("id, code")
+        .eq("product_id", order.product_id)
+        .eq("is_used", false)
+        .limit(order.quantity);
+
+      if (error) throw error;
+      setInventoryCodes(data || []);
+      
+      // Auto-enable if enough codes available
+      if (data && data.length >= order.quantity) {
+        setUseAutoDelivery(true);
+        setRedeemCodes(data.map(c => c.code));
+      }
+    } catch (error) {
+      console.error("Error fetching inventory codes:", error);
+    } finally {
+      setLoadingInventory(false);
+    }
+  };
+
+  // Generate codes manually when auto-delivery not available
   const generateCodes = () => {
     if (!order) return;
     const codes = Array.from({ length: order.quantity }, () =>
       `RF-${Date.now()}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
     );
     setRedeemCodes(codes);
+    setUseAutoDelivery(false);
   };
 
-  // Load signed URL for payment proof
+  // Load signed URL for payment proof and fetch inventory
   useEffect(() => {
     if (open && order?.payment_proof) {
       setProofLoading(true);
@@ -65,16 +105,31 @@ export const OrderVerificationDialog = ({
     } else {
       setProofUrl(null);
     }
-  }, [open, order?.payment_proof]);
+
+    // Fetch inventory codes when dialog opens
+    if (open && order?.product_id) {
+      fetchInventoryCodes();
+    }
+  }, [open, order?.payment_proof, order?.product_id]);
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen && order) {
-      generateCodes();
       setAdminNotes("");
       setRejectReason("");
       setActiveTab("verify");
+      setInventoryCodes([]);
+      setUseAutoDelivery(false);
+      setRedeemCodes([]);
+    } else {
+      setRedeemCodes([]);
     }
     onOpenChange(isOpen);
+  };
+
+  // Use inventory codes
+  const useInventoryCodes = () => {
+    setRedeemCodes(inventoryCodes.map(c => c.code));
+    setUseAutoDelivery(true);
   };
 
   const handleVerify = async () => {
@@ -197,30 +252,73 @@ export const OrderVerificationDialog = ({
           </TabsList>
 
           <TabsContent value="verify" className="space-y-4">
+            {/* Auto-delivery indicator */}
+            {loadingInventory ? (
+              <div className="flex items-center gap-2 text-muted-foreground text-sm p-3 bg-muted/50 rounded-md">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Checking code inventory...
+              </div>
+            ) : inventoryCodes.length >= order.quantity ? (
+              <div className="flex items-center justify-between p-3 bg-green-500/10 border border-green-500/20 rounded-md">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                  <Zap className="h-4 w-4" />
+                  <span className="text-sm font-medium">
+                    {inventoryCodes.length} codes available in inventory
+                  </span>
+                </div>
+                {!useAutoDelivery && (
+                  <Button variant="outline" size="sm" onClick={useInventoryCodes}>
+                    <Package className="h-4 w-4 mr-1" />
+                    Use Inventory
+                  </Button>
+                )}
+              </div>
+            ) : inventoryCodes.length > 0 ? (
+              <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-400 text-sm p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-md">
+                <Package className="h-4 w-4" />
+                <span>Only {inventoryCodes.length} codes in inventory (need {order.quantity})</span>
+              </div>
+            ) : null}
+
             <div className="flex items-center justify-between">
               <Label>Redeem Codes ({order.quantity} required)</Label>
-              <Button variant="ghost" size="sm" onClick={generateCodes}>
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Regenerate
-              </Button>
+              <div className="flex gap-1">
+                {useAutoDelivery && (
+                  <Badge variant="secondary" className="text-xs">
+                    <Zap className="h-3 w-3 mr-1" />
+                    From Inventory
+                  </Badge>
+                )}
+                <Button variant="ghost" size="sm" onClick={generateCodes}>
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Generate New
+                </Button>
+              </div>
             </div>
             <div className="space-y-2 max-h-48 overflow-y-auto">
-              {redeemCodes.map((code, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Input
-                    value={code}
-                    onChange={(e) => updateCode(index, e.target.value)}
-                    placeholder={`Code ${index + 1}`}
-                  />
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => copyCode(code)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+              {redeemCodes.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground text-sm">
+                  Click "Generate New" or "Use Inventory" to add codes
                 </div>
-              ))}
+              ) : (
+                redeemCodes.map((code, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      value={code}
+                      onChange={(e) => updateCode(index, e.target.value)}
+                      placeholder={`Code ${index + 1}`}
+                      disabled={useAutoDelivery}
+                    />
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={() => copyCode(code)}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
             </div>
             <div>
               <Label htmlFor="admin-notes">Admin Notes (optional)</Label>

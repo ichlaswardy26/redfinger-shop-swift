@@ -1070,6 +1070,7 @@ const Admin = () => {
           order={{
             id: verifyingOrder.id,
             quantity: verifyingOrder.quantity,
+            product_id: verifyingOrder.product_id,
             payment_proof: verifyingOrder.payment_proof,
             product_name: verifyingOrder.product_name,
             customer_name: verifyingOrder.customer_name,
@@ -1077,6 +1078,27 @@ const Admin = () => {
           }}
           onVerify={async (orderId, redeemCodes, adminNotes) => {
             const { data: { user } } = await supabase.auth.getUser();
+            
+            // Mark inventory codes as used if they match
+            const { data: inventoryCodes } = await supabase
+              .from("redeem_code_inventory")
+              .select("id, code")
+              .eq("product_id", verifyingOrder.product_id)
+              .eq("is_used", false)
+              .in("code", redeemCodes);
+            
+            if (inventoryCodes && inventoryCodes.length > 0) {
+              const codeIds = inventoryCodes.map(c => c.id);
+              await supabase
+                .from("redeem_code_inventory")
+                .update({ 
+                  is_used: true, 
+                  used_at: new Date().toISOString(),
+                  order_id: orderId 
+                })
+                .in("id", codeIds);
+            }
+            
             await supabase.from("orders").update({
               payment_status: "verified",
               redeem_codes: redeemCodes,
