@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_rules: {
+        Row: {
+          description: string | null
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           admin_notes: string | null
@@ -156,6 +183,7 @@ export type Database = {
       }
       products: {
         Row: {
+          auto_delivery: boolean
           category_id: string | null
           created_at: string
           description: string | null
@@ -168,6 +196,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_delivery?: boolean
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -180,6 +209,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_delivery?: boolean
           category_id?: string | null
           created_at?: string
           description?: string | null
@@ -224,6 +254,54 @@ export type Database = {
           is_active?: boolean
         }
         Relationships: []
+      }
+      redeem_code_inventory: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_used: boolean
+          order_id: string | null
+          product_id: string
+          used_at: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_used?: boolean
+          order_id?: string | null
+          product_id: string
+          used_at?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_used?: boolean
+          order_id?: string | null
+          product_id?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redeem_code_inventory_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "redeem_code_inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       stock_logs: {
         Row: {
