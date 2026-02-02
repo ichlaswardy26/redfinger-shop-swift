@@ -6,10 +6,19 @@ import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-cloud-phone.jpg";
-import { Smartphone, Cloud, Shield, Zap, Star, ChevronLeft, ChevronRight } from "lucide-react";
+import { Smartphone, Cloud, Shield, Zap, Star, ChevronLeft, ChevronRight, Filter, X, Layers } from "lucide-react";
 import { OrderConfirmationDialog } from "@/components/OrderConfirmationDialog";
+
+interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  is_active: boolean;
+}
 
 interface Product {
   id: string;
@@ -19,6 +28,7 @@ interface Product {
   duration_days: number;
   stock: number;
   is_active: boolean;
+  category_id: string | null;
   average_rating?: number;
   rating_count?: number;
   isBestSeller?: boolean;
@@ -42,6 +52,7 @@ interface ProductQuantity {
 }
 
 const Store = () => {
+  const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -52,6 +63,8 @@ const Store = () => {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [currentRatingPage, setCurrentRatingPage] = useState(0);
   const [bestSellerId, setBestSellerId] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const ratingsPerPage = 6;
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -65,6 +78,7 @@ const Store = () => {
       setUser(session?.user ?? null);
     });
 
+    fetchCategories();
     fetchProducts();
     fetchRatings();
     fetchBestSeller();
@@ -74,6 +88,9 @@ const Store = () => {
       .channel('store-products')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
         fetchProducts();
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_categories' }, () => {
+        fetchCategories();
       })
       .subscribe();
 
@@ -92,6 +109,21 @@ const Store = () => {
       }
     });
   }, [products]);
+
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("product_categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order", { ascending: true });
+
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -307,6 +339,20 @@ const Store = () => {
     }
   };
 
+  const filteredProducts = selectedCategory
+    ? products.filter(p => p.category_id === selectedCategory)
+    : products;
+
+  const getCategoryIcon = (iconName: string | null) => {
+    switch (iconName) {
+      case "smartphone": return <Smartphone className="h-4 w-4" />;
+      case "cloud": return <Cloud className="h-4 w-4" />;
+      case "shield": return <Shield className="h-4 w-4" />;
+      case "zap": return <Zap className="h-4 w-4" />;
+      default: return <Layers className="h-4 w-4" />;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <Navbar />
@@ -392,22 +438,64 @@ const Store = () => {
       {/* Products Section */}
       <section id="products" className="py-20">
         <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-12">
+          <div className="text-center space-y-4 mb-8">
             <h2 className="text-4xl font-bold">Choose Your Plan</h2>
             <p className="text-xl text-muted-foreground">Select the perfect duration for your needs</p>
           </div>
+
+          {/* Category Filter */}
+          {categories.length > 0 && (
+            <div className="mb-8">
+              <div className="flex flex-wrap items-center gap-2 justify-center">
+                <Button
+                  variant={selectedCategory === null ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(null)}
+                >
+                  All Products
+                </Button>
+                {categories.map((category) => (
+                  <Button
+                    key={category.id}
+                    variant={selectedCategory === category.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedCategory(category.id)}
+                    className="gap-1"
+                  >
+                    {getCategoryIcon(category.icon)}
+                    {category.name}
+                  </Button>
+                ))}
+              </div>
+              {selectedCategory && (
+                <div className="text-center mt-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedCategory(null)}
+                    className="text-muted-foreground"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Clear filter
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
 
           {loading ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">Loading products...</p>
             </div>
-          ) : products.length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-muted-foreground">No products available at the moment</p>
+              <p className="text-muted-foreground">
+                {selectedCategory ? "No products in this category" : "No products available at the moment"}
+              </p>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
                   {...product}
@@ -487,14 +575,23 @@ const Store = () => {
         </section>
       )}
 
-      <OrderConfirmationDialog
-        open={confirmDialogOpen}
-        onOpenChange={setConfirmDialogOpen}
-        product={selectedProduct}
-        quantity={selectedProduct ? Math.min(quantities[selectedProduct.id] || 1, selectedProduct.stock) : 1}
-        onConfirm={handleConfirmOrder}
-        isLoading={isCreatingOrder}
-      />
+      {/* Order Confirmation Dialog */}
+      {selectedProduct && (
+        <OrderConfirmationDialog
+          open={confirmDialogOpen}
+          onOpenChange={setConfirmDialogOpen}
+          product={{
+            id: selectedProduct.id,
+            name: selectedProduct.name,
+            description: selectedProduct.description,
+            price: selectedProduct.price,
+            duration_days: selectedProduct.duration_days,
+          }}
+          quantity={quantities[selectedProduct.id] || 1}
+          onConfirm={handleConfirmOrder}
+          isLoading={isCreatingOrder}
+        />
+      )}
     </div>
   );
 };
