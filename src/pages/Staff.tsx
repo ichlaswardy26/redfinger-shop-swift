@@ -17,6 +17,7 @@ import { TicketConversation } from "@/components/TicketConversation";
 import { FilePreview } from "@/components/FilePreview";
 import { DataTableFilters } from "@/components/DataTableFilters";
 import { OrderVerificationDialog } from "@/components/OrderVerificationDialog";
+import { MotionCard, MotionPage, MotionContainer, motion } from "@/components/ui/motion";
 import { format } from "date-fns";
 import { exportToCSV } from "@/lib/exportUtils";
 import { useReactTable, getCoreRowModel, getPaginationRowModel, getSortedRowModel, flexRender, ColumnDef, SortingState } from "@tanstack/react-table";
@@ -314,10 +315,21 @@ const Staff = () => {
   if (loading) return <div className="min-h-screen bg-background"><Navbar /><div className="container mx-auto p-4">Loading...</div></div>;
 
   return (
-    <div className="min-h-screen bg-background">
+    <MotionPage className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto p-4 space-y-6">
-        <Badge variant="secondary" className="text-lg px-4 py-2">Staff Dashboard</Badge>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div>
+            <h1 className="text-3xl font-bold">Staff Dashboard</h1>
+            <p className="text-muted-foreground">Manage tickets, orders, and inventory</p>
+          </div>
+          <Badge variant="secondary" className="text-sm px-4 py-2 w-fit">Staff Access</Badge>
+        </motion.div>
+        
         <Tabs defaultValue="tickets" className="space-y-4">
           <div className="w-full overflow-x-auto pb-2">
             <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-5">
@@ -401,13 +413,22 @@ const Staff = () => {
             <Card>
               <CardHeader><CardTitle>Stock Management</CardTitle><CardDescription>Manage product inventory</CardDescription></CardHeader>
               <CardContent>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {products.map(p => (
-                    <Card key={p.id} className="cursor-pointer hover:border-primary" onClick={() => { setSelectedProduct(p); setStockDialogOpen(true); }}>
-                      <CardContent className="p-4"><p className="font-medium">{p.name}</p><Badge variant={p.stock > 10 ? 'default' : p.stock > 0 ? 'secondary' : 'destructive'}>{p.stock} in stock</Badge></CardContent>
-                    </Card>
+                <MotionContainer className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {products.map((p, index) => (
+                    <MotionCard 
+                      key={p.id} 
+                      className="cursor-pointer p-4"
+                      onClick={() => { setSelectedProduct(p); setStockDialogOpen(true); }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold">{p.name}</p>
+                        <Badge variant={p.stock > 10 ? 'default' : p.stock > 0 ? 'secondary' : 'destructive'}>
+                          {p.stock} in stock
+                        </Badge>
+                      </div>
+                    </MotionCard>
                   ))}
-                </div>
+                </MotionContainer>
               </CardContent>
             </Card>
           </TabsContent>
@@ -428,7 +449,7 @@ const Staff = () => {
       <OrderVerificationDialog open={verifyDialogOpen} onOpenChange={setVerifyDialogOpen} 
         order={verifyingOrder ? { ...verifyingOrder, product_name: verifyingOrder.products?.name, customer_name: verifyingOrder.profiles?.full_name || '', customer_email: verifyingOrder.profiles?.email || '' } : null}
         onVerify={handleVerifyOrder} onReject={handleRejectOrder} />
-    </div>
+    </MotionPage>
   );
 };
 

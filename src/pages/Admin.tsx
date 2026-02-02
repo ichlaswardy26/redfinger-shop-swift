@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MotionStatCard, MotionContainer, MotionItem, MotionPage, motion } from "@/components/ui/motion";
 import { 
   ShoppingCart, Users, Package, LayoutDashboard, CheckCircle, XCircle, Clock, Search, 
   ExternalLink, AlertTriangle, Ticket, Star, Settings, History, Eye, MessageSquare, BarChart3, Layers, ListChecks
@@ -714,18 +715,28 @@ const Admin = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <MotionPage className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Admin Panel</h1>
-        <div className="flex flex-wrap gap-2 mb-4">
-          <Button variant="outline" onClick={() => navigate("/admin/analytics")}>
-            <BarChart3 className="h-4 w-4 mr-2" />Analytics
-          </Button>
-          <Button variant="outline" onClick={() => setBulkVerifyOpen(true)}>
-            <ListChecks className="h-4 w-4 mr-2" />Bulk Verify
-          </Button>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
+        >
+          <div>
+            <h1 className="text-3xl font-bold">Admin Panel</h1>
+            <p className="text-muted-foreground">Manage your store and users</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="brutal" onClick={() => navigate("/admin/analytics")}>
+              <BarChart3 className="h-4 w-4 mr-2" />Analytics
+            </Button>
+            <Button variant="outline" onClick={() => setBulkVerifyOpen(true)}>
+              <ListChecks className="h-4 w-4 mr-2" />Bulk Verify
+            </Button>
+          </div>
+        </motion.div>
+        
         <Tabs defaultValue="dashboard" className="space-y-6">
           <div className="w-full overflow-x-auto pb-2">
             <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-9">
@@ -742,24 +753,52 @@ const Admin = () => {
           </div>
 
           <TabsContent value="dashboard" className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total Orders</CardTitle><ShoppingCart className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                <CardContent><div className="text-2xl font-bold">{stats.totalOrders}</div></CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Pending Payments</CardTitle><Clock className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                <CardContent><div className="text-2xl font-bold">{stats.pendingPayments}</div></CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Verified Orders</CardTitle><CheckCircle className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                <CardContent><div className="text-2xl font-bold">{stats.totalRevenue}</div></CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2"><CardTitle className="text-sm font-medium">Total Users</CardTitle><Users className="h-4 w-4 text-muted-foreground" /></CardHeader>
-                <CardContent><div className="text-2xl font-bold">{stats.totalUsers}</div></CardContent>
-              </Card>
-            </div>
+            <MotionContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <MotionStatCard>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
+                    <p className="text-3xl font-bold">{stats.totalOrders}</p>
+                  </div>
+                  <div className="p-3 bg-primary/10 rounded-lg border-2 border-border">
+                    <ShoppingCart className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </MotionStatCard>
+              <MotionStatCard>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Pending Payments</p>
+                    <p className="text-3xl font-bold">{stats.pendingPayments}</p>
+                  </div>
+                  <div className="p-3 bg-accent/20 rounded-lg border-2 border-border">
+                    <Clock className="h-6 w-6 text-accent-foreground" />
+                  </div>
+                </div>
+              </MotionStatCard>
+              <MotionStatCard>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Verified Orders</p>
+                    <p className="text-3xl font-bold">{stats.totalRevenue}</p>
+                  </div>
+                  <div className="p-3 bg-primary/10 rounded-lg border-2 border-border">
+                    <CheckCircle className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+              </MotionStatCard>
+              <MotionStatCard>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Total Users</p>
+                    <p className="text-3xl font-bold">{stats.totalUsers}</p>
+                  </div>
+                  <div className="p-3 bg-secondary/50 rounded-lg border-2 border-border">
+                    <Users className="h-6 w-6 text-secondary-foreground" />
+                  </div>
+                </div>
+              </MotionStatCard>
+            </MotionContainer>
             <Card>
               <CardHeader><CardTitle>Recent Activity</CardTitle><CardDescription>Latest orders</CardDescription></CardHeader>
               <CardContent>
@@ -769,7 +808,7 @@ const Admin = () => {
                     <TableBody>
                       {orders.slice(0, 5).map((order) => (
                         <TableRow key={order.id}>
-                          <TableCell>{order.customer_name}</TableCell>
+                          <TableCell className="font-medium">{order.customer_name}</TableCell>
                           <TableCell>{order.product_name}</TableCell>
                           <TableCell><Badge variant={order.payment_status === "verified" ? "default" : "outline"}>{order.payment_status}</Badge></TableCell>
                           <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
@@ -1078,7 +1117,7 @@ const Admin = () => {
         onOpenChange={setBulkVerifyOpen}
         onSuccess={() => { fetchOrders(); fetchProducts(); fetchStats(); }}
       />
-    </div>
+    </MotionPage>
   );
 };
 

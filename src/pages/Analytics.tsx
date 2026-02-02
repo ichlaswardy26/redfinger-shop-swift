@@ -16,6 +16,7 @@ import {
   TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Package, 
   Star, Ticket, ArrowUpRight, ArrowDownRight, Loader2 
 } from "lucide-react";
+import { MotionStatCard, MotionPage, MotionContainer, motion } from "@/components/ui/motion";
 
 interface OrderData {
   id: string;
@@ -267,25 +268,23 @@ const Analytics = () => {
     icon: any; 
     format?: (v: number) => string;
   }) => (
-    <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">{formatFn ? formatFn(value) : value.toLocaleString()}</p>
-            {change !== undefined && (
-              <div className={`flex items-center text-sm ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {change >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-                <span>{Math.abs(change).toFixed(1)}% vs previous period</span>
-              </div>
-            )}
-          </div>
-          <div className="p-3 bg-primary/10 rounded-full">
-            <Icon className="h-6 w-6 text-primary" />
-          </div>
+    <MotionStatCard>
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground font-medium">{title}</p>
+          <p className="text-2xl font-bold">{formatFn ? formatFn(value) : value.toLocaleString()}</p>
+          {change !== undefined && (
+            <div className={`flex items-center text-sm ${change >= 0 ? 'text-primary' : 'text-destructive'}`}>
+              {change >= 0 ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+              <span>{Math.abs(change).toFixed(1)}% vs previous period</span>
+            </div>
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <div className="p-3 bg-primary/10 rounded-lg border-2 border-border">
+          <Icon className="h-6 w-6 text-primary" />
+        </div>
+      </div>
+    </MotionStatCard>
   );
 
   if (loading) {
@@ -297,10 +296,14 @@ const Analytics = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <MotionPage className="min-h-screen bg-background">
       <Navbar />
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
+        >
           <div>
             <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
             <p className="text-muted-foreground">Overview of your store performance</p>
@@ -316,10 +319,10 @@ const Analytics = () => {
               <SelectItem value="365">Last year</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </motion.div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <MotionContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <StatCard 
             title="Total Revenue" 
             value={stats.totalRevenue} 
@@ -345,7 +348,7 @@ const Analytics = () => {
             icon={TrendingUp}
             format={formatCurrency}
           />
-        </div>
+        </MotionContainer>
 
         <Tabs defaultValue="revenue" className="space-y-4">
           <TabsList className="flex-wrap">
@@ -516,7 +519,7 @@ const Analytics = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div>
+    </MotionPage>
   );
 };
 

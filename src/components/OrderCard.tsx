@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Upload, X, Star, MessageSquare, Download } from "lucide-react";
 import { format } from "date-fns";
 import CopyButton from "./CopyButton";
-
+import { MotionCard } from "@/components/ui/motion";
 interface OrderCardProps {
   order: {
     id: string;
@@ -82,11 +82,11 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
   };
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <MotionCard className="overflow-hidden">
       <CardHeader className="bg-gradient-to-r from-primary/10 to-accent/10 pb-4">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="font-semibold text-lg">{order.product.name}</h3>
+            <h3 className="font-bold text-lg">{order.product.name}</h3>
             <p className="text-sm text-muted-foreground">
               Quantity: {order.quantity} × {order.product.duration_days} days
             </p>
@@ -215,6 +215,6 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
           </Button>
         )}
       </CardFooter>
-    </Card>
+    </MotionCard>
   );
 };
