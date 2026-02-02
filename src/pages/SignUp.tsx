@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { ShoppingBag } from "lucide-react";
 
 const signUpSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -76,23 +75,30 @@ const SignUp = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-primary/5 to-accent/5 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-4 text-center">
-          <div className="flex justify-center">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <ShoppingBag className="h-6 w-6 text-primary" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl">Create Account</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-32 h-32 bg-primary/20 border-2 border-border rotate-12" />
+        <div className="absolute top-40 right-20 w-24 h-24 bg-accent/30 border-2 border-border -rotate-6" />
+        <div className="absolute bottom-32 left-1/4 w-20 h-20 bg-primary/10 border-2 border-border rotate-45" />
+        <div className="absolute bottom-20 right-1/3 w-28 h-28 bg-accent/20 border-2 border-border -rotate-12" />
+      </div>
+
+      <Card className="w-full max-w-md relative">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-3xl font-black text-center">
+            <span className="bg-primary text-primary-foreground px-3 py-1 inline-block border-2 border-border shadow-brutal-sm">
+              Redfinger Store
+            </span>
+          </CardTitle>
+          <CardDescription className="text-center pt-4 font-medium">
             Sign up to start purchasing Redfinger Cloud Phone codes.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="fullName">Full Name</Label>
+              <Label htmlFor="fullName" className="font-bold">Full Name</Label>
               <Input
                 id="fullName"
                 type="text"
@@ -103,7 +109,7 @@ const SignUp = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="font-bold">Email</Label>
               <Input
                 id="email"
                 type="email"
@@ -114,7 +120,7 @@ const SignUp = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="font-bold">Password</Label>
               <Input
                 id="password"
                 type="password"
@@ -124,12 +130,12 @@ const SignUp = () => {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Sign Up"}
+            <Button type="submit" className="w-full" disabled={loading} variant="hero">
+              {loading ? "Creating account..." : "Create Account"}
             </Button>
             <div className="text-center text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/auth/signin" className="text-primary hover:underline">
+              <Link to="/auth/signin" className="text-primary hover:underline font-medium">
                 Sign in
               </Link>
             </div>
