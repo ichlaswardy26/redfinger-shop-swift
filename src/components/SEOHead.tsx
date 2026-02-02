@@ -23,9 +23,10 @@ export const SEOHead = ({
   noIndex = false,
   noFollow = false,
   structuredData,
-  siteName = "Redfinger Store",
+  siteName,
 }: SEOHeadProps) => {
-  const fullTitle = title ? `${title} | ${siteName}` : siteName;
+  const effectiveSiteName = siteName || "Redfinger Store";
+  const fullTitle = title ? `${title} | ${effectiveSiteName}` : effectiveSiteName;
   const robots = [
     noIndex ? "noindex" : "index",
     noFollow ? "nofollow" : "follow",
