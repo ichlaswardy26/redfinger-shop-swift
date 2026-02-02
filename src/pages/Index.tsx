@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
+import { SEOHead } from "@/components/SEOHead";
+import { TrustIndicators } from "@/components/TrustIndicators";
+import { FAQSection } from "@/components/FAQSection";
+import { FloatingChatButton } from "@/components/FloatingChatButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -269,6 +273,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead 
+        title={`${settings.site?.name || defaultSettings.site.name} - ${settings.site?.tagline || defaultSettings.site.tagline}`}
+        description={settings.site?.description || defaultSettings.site.description}
+        ogType="website"
+      />
       <Navbar />
       
       {/* Hero Section */}
@@ -552,6 +561,12 @@ const Index = () => {
         </Card>
       </section>
 
+      {/* Trust Indicators */}
+      <TrustIndicators />
+
+      {/* FAQ Section */}
+      <FAQSection />
+
       {/* Contact Section */}
       <section className="container mx-auto px-4 py-16 border-t-2 border-border">
         <div className="grid md:grid-cols-3 gap-8 text-center">
@@ -621,6 +636,12 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      {/* Floating Chat Button */}
+      <FloatingChatButton 
+        whatsapp={settings.contact?.whatsapp} 
+        email={settings.contact?.email} 
+      />
     </div>
   );
 };

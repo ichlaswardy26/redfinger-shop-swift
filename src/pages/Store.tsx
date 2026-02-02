@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User } from "@supabase/supabase-js";
 import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
+import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -345,6 +346,10 @@ const Store = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
+      <SEOHead 
+        title="Shop - Redfinger Cloud Phone Codes"
+        description="Browse and purchase Redfinger cloud phone redeem codes. Instant delivery, secure payment, 24/7 support."
+      />
       <Navbar />
       
       {/* Hero Section */}
