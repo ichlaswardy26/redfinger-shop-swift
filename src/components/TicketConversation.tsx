@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, User, UserCog, FileImage, FileVideo, FileText, ExternalLink } from "lucide-react";
+import { Send, User, UserCog } from "lucide-react";
+import { FilePreview } from "@/components/FilePreview";
 import { format } from "date-fns";
 
 interface Message {
@@ -136,72 +137,6 @@ export const TicketConversation = ({
     }
   };
 
-  const getFilePreview = (filePath: string) => {
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/payment-proofs/${filePath}`;
-    const ext = filePath.split('.').pop()?.toLowerCase();
-    
-    if (['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(ext || '')) {
-      return (
-        <div className="mt-3 p-3 bg-muted rounded-lg">
-          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-            <FileImage className="h-3 w-3" /> Attachment
-          </p>
-          <img 
-            src={url} 
-            alt="Attachment" 
-            className="max-w-xs rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => window.open(url, '_blank')}
-          />
-        </div>
-      );
-    }
-    
-    if (['mp4', 'webm', 'mov'].includes(ext || '')) {
-      return (
-        <div className="mt-3 p-3 bg-muted rounded-lg">
-          <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-            <FileVideo className="h-3 w-3" /> Video Attachment
-          </p>
-          <video 
-            src={url} 
-            controls 
-            className="max-w-xs rounded-lg"
-          />
-        </div>
-      );
-    }
-    
-    if (ext === 'pdf') {
-      return (
-        <div className="mt-3 p-3 bg-muted rounded-lg">
-          <a 
-            href={url} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="flex items-center gap-2 text-primary hover:underline"
-          >
-            <FileText className="h-4 w-4" />
-            View PDF Attachment
-            <ExternalLink className="h-3 w-3" />
-          </a>
-        </div>
-      );
-    }
-
-    return (
-      <div className="mt-3 p-3 bg-muted rounded-lg">
-        <a 
-          href={url} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-primary hover:underline"
-        >
-          View Attachment
-          <ExternalLink className="h-3 w-3" />
-        </a>
-      </div>
-    );
-  };
 
   const isOpen = ticketStatus === 'open';
 
@@ -211,7 +146,7 @@ export const TicketConversation = ({
       {imageProof && (
         <div className="mb-4">
           <p className="text-sm font-medium mb-2">Original Attachment:</p>
-          {getFilePreview(imageProof)}
+          <FilePreview filePath={imageProof} />
         </div>
       )}
 
