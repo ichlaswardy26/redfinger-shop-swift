@@ -3,7 +3,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Search, X, Download, CalendarIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Search, X, Download, CalendarIcon, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -48,9 +49,14 @@ export const DataTableFilters = ({
   onExport,
   exportLabel = "Export CSV"
 }: DataTableFiltersProps) => {
-  const hasActiveFilters = searchValue || 
-    filters.some(f => f.value && f.value !== 'all') ||
-    (dateRange?.from || dateRange?.to);
+  // Count active filters
+  const activeFilterCount = [
+    searchValue ? 1 : 0,
+    ...filters.map(f => (f.value && f.value !== 'all') ? 1 : 0),
+    (dateRange?.from || dateRange?.to) ? 1 : 0
+  ].reduce((a, b) => a + b, 0);
+  
+  const hasActiveFilters = activeFilterCount > 0;
 
   return (
     <div className="flex flex-col gap-3">
@@ -124,8 +130,12 @@ export const DataTableFilters = ({
           )}
 
           {hasActiveFilters && onReset && (
-            <Button variant="ghost" size="sm" onClick={onReset}>
-              <X className="h-4 w-4 mr-1" />
+            <Button variant="outline" size="sm" onClick={onReset} className="gap-1">
+              <Filter className="h-4 w-4" />
+              <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-xs">
+                {activeFilterCount}
+              </Badge>
+              <X className="h-4 w-4" />
               Clear
             </Button>
           )}

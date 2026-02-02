@@ -111,6 +111,11 @@ const SignIn = () => {
                 required
               />
             </div>
+            <div className="flex items-center justify-end">
+              <Link to="/auth/forgot-password" className="text-sm text-primary hover:underline font-medium">
+                Forgot password?
+              </Link>
+            </div>
             <Button type="submit" className="w-full" disabled={loading} variant="hero">
               {loading ? "Signing in..." : "Sign In"}
             </Button>

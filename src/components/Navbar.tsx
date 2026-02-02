@@ -12,6 +12,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { 
   LogOut, 
   Shield, 
@@ -21,8 +26,28 @@ import {
   Menu,
   LogIn,
   UserPlus,
+  Clock,
+  Ticket,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+
+// Notification badge component with tooltip
+const NotificationBadge = ({ count, label, icon: Icon }: { count: number; label: string; icon: React.ElementType }) => {
+  if (count === 0) return null;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Badge variant="destructive" className="h-5 min-w-5 flex items-center justify-center p-0 px-1.5 text-xs gap-1">
+          <Icon className="h-3 w-3" />
+          {count > 99 ? '99+' : count}
+        </Badge>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{count} {label}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+};
 
 const Navbar = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -123,7 +148,6 @@ const Navbar = () => {
   };
 
   const isActive = (path: string) => location.pathname === path;
-  const totalNotifications = pendingCount + openTicketsCount;
 
   return (
     <nav className="sticky top-0 z-50 border-b-2 border-border bg-background/70 backdrop-blur-glass">
@@ -154,26 +178,28 @@ const Navbar = () => {
                 </Link>
                 {isAdmin && (
                   <Link to="/admin">
-                    <Button variant={isActive('/admin') ? 'default' : 'outline'} className="relative">
-                      <Shield className="mr-2 h-4 w-4" />
+                    <Button variant={isActive('/admin') ? 'default' : 'outline'} className="gap-2">
+                      <Shield className="h-4 w-4" />
                       Admin
-                      {totalNotifications > 0 && (
-                        <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                          {totalNotifications > 99 ? '99+' : totalNotifications}
-                        </Badge>
+                      {pendingCount > 0 && (
+                        <NotificationBadge count={pendingCount} label="pending orders" icon={Clock} />
+                      )}
+                      {openTicketsCount > 0 && (
+                        <NotificationBadge count={openTicketsCount} label="open tickets" icon={Ticket} />
                       )}
                     </Button>
                   </Link>
                 )}
                 {isStaff && !isAdmin && (
                   <Link to="/staff">
-                    <Button variant={isActive('/staff') ? 'default' : 'outline'} className="relative">
-                      <Briefcase className="mr-2 h-4 w-4" />
+                    <Button variant={isActive('/staff') ? 'default' : 'outline'} className="gap-2">
+                      <Briefcase className="h-4 w-4" />
                       Staff
-                      {totalNotifications > 0 && (
-                        <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs">
-                          {totalNotifications > 99 ? '99+' : totalNotifications}
-                        </Badge>
+                      {pendingCount > 0 && (
+                        <NotificationBadge count={pendingCount} label="pending orders" icon={Clock} />
+                      )}
+                      {openTicketsCount > 0 && (
+                        <NotificationBadge count={openTicketsCount} label="open tickets" icon={Ticket} />
                       )}
                     </Button>
                   </Link>
@@ -207,13 +233,8 @@ const Navbar = () => {
           <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="relative">
+                <Button variant="outline" size="icon">
                   <Menu className="h-5 w-5" />
-                  {(isAdmin || isStaff) && totalNotifications > 0 && (
-                    <Badge variant="destructive" className="absolute -top-2 -right-2 h-4 w-4 flex items-center justify-center p-0 text-[10px]">
-                      {totalNotifications > 9 ? '9+' : totalNotifications}
-                    </Badge>
-                  )}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 bg-popover border-2 border-border shadow-brutal">
@@ -242,26 +263,44 @@ const Navbar = () => {
                     </DropdownMenuItem>
                     
                     {isAdmin && (
-                      <DropdownMenuItem onClick={() => navigate("/admin")} className="relative font-medium">
-                        <Shield className="mr-2 h-4 w-4" />
-                        Admin Panel
-                        {totalNotifications > 0 && (
-                          <Badge variant="destructive" className="ml-auto text-xs">
-                            {totalNotifications}
-                          </Badge>
-                        )}
+                      <DropdownMenuItem onClick={() => navigate("/admin")} className="font-medium justify-between">
+                        <span className="flex items-center gap-2">
+                          <Shield className="h-4 w-4" />
+                          Admin Panel
+                        </span>
+                        <span className="flex items-center gap-1">
+                          {pendingCount > 0 && (
+                            <Badge variant="destructive" className="text-xs h-5 px-1.5">
+                              {pendingCount} orders
+                            </Badge>
+                          )}
+                          {openTicketsCount > 0 && (
+                            <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                              {openTicketsCount} tickets
+                            </Badge>
+                          )}
+                        </span>
                       </DropdownMenuItem>
                     )}
                     
                     {isStaff && !isAdmin && (
-                      <DropdownMenuItem onClick={() => navigate("/staff")} className="relative font-medium">
-                        <Briefcase className="mr-2 h-4 w-4" />
-                        Staff Panel
-                        {totalNotifications > 0 && (
-                          <Badge variant="destructive" className="ml-auto text-xs">
-                            {totalNotifications}
-                          </Badge>
-                        )}
+                      <DropdownMenuItem onClick={() => navigate("/staff")} className="font-medium justify-between">
+                        <span className="flex items-center gap-2">
+                          <Briefcase className="h-4 w-4" />
+                          Staff Panel
+                        </span>
+                        <span className="flex items-center gap-1">
+                          {pendingCount > 0 && (
+                            <Badge variant="destructive" className="text-xs h-5 px-1.5">
+                              {pendingCount} orders
+                            </Badge>
+                          )}
+                          {openTicketsCount > 0 && (
+                            <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                              {openTicketsCount} tickets
+                            </Badge>
+                          )}
+                        </span>
                       </DropdownMenuItem>
                     )}
                     
