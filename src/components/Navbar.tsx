@@ -30,6 +30,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 // Notification badge component with tooltip
 const NotificationBadge = ({ count, label, icon: Icon }: { count: number; label: string; icon: React.ElementType }) => {
@@ -58,6 +59,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { settings: siteSettings } = useSiteSettings();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -152,8 +154,8 @@ const Navbar = () => {
   return (
     <nav className="sticky top-0 z-50 border-b-2 border-border bg-background/70 backdrop-blur-glass">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <Link to="/" className="text-xl font-black tracking-tight px-3 py-1 bg-primary text-primary-foreground border-2 border-border shadow-brutal-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-brutal transition-all">
-          Redfinger Store
+        <Link to="/" className="text-base sm:text-xl font-black tracking-tight px-2 sm:px-3 py-1 bg-primary text-primary-foreground border-2 border-border shadow-brutal-sm hover:translate-x-[-1px] hover:translate-y-[-1px] hover:shadow-brutal transition-all truncate max-w-[180px] sm:max-w-none">
+          {siteSettings.name}
         </Link>
 
         <div className="flex items-center gap-2">
