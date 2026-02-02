@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useFileValidation } from "@/hooks/useFileValidation";
 import Navbar from "@/components/Navbar";
+import { SEOHead } from "@/components/SEOHead";
 import { OrderCard } from "@/components/OrderCard";
 import { TicketDialog } from "@/components/TicketDialog";
 import { RatingDialog } from "@/components/RatingDialog";
@@ -231,6 +232,7 @@ const Transactions = () => {
 
   return (
     <MotionPage className="min-h-screen bg-background">
+      <SEOHead title="My Orders - Redfinger Store" noIndex />
       <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <motion.h1 

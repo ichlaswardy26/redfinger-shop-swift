@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Ticket, Package, Star, CheckCircle, History, MessageSquare, ExternalLink } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import { SEOHead } from "@/components/SEOHead";
 import StockManagement from "@/components/StockManagement";
 import { StockActivityLog } from "@/components/StockActivityLog";
 import { TicketConversation } from "@/components/TicketConversation";
@@ -317,6 +318,7 @@ const Staff = () => {
 
   return (
     <MotionPage className="min-h-screen bg-background">
+      <SEOHead title="Staff Dashboard - Redfinger Store" noIndex />
       <Navbar />
       <div className="container mx-auto p-4 space-y-6">
         <motion.div

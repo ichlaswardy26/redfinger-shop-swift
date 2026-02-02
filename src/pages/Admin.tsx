@@ -13,6 +13,9 @@ import { FilePreview } from "@/components/FilePreview";
 import { WebSettingsEditor } from "@/components/WebSettingsEditor";
 import { BulkOrderVerification } from "@/components/BulkOrderVerification";
 import { CategoryManager } from "@/components/CategoryManager";
+import { BusinessRulesEditor } from "@/components/BusinessRulesEditor";
+import { CodeInventoryManager } from "@/components/CodeInventoryManager";
+import { SEOHead } from "@/components/SEOHead";
 import { productSchema } from "@/lib/validations";
 import { exportToCSV } from "@/lib/exportUtils";
 import { format } from "date-fns";
@@ -30,7 +33,7 @@ import { MotionStatCard, MotionContainer, MotionItem, MotionPage, motion } from 
 import { PaymentProofLink } from "@/components/PaymentProofLink";
 import { 
   ShoppingCart, Users, Package, LayoutDashboard, CheckCircle, XCircle, Clock, Search, 
-  ExternalLink, AlertTriangle, Ticket, Star, Settings, History, Eye, MessageSquare, BarChart3, Layers, ListChecks
+  ExternalLink, AlertTriangle, Ticket, Star, Settings, History, Eye, MessageSquare, BarChart3, Layers, ListChecks, Code, Cog
 } from "lucide-react";
 import { 
   useReactTable, 
@@ -709,6 +712,7 @@ const Admin = () => {
 
   return (
     <MotionPage className="min-h-screen bg-background">
+      <SEOHead title="Admin Panel - Redfinger Store" noIndex noFollow />
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <motion.div
@@ -732,16 +736,17 @@ const Admin = () => {
         
         <Tabs defaultValue="dashboard" className="space-y-6">
           <div className="w-full overflow-x-auto pb-2">
-            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-9">
+            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-10">
               <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" /><span>Dashboard</span></TabsTrigger>
               <TabsTrigger value="orders"><ShoppingCart className="h-4 w-4 mr-2" /><span>Orders</span></TabsTrigger>
               <TabsTrigger value="products"><Package className="h-4 w-4 mr-2" /><span>Products</span></TabsTrigger>
               <TabsTrigger value="categories"><Layers className="h-4 w-4 mr-2" /><span>Categories</span></TabsTrigger>
+              <TabsTrigger value="code-inventory"><Code className="h-4 w-4 mr-2" /><span>Codes</span></TabsTrigger>
               <TabsTrigger value="users"><Users className="h-4 w-4 mr-2" /><span>Users</span></TabsTrigger>
               <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-2" /><span>Tickets</span></TabsTrigger>
               <TabsTrigger value="ratings"><Star className="h-4 w-4 mr-2" /><span>Ratings</span></TabsTrigger>
               <TabsTrigger value="audit"><History className="h-4 w-4 mr-2" /><span>Audit</span></TabsTrigger>
-              <TabsTrigger value="settings"><Settings className="h-4 w-4 mr-2" /><span>Settings</span></TabsTrigger>
+              <TabsTrigger value="settings"><Cog className="h-4 w-4 mr-2" /><span>Settings</span></TabsTrigger>
             </TabsList>
           </div>
 
@@ -1023,9 +1028,37 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
+          <TabsContent value="code-inventory">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Code className="h-5 w-5" />
+                  Code Inventory
+                </CardTitle>
+                <CardDescription>Manage pre-uploaded redeem codes for auto-delivery products</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <CodeInventoryManager />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="audit"><StockActivityLog /></TabsContent>
 
-          <TabsContent value="settings"><WebSettingsEditor /></TabsContent>
+          <TabsContent value="settings">
+            <Tabs defaultValue="web" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="web">Web Settings</TabsTrigger>
+                <TabsTrigger value="business">Business Rules</TabsTrigger>
+              </TabsList>
+              <TabsContent value="web">
+                <WebSettingsEditor />
+              </TabsContent>
+              <TabsContent value="business">
+                <BusinessRulesEditor />
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
         </Tabs>
       </div>
 
