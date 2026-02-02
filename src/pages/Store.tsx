@@ -33,6 +33,7 @@ interface Product {
   average_rating?: number;
   rating_count?: number;
   isBestSeller?: boolean;
+  created_at?: string;
 }
 
 interface Rating {
@@ -130,7 +131,7 @@ const Store = () => {
     try {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select("*, created_at")
         .eq("is_active", true)
         .order("price", { ascending: true });
 
@@ -496,17 +497,25 @@ const Store = () => {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  {...product}
-                  quantity={Math.min(quantities[product.id] || 1, product.stock || 1)}
-                  onQuantityChange={handleQuantityChange}
-                  onPurchase={handlePurchase}
-                  isAuthenticated={!!user}
-                  isBestSeller={product.id === bestSellerId}
-                />
-              ))}
+              {(() => {
+                // Calculate base price per day (from shortest duration product)
+                const basePricePerDay = filteredProducts.length > 0
+                  ? Math.min(...filteredProducts.map(p => p.price / p.duration_days))
+                  : 0;
+
+                return filteredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    {...product}
+                    quantity={Math.min(quantities[product.id] || 1, product.stock || 1)}
+                    onQuantityChange={handleQuantityChange}
+                    onPurchase={handlePurchase}
+                    isAuthenticated={!!user}
+                    isBestSeller={product.id === bestSellerId}
+                    basePrice={basePricePerDay}
+                  />
+                ));
+              })()}
             </div>
           )}
         </div>
