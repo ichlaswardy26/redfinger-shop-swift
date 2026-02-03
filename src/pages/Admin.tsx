@@ -911,12 +911,12 @@ const Admin = () => {
                       <div className="space-y-2"><Label>Description</Label><Textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></div>
                       <div className="space-y-2">
                         <Label>Category</Label>
-                        <Select value={productForm.category_id} onValueChange={(value) => setProductForm({ ...productForm, category_id: value })}>
+                        <Select value={productForm.category_id || "none"} onValueChange={(value) => setProductForm({ ...productForm, category_id: value === "none" ? "" : value })}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select category (optional)" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">No Category</SelectItem>
+                            <SelectItem value="none">No Category</SelectItem>
                             {categories.filter(c => !c.parent_id).map((parentCat) => (
                               <React.Fragment key={parentCat.id}>
                                 <SelectItem value={parentCat.id} className="font-semibold">{parentCat.name}</SelectItem>
