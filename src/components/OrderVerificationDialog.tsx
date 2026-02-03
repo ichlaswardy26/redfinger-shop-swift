@@ -54,6 +54,7 @@ export const OrderVerificationDialog = ({
   const [inventoryCodes, setInventoryCodes] = useState<InventoryCode[]>([]);
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [useAutoDelivery, setUseAutoDelivery] = useState(false);
+  const [otherPendingCount, setOtherPendingCount] = useState(0);
   const { toast } = useToast();
 
   // Fetch available codes from inventory for this product
@@ -106,11 +107,25 @@ export const OrderVerificationDialog = ({
       setProofUrl(null);
     }
 
-    // Fetch inventory codes when dialog opens
+    // Fetch inventory codes and pending orders when dialog opens
     if (open && order?.product_id) {
       fetchInventoryCodes();
+      // Fetch other pending orders for same product
+      const fetchPendingOrders = async () => {
+        const { data } = await supabase
+          .from("orders")
+          .select("quantity")
+          .eq("product_id", order.product_id)
+          .eq("payment_status", "pending");
+        
+        const totalPending = data?.reduce((sum, o) => sum + o.quantity, 0) || 0;
+        setOtherPendingCount(totalPending - order.quantity); // Exclude current order
+      };
+      fetchPendingOrders();
+    } else {
+      setOtherPendingCount(0);
     }
-  }, [open, order?.payment_proof, order?.product_id]);
+  }, [open, order?.payment_proof, order?.product_id, order?.quantity]);
 
   const handleOpen = (isOpen: boolean) => {
     if (isOpen && order) {
@@ -120,6 +135,7 @@ export const OrderVerificationDialog = ({
       setInventoryCodes([]);
       setUseAutoDelivery(false);
       setRedeemCodes([]);
+      setOtherPendingCount(0);
     } else {
       setRedeemCodes([]);
     }
@@ -321,6 +337,14 @@ export const OrderVerificationDialog = ({
                 <span>Only {inventoryCodes.length} codes in inventory (need {order.quantity})</span>
               </div>
             ) : null}
+            
+            {/* Warning: Other pending orders for same product */}
+            {otherPendingCount > 0 && (
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-sm p-3 bg-amber-500/10 border border-amber-500/20 rounded-md">
+                <Package className="h-4 w-4" />
+                <span>⚠️ {otherPendingCount} more pending orders for this product ({inventoryCodes.length} codes available)</span>
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <Label>Redeem Codes ({order.quantity} required)</Label>
