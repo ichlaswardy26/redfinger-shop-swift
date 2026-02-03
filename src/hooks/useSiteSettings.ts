@@ -10,9 +10,9 @@ interface SiteSettings {
 }
 
 const defaultSiteSettings: SiteSettings = {
-  name: "Redfinger Store",
+  name: "Cloud Phone Store",
   tagline: "Cloud Phone Services",
-  description: "Premium cloud gaming and app automation services",
+  description: "Premium cloud phone and app automation services",
 };
 
 export function useSiteSettings() {

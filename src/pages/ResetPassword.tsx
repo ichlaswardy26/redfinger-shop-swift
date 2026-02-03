@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { Eye, EyeOff, CheckCircle, XCircle, Lock } from "lucide-react";
 import { z } from "zod";
 
@@ -27,6 +28,7 @@ const ResetPassword = () => {
   const [checkingSession, setCheckingSession] = useState(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { settings: siteSettings } = useSiteSettings();
 
   // Password strength calculation
   const getPasswordStrength = (pwd: string) => {
@@ -171,7 +173,7 @@ const ResetPassword = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <SEOHead title="Reset Password" noIndex />
+      <SEOHead title="Reset Password" siteName={siteSettings.name} noIndex />
       
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

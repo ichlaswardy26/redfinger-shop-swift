@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -95,6 +96,7 @@ const Staff = () => {
 
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { settings: siteSettings } = useSiteSettings();
 
   useEffect(() => {
     checkStaffAccess();
@@ -359,7 +361,7 @@ const Staff = () => {
 
   return (
     <MotionPage className="min-h-screen bg-background">
-      <SEOHead title="Staff Dashboard - Redfinger Store" noIndex />
+      <SEOHead title={`Staff Dashboard - ${siteSettings.name}`} siteName={siteSettings.name} noIndex />
       <Navbar />
       <div className="container mx-auto p-4 space-y-6">
         <motion.div

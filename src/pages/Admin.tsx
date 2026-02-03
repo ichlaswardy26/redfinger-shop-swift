@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import Navbar from "@/components/Navbar";
 import StockManagement from "@/components/StockManagement";
 import CopyButton from "@/components/CopyButton";
@@ -158,6 +159,7 @@ const Admin = () => {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { settings: siteSettings } = useSiteSettings();
 
   useEffect(() => {
     checkAdminAccess();
@@ -712,7 +714,7 @@ const Admin = () => {
 
   return (
     <MotionPage className="min-h-screen bg-background">
-      <SEOHead title="Admin Panel - Redfinger Store" noIndex noFollow />
+      <SEOHead title={`Admin Panel - ${siteSettings.name}`} siteName={siteSettings.name} noIndex noFollow />
       <Navbar />
       <div className="container mx-auto px-4 py-8">
         <motion.div
