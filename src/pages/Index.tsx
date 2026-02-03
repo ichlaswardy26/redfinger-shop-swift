@@ -96,13 +96,13 @@ interface WebSettings {
 
 const defaultSettings: WebSettings = {
   site: {
-    name: "Redfinger Store",
+    name: "Cloud Phone Store",
     tagline: "Cloud Phone Services",
-    description: "Premium cloud gaming and app automation services"
+    description: "Premium cloud phone and app automation services"
   },
   hero: {
-    title: "Premium Redfinger Cloud Phone Services",
-    subtitle: "Experience seamless cloud gaming and app automation with our reliable Redfinger subscriptions",
+    title: "Premium Cloud Phone Services",
+    subtitle: "Experience seamless cloud phone and app automation with our reliable subscriptions",
     buttonText: "Browse Store",
     secondaryButtonText: "Sign In",
     trustedText: "Trusted by 10,000+ customers",
@@ -129,12 +129,12 @@ const defaultSettings: WebSettings = {
   },
   cta: {
     title: "Ready to Get Started?",
-    subtitle: "Join thousands of satisfied customers using our premium Redfinger cloud phone services",
+    subtitle: "Join thousands of satisfied customers using our premium cloud phone services",
     buttonText: "View Plans & Pricing"
   },
-  contact: { email: "support@redfinger.store", phone: "+62812345678", whatsapp: "+62812345678" },
+  contact: { email: "support@store.com", phone: "+62812345678", whatsapp: "+62812345678" },
   social: { facebook: "", instagram: "", twitter: "" },
-  footer: { copyrightText: "© 2024 Redfinger Store. All rights reserved." }
+  footer: { copyrightText: "© 2024 Cloud Phone Store. All rights reserved." }
 };
 
 const iconMap: Record<string, React.ReactNode> = {

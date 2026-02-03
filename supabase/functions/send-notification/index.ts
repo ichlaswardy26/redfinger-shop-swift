@@ -115,6 +115,18 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Fetch site name from web_settings
+    let siteName = "Cloud Phone Store";
+    const { data: siteData } = await supabaseClient
+      .from("web_settings")
+      .select("value")
+      .eq("key", "site")
+      .maybeSingle();
+    
+    if (siteData?.value && typeof siteData.value === 'object' && 'name' in siteData.value) {
+      siteName = (siteData.value as { name: string }).name;
+    }
+
     const { type, orderId, ticketId, recipientEmail, recipientName, additionalData }: NotificationRequest = await req.json();
     
     console.log(`Processing notification: ${type}`, { orderId, ticketId, recipientEmail });
@@ -213,7 +225,7 @@ const handler = async (req: Request): Promise<Response> => {
     const template = getEmailTemplate(type, emailData);
 
     const emailResponse = await resend.emails.send({
-      from: "Redfinger Store <onboarding@resend.dev>",
+      from: `${siteName} <onboarding@resend.dev>`,
       to: [toEmail],
       subject: template.subject,
       html: template.html,

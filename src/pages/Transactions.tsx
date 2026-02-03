@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useNavigate } from "react-router-dom";
 import { useFileValidation } from "@/hooks/useFileValidation";
 import Navbar from "@/components/Navbar";
@@ -82,6 +83,7 @@ const Transactions = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { validatePaymentProofFile } = useFileValidation();
+  const { settings: siteSettings } = useSiteSettings();
 
   useEffect(() => {
     checkAuth();
@@ -232,7 +234,7 @@ const Transactions = () => {
 
   return (
     <MotionPage className="min-h-screen bg-background">
-      <SEOHead title="My Orders - Redfinger Store" noIndex />
+      <SEOHead title={`My Orders - ${siteSettings.name}`} siteName={siteSettings.name} noIndex />
       <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         <motion.h1 

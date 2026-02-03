@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
 import { z } from "zod";
 
@@ -17,6 +18,7 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const { toast } = useToast();
+  const { settings: siteSettings } = useSiteSettings();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +59,7 @@ const ForgotPassword = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <SEOHead title="Forgot Password" noIndex />
+      <SEOHead title="Forgot Password" siteName={siteSettings.name} noIndex />
       
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">

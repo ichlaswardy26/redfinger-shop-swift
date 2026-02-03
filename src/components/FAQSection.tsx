@@ -14,12 +14,12 @@ interface FAQSectionProps {
 
 const defaultFAQs: FAQItem[] = [
   {
-    question: "What is Redfinger Cloud Phone?",
-    answer: "Redfinger is a cloud-based virtual Android phone that runs 24/7 on our servers. You can access it from any device, anywhere in the world, without draining your phone's battery or storage."
+    question: "What is a Cloud Phone?",
+    answer: "A cloud phone is a virtual Android device that runs 24/7 on our servers. You can access it from any device, anywhere in the world, without draining your phone's battery or storage."
   },
   {
     question: "How do I redeem my code?",
-    answer: "After your payment is verified, you'll receive a unique redeem code. Open the Redfinger app, go to Settings > Redeem Code, and enter your code to activate your subscription."
+    answer: "After your payment is verified, you'll receive a unique redeem code. Open the cloud phone app, go to Settings > Redeem Code, and enter your code to activate your subscription."
   },
   {
     question: "What payment methods do you accept?",

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { User } from "@supabase/supabase-js";
 import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
@@ -70,6 +71,7 @@ const Store = () => {
   const ratingsPerPage = 6;
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { settings: siteSettings } = useSiteSettings();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -348,8 +350,9 @@ const Store = () => {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-0">
       <SEOHead 
-        title="Shop - Redfinger Cloud Phone Codes"
-        description="Browse and purchase Redfinger cloud phone redeem codes. Instant delivery, secure payment, 24/7 support."
+        title={`Shop - ${siteSettings.name}`}
+        description={`Browse and purchase cloud phone redeem codes at ${siteSettings.name}. Instant delivery, secure payment, 24/7 support.`}
+        siteName={siteSettings.name}
       />
       <Navbar />
       
@@ -366,7 +369,7 @@ const Store = () => {
             <div className="space-y-6">
               <h1 className="text-5xl md:text-6xl font-black leading-tight">
                 <span className="bg-primary text-primary-foreground px-2 inline-block border-2 border-border shadow-brutal">
-                  Redfinger Cloud Phone
+                  {siteSettings.name}
                 </span>
                 <br />
                 <span className="text-foreground mt-2 inline-block">Redeem Codes</span>
