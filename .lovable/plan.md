@@ -1,114 +1,151 @@
 
-# Mobile Responsiveness & Branding Sync Polish Plan
+# Mobile Responsiveness & Branding Sync Comprehensive Fix Plan
 
-## Overview
-This plan addresses mobile responsiveness issues and synchronizes all hardcoded "Redfinger Store" text with the dynamic site name from web_settings database.
+## Executive Summary
+Pengujian menyeluruh pada tampilan mobile (390x844) mengungkap beberapa masalah responsivitas UI/UX dan ketidakkonsistenan branding yang perlu diperbaiki di semua role (Customer, Staff, Admin).
 
 ---
 
 ## Issues Identified
 
-### Critical: Hardcoded Brand Names (11 files, 92 occurrences)
-Multiple pages and components contain hardcoded "Redfinger Store" or "Redfinger" text instead of using the dynamic `useSiteSettings` hook.
+### Critical: Hardcoded "Redfinger" Branding (5 locations)
 
-### Minor: Hero Section Navigation
-The "Sign In" button in the hero section uses `onClick={() => navigate()}` which works but should be verified.
+| File | Line | Current Value | Issue |
+|------|------|---------------|-------|
+| `index.html` | 6-11 | "Redfinger Cloud Phone Store" | Static HTML title & meta tags not using dynamic values |
+| `SEOHead.tsx` | 28 | `"Redfinger Store"` fallback | Should use "Cloud Phone Store" as generic fallback |
+| `WebSettingsEditor.tsx` | 92 | `name: "Redfinger Store"` | Default settings contain hardcoded brand |
+| `WebSettingsEditor.tsx` | 105 | `title: "Premium Redfinger Cloud Phone..."` | Default hero title |
 
-### Good: Mobile Layout Foundation
-- Tables use horizontal scroll (`overflow-x-auto`)
-- Tabs use horizontal scroll on mobile
-- Cards stack properly
-- Navbar hamburger menu functional
+### Mobile Responsiveness Issues Found
 
----
+#### 1. Admin Page - Tab Navigation (Medium Priority)
+- Tabs overflow container on narrow screens
+- Need `overflow-x-auto` with proper scroll indicators
+- Current implementation exists but needs polish
 
-## Implementation Steps
+#### 2. Staff Page - Table Headers (Medium Priority)
+- Long column headers wrap awkwardly on mobile
+- Action buttons cramped in narrow table cells
 
-### Phase 1: Sync All Pages with Dynamic Site Name
+#### 3. Order Card - Footer Buttons (Low Priority)
+- Buttons in `CardFooter` can wrap awkwardly with long text
+- Need consistent `min-w` to prevent text wrapping
 
-**1.1 Update Store.tsx**
-- Import `useSiteSettings` hook
-- Replace hardcoded "Redfinger Cloud Phone" in hero with dynamic name
-- Update SEOHead to use dynamic site name
-
-**1.2 Update Admin.tsx**
-- Import `useSiteSettings` hook
-- Update SEOHead title to use dynamic site name
-
-**1.3 Update Staff.tsx**
-- Import `useSiteSettings` hook
-- Update SEOHead title to use dynamic site name
-
-**1.4 Update Transactions.tsx**
-- Import `useSiteSettings` hook
-- Update SEOHead title to use dynamic site name
-
-**1.5 Update ForgotPassword.tsx**
-- Import `useSiteSettings` hook
-- Add dynamic site name display if needed
-
-**1.6 Update ResetPassword.tsx**
-- Import `useSiteSettings` hook
-- Ensure consistent branding
-
-### Phase 2: Update Components with Dynamic Branding
-
-**2.1 Update FAQSection.tsx**
-- Make default FAQ content use more generic terms
-- Or fetch FAQ content that includes dynamic site name
-
-**2.2 Update OrderCard.tsx**
-- Keep redfinger.com links as these are the actual product service URLs (not brand name)
-- These are functional links, not branding
-
-**2.3 Update SEOHead.tsx**
-- Already has fallback, but ensure it uses settings properly
-
-**2.4 Update WebSettingsEditor.tsx**
-- Default settings are for admin preview, acceptable to keep
-
-### Phase 3: Update Default Fallbacks
-
-**3.1 Update useSiteSettings.ts**
-- Change default fallback from "Redfinger Store" to a more generic placeholder
-- Consider using "Cloud Phone Store" as neutral default
-
-**3.2 Update Index.tsx Default Settings**
-- Update default hero title, subtitle to be more generic
-- Database values will override these anyway
-
-### Phase 4: Edge Function Update
-
-**4.1 Update send-notification Edge Function**
-- Fetch site name from web_settings
-- Use dynamic site name in email sender field
+#### 4. Index.tsx Hero Section - Text Overflow (High Priority)
+- Hero section title does not use the dynamic `{settings.hero.title}` consistently
+- The settings are fetched but still falls back to defaults when database is empty
 
 ---
 
-## Technical Details
+## Implementation Phases
 
-### Files to Modify:
-1. `src/pages/Store.tsx` - Add useSiteSettings, update hero and SEOHead
-2. `src/pages/Admin.tsx` - Add useSiteSettings, update SEOHead
-3. `src/pages/Staff.tsx` - Add useSiteSettings, update SEOHead  
-4. `src/pages/Transactions.tsx` - Add useSiteSettings, update SEOHead
-5. `src/pages/ForgotPassword.tsx` - Add useSiteSettings if title needed
-6. `src/pages/ResetPassword.tsx` - Add useSiteSettings if title needed
-7. `src/hooks/useSiteSettings.ts` - Update default to generic name
-8. `src/pages/Index.tsx` - Update default settings text
-9. `supabase/functions/send-notification/index.ts` - Fetch dynamic site name
+### Phase 1: Fix Remaining Hardcoded Branding
 
-### Pattern to Follow:
-```typescript
-// Import at top
-import { useSiteSettings } from "@/hooks/useSiteSettings";
+#### 1.1 Update `index.html`
+Replace hardcoded meta tags with generic placeholders (react-helmet-async will override these at runtime):
 
-// In component
-const { settings: siteSettings } = useSiteSettings();
+```text
+Before:
+- title: "Redfinger Cloud Phone Store - Premium Virtual Android Devices"
+- description: "Purchase Redfinger Cloud Phone redeem codes..."
+- author: "Redfinger Store"
 
-// Use in JSX
-<SEOHead title={`Page Title - ${siteSettings.name}`} />
+After:
+- title: "Cloud Phone Store - Premium Virtual Android Devices"
+- description: "Purchase Cloud Phone redeem codes..."
+- author: "Cloud Phone Store"
 ```
+
+#### 1.2 Update `SEOHead.tsx` (Line 28)
+```text
+Before: const effectiveSiteName = siteName || "Redfinger Store";
+After:  const effectiveSiteName = siteName || "Cloud Phone Store";
+```
+
+#### 1.3 Update `WebSettingsEditor.tsx` (Lines 92, 105)
+```text
+Before:
+- name: "Redfinger Store"
+- title: "Premium Redfinger Cloud Phone Services"
+
+After:
+- name: "Cloud Phone Store"
+- title: "Premium Cloud Phone Services"
+```
+
+### Phase 2: Mobile Responsiveness Polish
+
+#### 2.1 Staff Page Tab Navigation
+- Add proper horizontal scroll wrapper for tabs
+- Include visual scroll indicators (gradient fade)
+- File: `src/pages/Staff.tsx`
+
+#### 2.2 Admin Page Tab Navigation Consistency
+- Ensure tabs match Staff page implementation
+- File: `src/pages/Admin.tsx`
+
+#### 2.3 OrderCard Button Layout
+- Add `min-w-0` and `truncate` to prevent text overflow
+- Ensure buttons remain usable on narrow screens
+- File: `src/components/OrderCard.tsx`
+
+#### 2.4 DataTable Mobile Optimization
+- Ensure all tables have `overflow-x-auto` parent
+- Add sticky first column for better navigation
+- Files: `src/pages/Admin.tsx`, `src/pages/Staff.tsx`
+
+### Phase 3: Additional Mobile UX Improvements
+
+#### 3.1 Navbar - Site Name Truncation
+- Already implemented with `truncate max-w-[180px]`
+- Verify works correctly with very long names
+
+#### 3.2 Dialog Mobile Sizing
+- Add `max-h-[90vh]` and proper scroll handling
+- Files: All dialog components
+
+---
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `index.html` | Replace hardcoded "Redfinger" in title, description, author, og:title, og:description |
+| `src/components/SEOHead.tsx` | Update fallback from "Redfinger Store" to "Cloud Phone Store" |
+| `src/components/WebSettingsEditor.tsx` | Update default settings object |
+| `src/pages/Admin.tsx` | Add responsive tab scroll wrapper |
+| `src/pages/Staff.tsx` | Add responsive tab scroll wrapper |
+| `src/components/OrderCard.tsx` | Add button text truncation for mobile |
+
+---
+
+## Legitimate Redfinger References (DO NOT CHANGE)
+
+The following references to "Redfinger" are legitimate external product links and should remain unchanged:
+
+- `OrderCard.tsx` line 65-66: Redemption instructions text "Go to https://www.redfinger.com"
+- `OrderCard.tsx` line 174: External link button `window.open('https://www.redfinger.com', '_blank')`
+
+These refer to the actual external service provider URL, not the store branding.
+
+---
+
+## Testing Checklist
+
+After implementation, verify:
+
+| Role | Test | Status |
+|------|------|--------|
+| Customer | Landing page hero displays dynamic site name | Pending |
+| Customer | Store page shows correct branding | Pending |
+| Customer | Sign In/Up pages show dynamic site name | Pending |
+| Customer | Transactions page responsive on mobile | Pending |
+| Staff | Tab navigation scrollable on mobile | Pending |
+| Staff | Order table readable on narrow screens | Pending |
+| Admin | All tabs accessible via horizontal scroll | Pending |
+| Admin | Web Settings shows generic defaults | Pending |
+| All | Browser tab shows updated title | Pending |
 
 ---
 
@@ -116,8 +153,7 @@ const { settings: siteSettings } = useSiteSettings();
 
 | Category | Items | Priority |
 |----------|-------|----------|
-| Branding Sync | 9 files | High |
-| Edge Function | 1 file | Medium |
-| Mobile Layout | Already good | N/A |
-
-**Estimated Changes**: ~50-80 lines of code modifications across 9-10 files
+| Branding Fix | 4 files | High |
+| Mobile Tab Scroll | 2 files | Medium |
+| Button Layout | 1 file | Low |
+| **Total Changes** | **~40-60 lines** | |
