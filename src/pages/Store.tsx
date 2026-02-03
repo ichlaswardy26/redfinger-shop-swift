@@ -20,6 +20,7 @@ interface Category {
   description: string | null;
   icon: string | null;
   is_active: boolean;
+  parent_id: string | null;
 }
 
 interface Product {
@@ -333,6 +334,20 @@ const Store = () => {
     }
   };
 
+  // Separate parent and child categories
+  const parentCategories = categories.filter(c => !c.parent_id);
+  const childCategories = categories.filter(c => c.parent_id);
+  
+  // Get child categories for selected parent
+  const getChildCategories = (parentId: string) => {
+    return childCategories.filter(c => c.parent_id === parentId);
+  };
+  
+  // Selected parent for nested navigation
+  const selectedParentId = selectedCategory 
+    ? (categories.find(c => c.id === selectedCategory)?.parent_id || selectedCategory)
+    : null;
+
   const filteredProducts = selectedCategory
     ? products.filter(p => p.category_id === selectedCategory)
     : products;
@@ -448,39 +463,73 @@ const Store = () => {
             <p className="text-xl text-muted-foreground">Select the perfect duration for your needs</p>
           </div>
 
-          {/* Category Filter */}
+          {/* Category Filter - Nested Tabs */}
           {categories.length > 0 && (
-            <div className="mb-8">
-              <div className="flex flex-wrap items-center gap-2 justify-center">
-                <Button
-                  variant={selectedCategory === null ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setSelectedCategory(null)}
-                >
-                  All Products
-                </Button>
-                {categories.map((category) => (
+            <div className="mb-8 space-y-3">
+              {/* Parent Categories */}
+              <div className="overflow-x-auto pb-2 -mx-4 px-4">
+                <div className="flex items-center gap-2 min-w-max justify-center">
                   <Button
-                    key={category.id}
-                    variant={selectedCategory === category.id ? "default" : "outline"}
+                    variant={selectedCategory === null ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setSelectedCategory(category.id)}
-                    className="gap-1"
+                    onClick={() => setSelectedCategory(null)}
+                    className="flex-shrink-0"
                   >
-                    {getCategoryIcon(category.icon)}
-                    {category.name}
+                    All
                   </Button>
-                ))}
+                  {parentCategories.map((category) => (
+                    <Button
+                      key={category.id}
+                      variant={selectedParentId === category.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setSelectedCategory(category.id)}
+                      className="gap-1 flex-shrink-0"
+                    >
+                      {getCategoryIcon(category.icon)}
+                      <span className="hidden sm:inline">{category.name}</span>
+                      <span className="sm:hidden">{category.name.substring(0, 6)}{category.name.length > 6 ? '…' : ''}</span>
+                    </Button>
+                  ))}
+                </div>
               </div>
+              
+              {/* Child Categories - Show when parent is selected */}
+              {selectedParentId && getChildCategories(selectedParentId).length > 0 && (
+                <div className="overflow-x-auto pb-2 -mx-4 px-4">
+                  <div className="flex items-center gap-2 min-w-max justify-center">
+                    <Button
+                      variant={selectedCategory === selectedParentId ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setSelectedCategory(selectedParentId)}
+                      className="text-xs flex-shrink-0"
+                    >
+                      All {categories.find(c => c.id === selectedParentId)?.name}
+                    </Button>
+                    {getChildCategories(selectedParentId).map((child) => (
+                      <Button
+                        key={child.id}
+                        variant={selectedCategory === child.id ? "secondary" : "ghost"}
+                        size="sm"
+                        onClick={() => setSelectedCategory(child.id)}
+                        className="gap-1 text-xs flex-shrink-0"
+                      >
+                        {getCategoryIcon(child.icon)}
+                        {child.name}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               {selectedCategory && (
-                <div className="text-center mt-4">
+                <div className="text-center">
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setSelectedCategory(null)}
-                    className="text-muted-foreground"
+                    className="text-muted-foreground text-xs"
                   >
-                    <X className="h-4 w-4 mr-1" />
+                    <X className="h-3 w-3 mr-1" />
                     Clear filter
                   </Button>
                 </div>
