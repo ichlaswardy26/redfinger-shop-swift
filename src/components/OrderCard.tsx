@@ -163,19 +163,19 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
               size="sm" 
               variant="default"
               onClick={() => onRate(order.id, order.product_id, order.product.name)}
-              className="flex-1"
+              className="flex-1 min-w-0"
             >
-              <Star className="h-4 w-4 mr-2" />
-              Rate Product
+              <Star className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span className="truncate">Rate</span>
             </Button>
             <Button 
               size="sm" 
               variant="outline"
               onClick={() => window.open('https://www.redfinger.com', '_blank')}
-              className="flex-1"
+              className="flex-1 min-w-0"
             >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Redeem
+              <ExternalLink className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span className="truncate">Redeem</span>
             </Button>
           </>
         )}
@@ -186,19 +186,19 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
               size="sm" 
               variant="default"
               onClick={() => onUploadProof(order.id)}
-              className="flex-1"
+              className="flex-1 min-w-0"
             >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Proof
+              <Upload className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span className="truncate">Upload</span>
             </Button>
             <Button 
               size="sm" 
               variant="outline"
               onClick={() => onCancelOrder(order.id)}
-              className="flex-1"
+              className="flex-1 min-w-0"
             >
-              <X className="h-4 w-4 mr-2" />
-              Cancel
+              <X className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span className="truncate">Cancel</span>
             </Button>
           </>
         )}
@@ -208,10 +208,10 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
             size="sm" 
             variant="default"
             onClick={() => onCreateTicket(order.id)}
-            className="w-full"
+            className="w-full min-w-0"
           >
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Create Support Ticket
+            <MessageSquare className="h-4 w-4 mr-1 flex-shrink-0" />
+            <span className="truncate">Create Ticket</span>
           </Button>
         )}
       </CardFooter>

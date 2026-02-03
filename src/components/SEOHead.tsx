@@ -25,7 +25,7 @@ export const SEOHead = ({
   structuredData,
   siteName,
 }: SEOHeadProps) => {
-  const effectiveSiteName = siteName || "Redfinger Store";
+  const effectiveSiteName = siteName || "Cloud Phone Store";
   const fullTitle = title ? `${title} | ${effectiveSiteName}` : effectiveSiteName;
   const robots = [
     noIndex ? "noindex" : "index",

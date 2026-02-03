@@ -137,15 +137,15 @@ After implementation, verify:
 
 | Role | Test | Status |
 |------|------|--------|
-| Customer | Landing page hero displays dynamic site name | Pending |
-| Customer | Store page shows correct branding | Pending |
-| Customer | Sign In/Up pages show dynamic site name | Pending |
-| Customer | Transactions page responsive on mobile | Pending |
-| Staff | Tab navigation scrollable on mobile | Pending |
-| Staff | Order table readable on narrow screens | Pending |
-| Admin | All tabs accessible via horizontal scroll | Pending |
-| Admin | Web Settings shows generic defaults | Pending |
-| All | Browser tab shows updated title | Pending |
+| Customer | Landing page hero displays dynamic site name | ✅ Done |
+| Customer | Store page shows correct branding | ✅ Done |
+| Customer | Sign In/Up pages show dynamic site name | ✅ Done |
+| Customer | Transactions page responsive on mobile | ✅ Done |
+| Staff | Tab navigation scrollable on mobile | ✅ Done |
+| Staff | Order table readable on narrow screens | ✅ Done |
+| Admin | All tabs accessible via horizontal scroll | ✅ Done |
+| Admin | Web Settings shows generic defaults | ✅ Done |
+| All | Browser tab shows updated title | ✅ Done |
 
 ---
 
