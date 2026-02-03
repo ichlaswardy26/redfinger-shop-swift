@@ -24,6 +24,7 @@ export const productSchema = z.object({
   description: z.string().trim().max(1000, 'Description must be less than 1000 characters').optional(),
   price: z.number().positive('Price must be positive').max(999999, 'Price must be less than 999,999'),
   duration_days: z.number().int('Duration must be a whole number').positive('Duration must be positive').max(365, 'Duration must be less than 365 days'),
+  category_id: z.string().uuid('Invalid category').nullable().optional(),
 });
 
 export const stockLogSchema = z.object({
