@@ -303,9 +303,29 @@ const Store = () => {
     ? (categories.find(c => c.id === selectedCategory)?.parent_id || selectedCategory)
     : null;
 
-  const filteredProducts = selectedCategory
-    ? products.filter(p => p.category_id === selectedCategory)
-    : products;
+  // Fix: When parent category selected, include products from all child categories
+  const filteredProducts = (() => {
+    if (!selectedCategory) return products;
+    
+    const selectedCat = categories.find(c => c.id === selectedCategory);
+    if (!selectedCat) return products;
+    
+    // If this is a child category, filter exactly
+    if (selectedCat.parent_id) {
+      return products.filter(p => p.category_id === selectedCategory);
+    }
+    
+    // If this is a parent category, include all child category products too
+    const childCategoryIds = categories
+      .filter(c => c.parent_id === selectedCategory)
+      .map(c => c.id);
+    
+    const relevantCategoryIds = [selectedCategory, ...childCategoryIds];
+    
+    return products.filter(p => 
+      p.category_id && relevantCategoryIds.includes(p.category_id)
+    );
+  })();
 
   const getCategoryIcon = (iconName: string | null) => {
     switch (iconName) {
@@ -346,9 +366,9 @@ const Store = () => {
       {/* Sticky Category Filter */}
       {categories.length > 0 && (
         <div className="sticky top-16 z-20 bg-background/95 backdrop-blur border-b border-border">
-          <div className="container mx-auto px-4 py-3 space-y-2">
+          <div className="container mx-auto px-4 py-4 sm:py-5 space-y-3">
             {/* Parent Categories */}
-            <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide">
+            <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide mb-1">
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-max">
                 <Button
                   variant={selectedCategory === null ? "default" : "outline"}
