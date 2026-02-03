@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -56,6 +56,14 @@ interface Product {
   price: number;
   duration_days: number;
   stock: number;
+  is_active: boolean;
+  category_id: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  parent_id: string | null;
   is_active: boolean;
 }
 
@@ -116,6 +124,7 @@ interface RatingRow {
 const Admin = () => {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [tickets, setTickets] = useState<TicketRow[]>([]);
@@ -125,7 +134,7 @@ const Admin = () => {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [stockManagementOpen, setStockManagementOpen] = useState(false);
   const [selectedProductForStock, setSelectedProductForStock] = useState<Product | null>(null);
-  const [productForm, setProductForm] = useState({ name: "", description: "", price: "", duration_days: "" });
+  const [productForm, setProductForm] = useState({ name: "", description: "", price: "", duration_days: "", category_id: "" });
   
   // Order verification
   const [verifyingOrder, setVerifyingOrder] = useState<Order | null>(null);
@@ -192,7 +201,7 @@ const Admin = () => {
         navigate("/");
         return;
       }
-      await Promise.all([fetchProducts(), fetchOrders(), fetchUsers(), fetchStats(), fetchTickets(), fetchRatings()]);
+      await Promise.all([fetchProducts(), fetchCategories(), fetchOrders(), fetchUsers(), fetchStats(), fetchTickets(), fetchRatings()]);
     } catch (error) {
       toast({ title: "Error", description: "Failed to verify admin access", variant: "destructive" });
       navigate("/");
@@ -213,6 +222,17 @@ const Admin = () => {
       if (outOfStockProducts.length > 0) {
         toast({ title: "Out of Stock Alert", description: `${outOfStockProducts.length} product(s) are out of stock`, variant: "destructive" });
       }
+    }
+  };
+
+  const fetchCategories = async () => {
+    const { data, error } = await supabase
+      .from("product_categories")
+      .select("id, name, parent_id, is_active")
+      .eq("is_active", true)
+      .order("display_order", { ascending: true });
+    if (!error && data) {
+      setCategories(data);
     }
   };
 
@@ -284,6 +304,7 @@ const Admin = () => {
         description: productForm.description.trim() || undefined,
         price: parseFloat(productForm.price),
         duration_days: parseInt(productForm.duration_days),
+        category_id: productForm.category_id || null,
       });
       if (!validationResult.success) {
         toast({ title: "Validation Error", description: validationResult.error.errors[0].message, variant: "destructive" });
@@ -291,15 +312,28 @@ const Admin = () => {
       }
       const productData = validationResult.data;
       if (editingProduct) {
-        const { error } = await supabase.from("products").update(productData).eq("id", editingProduct.id);
+        const { error } = await supabase.from("products").update({
+          name: productData.name,
+          description: productData.description,
+          price: productData.price,
+          duration_days: productData.duration_days,
+          category_id: productData.category_id,
+        }).eq("id", editingProduct.id);
         if (error) throw error;
         toast({ title: "Product updated successfully" });
       } else {
-        const { error } = await supabase.from("products").insert([{ name: productData.name, description: productData.description, price: productData.price, duration_days: productData.duration_days, stock: 0 }]);
+        const { error } = await supabase.from("products").insert([{ 
+          name: productData.name, 
+          description: productData.description, 
+          price: productData.price, 
+          duration_days: productData.duration_days, 
+          category_id: productData.category_id,
+          stock: 0 
+        }]);
         if (error) throw error;
         toast({ title: "Product created successfully" });
       }
-      setProductForm({ name: "", description: "", price: "", duration_days: "" });
+      setProductForm({ name: "", description: "", price: "", duration_days: "", category_id: "" });
       setEditingProduct(null);
       setShowProductDialog(false);
       fetchProducts();
@@ -868,13 +902,32 @@ const Admin = () => {
               <CardContent>
                 <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
                   <DialogTrigger asChild>
-                    <Button className="mb-4" onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", price: "", duration_days: "" }); }}>Add Product</Button>
+                    <Button className="mb-4" onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", price: "", duration_days: "", category_id: "" }); }}>Add Product</Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader><DialogTitle>{editingProduct ? "Edit" : "Add"} Product</DialogTitle></DialogHeader>
                     <form onSubmit={handleProductSubmit} className="space-y-4">
                       <div className="space-y-2"><Label>Name</Label><Input value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required /></div>
                       <div className="space-y-2"><Label>Description</Label><Textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></div>
+                      <div className="space-y-2">
+                        <Label>Category</Label>
+                        <Select value={productForm.category_id} onValueChange={(value) => setProductForm({ ...productForm, category_id: value })}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">No Category</SelectItem>
+                            {categories.filter(c => !c.parent_id).map((parentCat) => (
+                              <React.Fragment key={parentCat.id}>
+                                <SelectItem value={parentCat.id} className="font-semibold">{parentCat.name}</SelectItem>
+                                {categories.filter(c => c.parent_id === parentCat.id).map((childCat) => (
+                                  <SelectItem key={childCat.id} value={childCat.id} className="pl-6">↳ {childCat.name}</SelectItem>
+                                ))}
+                              </React.Fragment>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <div className="space-y-2"><Label>Price (IDR)</Label><Input type="number" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} required /></div>
                       <div className="space-y-2"><Label>Duration (days)</Label><Input type="number" value={productForm.duration_days} onChange={(e) => setProductForm({ ...productForm, duration_days: e.target.value })} required /></div>
                       <Button type="submit" className="w-full">{editingProduct ? "Update" : "Create"}</Button>
@@ -889,29 +942,42 @@ const Admin = () => {
                 />
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Price</TableHead><TableHead>Duration</TableHead><TableHead>Stock</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Category</TableHead><TableHead>Price</TableHead><TableHead>Duration</TableHead><TableHead>Stock</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                     <TableBody>
-                      {products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell>{product.name}</TableCell>
-                          <TableCell>Rp {product.price.toLocaleString('id-ID')}</TableCell>
-                          <TableCell>{product.duration_days} days</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <span className={product.stock < 10 ? "text-destructive font-semibold" : ""}>{product.stock}</span>
-                              {product.stock < 10 && <AlertTriangle className="h-4 w-4 text-destructive" />}
-                            </div>
-                          </TableCell>
-                          <TableCell><Badge variant={product.is_active ? "default" : "secondary"}>{product.is_active ? "Active" : "Inactive"}</Badge></TableCell>
-                          <TableCell>
-                            <div className="flex gap-2 flex-wrap">
-                              <Button variant="outline" size="sm" onClick={() => { setSelectedProductForStock(product); setStockManagementOpen(true); }}>Manage Stock</Button>
-                              <Button variant="outline" size="sm" onClick={() => { setEditingProduct(product); setProductForm({ name: product.name, description: product.description || "", price: product.price.toString(), duration_days: product.duration_days.toString() }); setShowProductDialog(true); }}>Edit</Button>
-                              <Button variant={product.is_active ? "outline" : "default"} size="sm" onClick={async () => { await supabase.from("products").update({ is_active: !product.is_active }).eq("id", product.id); fetchProducts(); }}>{product.is_active ? "Deactivate" : "Activate"}</Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).map((product) => {
+                        const productCategory = categories.find(c => c.id === product.category_id);
+                        const parentCategory = productCategory?.parent_id ? categories.find(c => c.id === productCategory.parent_id) : null;
+                        return (
+                          <TableRow key={product.id}>
+                            <TableCell>{product.name}</TableCell>
+                            <TableCell>
+                              {productCategory ? (
+                                <Badge variant="outline" className="text-xs">
+                                  {parentCategory ? `${parentCategory.name} / ` : ""}{productCategory.name}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-xs">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>Rp {product.price.toLocaleString('id-ID')}</TableCell>
+                            <TableCell>{product.duration_days} days</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span className={product.stock < 10 ? "text-destructive font-semibold" : ""}>{product.stock}</span>
+                                {product.stock < 10 && <AlertTriangle className="h-4 w-4 text-destructive" />}
+                              </div>
+                            </TableCell>
+                            <TableCell><Badge variant={product.is_active ? "default" : "secondary"}>{product.is_active ? "Active" : "Inactive"}</Badge></TableCell>
+                            <TableCell>
+                              <div className="flex gap-2 flex-wrap">
+                                <Button variant="outline" size="sm" onClick={() => { setSelectedProductForStock(product); setStockManagementOpen(true); }}>Manage Stock</Button>
+                                <Button variant="outline" size="sm" onClick={() => { setEditingProduct(product); setProductForm({ name: product.name, description: product.description || "", price: product.price.toString(), duration_days: product.duration_days.toString(), category_id: product.category_id || "" }); setShowProductDialog(true); }}>Edit</Button>
+                                <Button variant={product.is_active ? "outline" : "default"} size="sm" onClick={async () => { await supabase.from("products").update({ is_active: !product.is_active }).eq("id", product.id); fetchProducts(); }}>{product.is_active ? "Deactivate" : "Activate"}</Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
