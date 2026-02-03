@@ -89,9 +89,9 @@ interface WebSettings {
 
 const defaultSettings: WebSettings = {
   site: {
-    name: "Redfinger Store",
+    name: "Cloud Phone Store",
     tagline: "Cloud Phone Services",
-    description: "Premium cloud gaming and app automation services",
+    description: "Premium cloud phone and app automation services",
     logo: "",
     favicon: ""
   },
@@ -102,8 +102,8 @@ const defaultSettings: WebSettings = {
     textColor: ""
   },
   hero: {
-    title: "Premium Redfinger Cloud Phone Services",
-    subtitle: "Experience seamless cloud gaming and app automation",
+    title: "Premium Cloud Phone Services",
+    subtitle: "Experience seamless cloud phone and app automation",
     buttonText: "Browse Store",
     secondaryButtonText: "Sign In",
     trustedText: "Trusted by 10,000+ customers",
