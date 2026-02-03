@@ -290,20 +290,22 @@ const Navbar = () => {
                       <DropdownMenuItem onClick={() => navigate("/admin")} className="font-medium justify-between">
                         <span className="flex items-center gap-2">
                           <Shield className="h-4 w-4" />
-                          Admin Panel
+                          Admin
                         </span>
-                        <span className="flex items-center gap-1">
-                          {pendingCount > 0 && (
-                            <Badge variant="destructive" className="text-xs h-5 px-1.5">
-                              {pendingCount} orders
-                            </Badge>
-                          )}
-                          {openTicketsCount > 0 && (
-                            <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                              {openTicketsCount} tickets
-                            </Badge>
-                          )}
-                        </span>
+                        {(pendingCount > 0 || openTicketsCount > 0) && (
+                          <span className="flex items-center gap-0.5 flex-shrink-0">
+                            {pendingCount > 0 && (
+                              <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                                {pendingCount > 9 ? '9+' : pendingCount}
+                              </Badge>
+                            )}
+                            {openTicketsCount > 0 && (
+                              <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                                {openTicketsCount > 9 ? '9+' : openTicketsCount}
+                              </Badge>
+                            )}
+                          </span>
+                        )}
                       </DropdownMenuItem>
                     )}
                     
@@ -311,20 +313,22 @@ const Navbar = () => {
                       <DropdownMenuItem onClick={() => navigate("/staff")} className="font-medium justify-between">
                         <span className="flex items-center gap-2">
                           <Briefcase className="h-4 w-4" />
-                          Staff Panel
+                          Staff
                         </span>
-                        <span className="flex items-center gap-1">
-                          {pendingCount > 0 && (
-                            <Badge variant="destructive" className="text-xs h-5 px-1.5">
-                              {pendingCount} orders
-                            </Badge>
-                          )}
-                          {openTicketsCount > 0 && (
-                            <Badge variant="secondary" className="text-xs h-5 px-1.5">
-                              {openTicketsCount} tickets
-                            </Badge>
-                          )}
-                        </span>
+                        {(pendingCount > 0 || openTicketsCount > 0) && (
+                          <span className="flex items-center gap-0.5 flex-shrink-0">
+                            {pendingCount > 0 && (
+                              <Badge variant="destructive" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                                {pendingCount > 9 ? '9+' : pendingCount}
+                              </Badge>
+                            )}
+                            {openTicketsCount > 0 && (
+                              <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                                {openTicketsCount > 9 ? '9+' : openTicketsCount}
+                              </Badge>
+                            )}
+                          </span>
+                        )}
                       </DropdownMenuItem>
                     )}
                     

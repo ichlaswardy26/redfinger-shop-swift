@@ -20,6 +20,7 @@ interface Category {
   display_order: number;
   is_active: boolean;
   created_at: string;
+  parent_id: string | null;
 }
 
 const ICONS = [
@@ -35,7 +36,7 @@ export const CategoryManager = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", icon: "package" });
+  const [form, setForm] = useState({ name: "", description: "", icon: "package", parent_id: "" });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -74,6 +75,7 @@ export const CategoryManager = () => {
             name: form.name.trim(),
             description: form.description.trim() || null,
             icon: form.icon,
+            parent_id: form.parent_id || null,
           })
           .eq("id", editingCategory.id);
 
@@ -88,6 +90,7 @@ export const CategoryManager = () => {
             description: form.description.trim() || null,
             icon: form.icon,
             display_order: maxOrder + 1,
+            parent_id: form.parent_id || null,
           });
 
         if (error) throw error;
@@ -96,7 +99,7 @@ export const CategoryManager = () => {
 
       setDialogOpen(false);
       setEditingCategory(null);
-      setForm({ name: "", description: "", icon: "package" });
+      setForm({ name: "", description: "", icon: "package", parent_id: "" });
       fetchCategories();
     } catch (error) {
       toast({ 
@@ -115,6 +118,7 @@ export const CategoryManager = () => {
       name: category.name,
       description: category.description || "",
       icon: category.icon,
+      parent_id: category.parent_id || "",
     });
     setDialogOpen(true);
   };
@@ -183,13 +187,13 @@ export const CategoryManager = () => {
           setDialogOpen(open);
           if (!open) {
             setEditingCategory(null);
-            setForm({ name: "", description: "", icon: "package" });
+            setForm({ name: "", description: "", icon: "package", parent_id: "" });
           }
         }}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Category
+            <Button size="sm">
+              <Plus className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Add Category</span>
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -208,6 +212,24 @@ export const CategoryManager = () => {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="e.g., Gaming, Premium, etc."
                 />
+              </div>
+              <div>
+                <Label htmlFor="parent">Parent Category (Optional)</Label>
+                <select
+                  id="parent"
+                  value={form.parent_id}
+                  onChange={(e) => setForm({ ...form, parent_id: e.target.value })}
+                  className="flex h-10 w-full rounded-md border-2 border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">None (Top Level)</option>
+                  {categories
+                    .filter(c => !c.parent_id && c.id !== editingCategory?.id)
+                    .map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))
+                  }
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">Create sub-categories by selecting a parent</p>
               </div>
               <div>
                 <Label htmlFor="description">Description</Label>

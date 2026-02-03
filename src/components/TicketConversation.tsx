@@ -144,17 +144,17 @@ export const TicketConversation = ({
     <div className="flex flex-col h-full max-h-[70vh]">
       {/* Ticket attachment preview */}
       {imageProof && (
-        <div className="mb-4">
-          <p className="text-sm font-medium mb-2">Original Attachment:</p>
+        <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border/50">
+          <p className="text-sm font-medium mb-2 text-muted-foreground">Original Attachment:</p>
           <FilePreview filePath={imageProof} />
         </div>
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-3 p-2 min-h-[200px]">
+      <div className="flex-1 overflow-y-auto space-y-3 p-3 sm:p-4 min-h-[200px] bg-muted/30 rounded-lg border border-border/50">
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
-            <p>No messages yet. Start the conversation!</p>
+            <p className="text-sm">No messages yet. Start the conversation!</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -173,33 +173,33 @@ export const TicketConversation = ({
                 key={msg.id} 
                 className={`flex ${isRightAligned ? 'justify-end' : 'justify-start'}`}
               >
-                <Card className={`max-w-[80%] p-3 ${
+                <div className={`max-w-[85%] sm:max-w-[75%] p-2.5 sm:p-3 rounded-xl shadow-sm ${
                   isRightAligned 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted'
+                    ? 'bg-primary text-primary-foreground rounded-br-sm' 
+                    : 'bg-card border border-border rounded-bl-sm'
                 }`}>
                   <div className="flex items-center gap-2 mb-1">
                     {isStaffMessage ? (
-                      <UserCog className="h-3 w-3" />
+                      <UserCog className="h-3 w-3 flex-shrink-0" />
                     ) : (
-                      <User className="h-3 w-3" />
+                      <User className="h-3 w-3 flex-shrink-0" />
                     )}
-                    <span className="text-xs font-medium">
+                    <span className="text-xs font-medium truncate">
                       {msg.profiles?.full_name || msg.profiles?.email || 'User'}
                     </span>
                     {isStaffMessage && (
-                      <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                      <Badge variant="secondary" className="text-[10px] px-1 py-0 flex-shrink-0">
                         Staff
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                  <p className={`text-[10px] mt-1 ${
+                  <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
+                  <p className={`text-[10px] mt-1.5 ${
                     isRightAligned ? 'text-primary-foreground/70' : 'text-muted-foreground'
                   }`}>
                     {format(new Date(msg.created_at), 'PP p')}
                   </p>
-                </Card>
+                </div>
               </div>
             );
           })
