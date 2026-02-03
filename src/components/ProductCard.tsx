@@ -66,111 +66,113 @@ const ProductCard = ({
   return (
     <Card className={`flex flex-col h-full relative bg-card ${stockUrgency === "critical" ? "ring-2 ring-destructive/50" : ""}`}>
       {/* Badges Container */}
-      <div className="absolute -top-3 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+      <div className="absolute -top-2 sm:-top-3 left-1/2 -translate-x-1/2 flex gap-0.5 sm:gap-1 z-10">
         {isBestSeller && (
-          <Badge className="bg-accent text-accent-foreground shadow-brutal-sm">
-            <TrendingUp className="h-3 w-3 mr-1" />
-            Best Seller
+          <Badge className="bg-accent text-accent-foreground shadow-brutal-sm text-[10px] sm:text-xs px-1.5 sm:px-2.5 py-0.5 sm:py-1">
+            <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+            <span className="hidden sm:inline">Best Seller</span>
+            <span className="sm:hidden">Top</span>
           </Badge>
         )}
         {isNewProduct && !isBestSeller && (
-          <Badge className="bg-primary text-primary-foreground shadow-brutal-sm">
-            <Sparkles className="h-3 w-3 mr-1" />
+          <Badge className="bg-primary text-primary-foreground shadow-brutal-sm text-[10px] sm:text-xs px-1.5 sm:px-2.5 py-0.5 sm:py-1">
+            <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
             New
           </Badge>
         )}
         {savingsPercent >= 10 && (
-          <Badge className="bg-green-600 text-white shadow-brutal-sm">
-            <Percent className="h-3 w-3 mr-1" />
-            Save {savingsPercent}%
+          <Badge className="bg-green-600 text-white shadow-brutal-sm text-[10px] sm:text-xs px-1.5 sm:px-2.5 py-0.5 sm:py-1">
+            <Percent className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+            <span className="hidden sm:inline">Save</span> {savingsPercent}%
           </Badge>
         )}
       </div>
 
-      <CardHeader className={isBestSeller || isNewProduct || savingsPercent >= 10 ? "pt-6" : ""}>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-2xl">{name}</CardTitle>
+      <CardHeader className={`p-3 sm:p-4 md:p-6 ${isBestSeller || isNewProduct || savingsPercent >= 10 ? "pt-5 sm:pt-6" : ""}`}>
+        <div className="flex items-start justify-between gap-1.5 sm:gap-2">
+          <CardTitle className="text-base sm:text-lg md:text-xl lg:text-2xl">{name}</CardTitle>
           <Badge 
             variant={stock > 0 ? (stockUrgency === "critical" ? "destructive" : "default") : "destructive"}
-            className={stockUrgency === "low" ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+            className={`text-[10px] sm:text-xs shrink-0 ${stockUrgency === "low" ? "bg-yellow-600 hover:bg-yellow-700" : ""}`}
           >
-            {stock === 0 ? "Out of Stock" : `${stock} Available`}
+            {stock === 0 ? "Out" : `${stock}`}
+            <span className="hidden sm:inline ml-1">{stock === 0 ? "of Stock" : "Available"}</span>
           </Badge>
         </div>
-        <CardDescription className="text-base">{description}</CardDescription>
+        <CardDescription className="text-xs sm:text-sm md:text-base line-clamp-2">{description}</CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-1">
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            <span className="font-medium">{duration_days} days validity</span>
+      <CardContent className="flex-1 p-3 sm:p-4 md:p-6 pt-0">
+        <div className="space-y-2 sm:space-y-3">
+          <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+            <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="font-medium text-xs sm:text-sm">{duration_days} days validity</span>
           </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Package className="h-4 w-4" />
-            <span className="font-medium">Digital Redeem Code</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground">
+            <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+            <span className="font-medium text-xs sm:text-sm">Digital Redeem Code</span>
           </div>
           
           {/* Urgency Warning */}
           {stockUrgency === "critical" && stock > 0 && (
-            <div className="flex items-center gap-2 text-destructive bg-destructive/10 p-2 rounded-md border border-destructive/20">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span className="text-sm font-medium">Only {stock} left! Order soon</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-destructive bg-destructive/10 p-1.5 sm:p-2 rounded-md border border-destructive/20">
+              <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="text-xs sm:text-sm font-medium">Only {stock} left!</span>
             </div>
           )}
           {stockUrgency === "low" && (
-            <div className="flex items-center gap-2 text-yellow-700 dark:text-yellow-500 bg-yellow-500/10 p-2 rounded-md border border-yellow-500/20">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span className="text-sm font-medium">Low stock - {stock} remaining</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 text-yellow-700 dark:text-yellow-500 bg-yellow-500/10 p-1.5 sm:p-2 rounded-md border border-yellow-500/20">
+              <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="text-xs sm:text-sm font-medium">Low stock - {stock} remaining</span>
             </div>
           )}
         </div>
       </CardContent>
 
-      <CardFooter className="flex flex-col gap-4 pt-6 border-t-2 border-border">
-        <div className="flex items-center justify-between w-full">
-          <div>
-            <div className="text-3xl font-black text-primary">
+      <CardFooter className="flex flex-col gap-2 sm:gap-3 md:gap-4 p-3 sm:p-4 md:p-6 pt-3 sm:pt-4 md:pt-6 border-t-2 border-border">
+        <div className="flex items-center justify-between w-full gap-2">
+          <div className="min-w-0">
+            <div className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-black text-primary">
               Rp {price.toLocaleString('id-ID')}
             </div>
             {savingsPercent >= 10 && basePrice && (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">
                 <span className="line-through">Rp {(basePrice * duration_days).toLocaleString('id-ID')}</span>
               </div>
             )}
           </div>
           {isAuthenticated && stock > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9"
+                className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9"
                 onClick={() => onQuantityChange(id, -1)}
                 disabled={quantity <= 1}
               >
-                <Minus className="h-4 w-4" />
+                <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
-              <span className="font-black min-w-[2ch] text-center text-lg">{quantity}</span>
+              <span className="font-black min-w-[2ch] text-center text-sm sm:text-base md:text-lg">{quantity}</span>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-9 w-9"
+                className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9"
                 onClick={() => onQuantityChange(id, 1)}
                 disabled={quantity >= stock}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
               </Button>
             </div>
           )}
         </div>
         <Button 
           variant="hero" 
-          size="lg"
-          className="w-full"
+          size="default"
+          className="w-full text-xs sm:text-sm"
           disabled={stock === 0 || !isAuthenticated || quantity > stock}
           onClick={() => onPurchase(id)}
         >
-          {!isAuthenticated ? "Sign In to Buy" : stock === 0 ? "Out of Stock" : `Purchase ${quantity > 1 ? `(x${quantity})` : "Now"}`}
+          {!isAuthenticated ? "Sign In" : stock === 0 ? "Out of Stock" : `Purchase ${quantity > 1 ? `(x${quantity})` : "Now"}`}
         </Button>
       </CardFooter>
     </Card>
