@@ -62,18 +62,40 @@ const Navbar = () => {
   const { settings: siteSettings } = useSiteSettings();
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
+    const initAuth = async () => {
+      try {
+        // Try to get and validate session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session?.user) {
+          // Clear any stale session data
+          setUser(null);
+          setIsAdmin(false);
+          setIsStaff(false);
+          return;
+        }
+        
+        setUser(session.user);
         checkRoles(session.user.id);
+      } catch (err) {
+        console.error('Error initializing auth:', err);
+        setUser(null);
+        setIsAdmin(false);
+        setIsStaff(false);
       }
-    });
+    };
+
+    initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        checkRoles(session.user.id);
-      } else {
+      // Handle session expiry
+      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          checkRoles(session.user.id);
+        }
+      } else if (event === 'SIGNED_OUT' || !session) {
+        setUser(null);
         setIsAdmin(false);
         setIsStaff(false);
         setPendingCount(0);
