@@ -7,11 +7,8 @@ import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
 import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import heroImage from "@/assets/hero-cloud-phone.jpg";
-import { Smartphone, Cloud, Shield, Zap, Star, ChevronLeft, ChevronRight, Filter, X, Layers } from "lucide-react";
+import { Smartphone, Cloud, Shield, Zap, X, Layers, ShoppingBag } from "lucide-react";
 import { OrderConfirmationDialog } from "@/components/OrderConfirmationDialog";
 
 interface Category {
@@ -38,19 +35,6 @@ interface Product {
   created_at?: string;
 }
 
-interface Rating {
-  id: string;
-  rating: number;
-  review: string | null;
-  created_at: string;
-  profiles: {
-    full_name: string | null;
-  };
-  products: {
-    name: string;
-  };
-}
-
 interface ProductQuantity {
   [key: string]: number;
 }
@@ -58,18 +42,14 @@ interface ProductQuantity {
 const Store = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [ratings, setRatings] = useState<Rating[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [quantities, setQuantities] = useState<ProductQuantity>({});
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
-  const [currentRatingPage, setCurrentRatingPage] = useState(0);
   const [bestSellerId, setBestSellerId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const ratingsPerPage = 6;
   const { toast } = useToast();
   const navigate = useNavigate();
   const { settings: siteSettings } = useSiteSettings();
@@ -85,7 +65,6 @@ const Store = () => {
 
     fetchCategories();
     fetchProducts();
-    fetchRatings();
     fetchBestSeller();
 
     // Real-time stock updates
@@ -148,30 +127,6 @@ const Store = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchRatings = async () => {
-    try {
-      // Use the secure public_product_ratings view instead of product_ratings table
-      const { data, error } = await supabase
-        .from("public_product_ratings")
-        .select("id, rating, review, created_at, product_id, reviewer_name, product_name")
-        .order("created_at", { ascending: false })
-        .limit(6);
-
-      if (error) throw error;
-
-      // Transform to match expected format
-      const enrichedRatings = (data || []).map(rating => ({
-        ...rating,
-        profiles: { full_name: rating.reviewer_name || null },
-        products: { name: rating.product_name || "" }
-      }));
-
-      setRatings(enrichedRatings);
-    } catch (error) {
-      console.error("Error fetching ratings:", error);
     }
   };
 
@@ -354,11 +309,11 @@ const Store = () => {
 
   const getCategoryIcon = (iconName: string | null) => {
     switch (iconName) {
-      case "smartphone": return <Smartphone className="h-4 w-4" />;
-      case "cloud": return <Cloud className="h-4 w-4" />;
-      case "shield": return <Shield className="h-4 w-4" />;
-      case "zap": return <Zap className="h-4 w-4" />;
-      default: return <Layers className="h-4 w-4" />;
+      case "smartphone": return <Smartphone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
+      case "cloud": return <Cloud className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
+      case "shield": return <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
+      case "zap": return <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
+      default: return <Layers className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
     }
   };
 
@@ -371,271 +326,135 @@ const Store = () => {
       />
       <Navbar />
       
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-muted/30 z-0" />
-        {/* Decorative elements */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-10 right-10 w-24 h-24 bg-primary/20 border-2 border-border rotate-12" />
-          <div className="absolute bottom-20 left-20 w-20 h-20 bg-accent/30 border-2 border-border -rotate-6" />
-        </div>
-        <div className="container mx-auto px-4 py-20 relative z-10">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6">
-              <h1 className="text-5xl md:text-6xl font-black leading-tight">
-                <span className="bg-primary text-primary-foreground px-2 inline-block border-2 border-border shadow-brutal">
-                  {siteSettings.name}
-                </span>
-                <br />
-                <span className="text-foreground mt-2 inline-block">Redeem Codes</span>
-              </h1>
-              <p className="text-xl text-muted-foreground font-medium">
-                Access your virtual Android device anywhere, anytime. Run apps 24/7 in the cloud with premium performance.
+      {/* Simple Header */}
+      <div className="border-b-2 border-border bg-muted/30">
+        <div className="container mx-auto px-4 py-4 sm:py-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary border-2 border-border shadow-brutal-sm flex items-center justify-center">
+              <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-black">Products</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground">
+                {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} available
               </p>
-              <div className="flex gap-4">
-                <Button variant="hero" size="lg" onClick={() => {
-                  const productsSection = document.getElementById("products");
-                  productsSection?.scrollIntoView({ behavior: "smooth" });
-                }}>
-                  Browse Products
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky Category Filter */}
+      {categories.length > 0 && (
+        <div className="sticky top-16 z-20 bg-background/95 backdrop-blur border-b border-border">
+          <div className="container mx-auto px-4 py-3 space-y-2">
+            {/* Parent Categories */}
+            <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide">
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-max">
+                <Button
+                  variant={selectedCategory === null ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(null)}
+                  className="flex-shrink-0 text-xs sm:text-sm h-8 sm:h-9"
+                >
+                  All
                 </Button>
-                {!user && (
-                  <Button variant="outline" size="lg" onClick={() => navigate("/auth/signup")}>
-                    Sign Up Free
-                  </Button>
-                )}
-              </div>
-            </div>
-            <div className="relative">
-              <div className="border-2 border-border shadow-brutal-lg overflow-hidden">
-                <img 
-                  src={heroImage} 
-                  alt="Cloud Phone Technology" 
-                  className="w-full"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 bg-muted/20">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center space-y-3">
-              <div className="mx-auto w-14 h-14 bg-primary border-2 border-border shadow-brutal-sm flex items-center justify-center">
-                <Cloud className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <h3 className="font-bold">Cloud Based</h3>
-              <p className="text-sm text-muted-foreground">Access anywhere with internet</p>
-            </div>
-            <div className="text-center space-y-3">
-              <div className="mx-auto w-14 h-14 bg-accent border-2 border-border shadow-brutal-sm flex items-center justify-center">
-                <Zap className="h-6 w-6 text-accent-foreground" />
-              </div>
-              <h3 className="font-bold">Ultra Fast</h3>
-              <p className="text-sm text-muted-foreground">High performance virtual device</p>
-            </div>
-            <div className="text-center space-y-3">
-              <div className="mx-auto w-14 h-14 bg-secondary border-2 border-border shadow-brutal-sm flex items-center justify-center">
-                <Smartphone className="h-6 w-6 text-secondary-foreground" />
-              </div>
-              <h3 className="font-bold">24/7 Runtime</h3>
-              <p className="text-sm text-muted-foreground">Keep your apps running always</p>
-            </div>
-            <div className="text-center space-y-3">
-              <div className="mx-auto w-14 h-14 bg-primary border-2 border-border shadow-brutal-sm flex items-center justify-center">
-                <Shield className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <h3 className="font-bold">Secure</h3>
-              <p className="text-sm text-muted-foreground">Your data is safe and private</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Products Section */}
-      <section id="products" className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-8">
-            <h2 className="text-4xl font-bold">Choose Your Plan</h2>
-            <p className="text-xl text-muted-foreground">Select the perfect duration for your needs</p>
-          </div>
-
-          {/* Category Filter - Nested Tabs */}
-          {categories.length > 0 && (
-            <div className="mb-8 space-y-3">
-              {/* Parent Categories */}
-              <div className="overflow-x-auto pb-2 -mx-4 px-4">
-                <div className="flex items-center gap-2 min-w-max justify-center">
+                {parentCategories.map((category) => (
                   <Button
-                    variant={selectedCategory === null ? "default" : "outline"}
+                    key={category.id}
+                    variant={selectedParentId === category.id ? "default" : "outline"}
                     size="sm"
-                    onClick={() => setSelectedCategory(null)}
-                    className="flex-shrink-0"
+                    onClick={() => setSelectedCategory(category.id)}
+                    className="gap-1 flex-shrink-0 text-xs sm:text-sm h-8 sm:h-9"
                   >
-                    All
+                    {getCategoryIcon(category.icon)}
+                    <span className="hidden xs:inline sm:inline">{category.name}</span>
+                    <span className="xs:hidden sm:hidden">{category.name.substring(0, 4)}{category.name.length > 4 ? '…' : ''}</span>
                   </Button>
-                  {parentCategories.map((category) => (
+                ))}
+              </div>
+            </div>
+            
+            {/* Child Categories - Show when parent is selected */}
+            {selectedParentId && getChildCategories(selectedParentId).length > 0 && (
+              <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-max">
+                  <Button
+                    variant={selectedCategory === selectedParentId ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setSelectedCategory(selectedParentId)}
+                    className="text-[10px] sm:text-xs flex-shrink-0 h-7 sm:h-8"
+                  >
+                    All {categories.find(c => c.id === selectedParentId)?.name}
+                  </Button>
+                  {getChildCategories(selectedParentId).map((child) => (
                     <Button
-                      key={category.id}
-                      variant={selectedParentId === category.id ? "default" : "outline"}
+                      key={child.id}
+                      variant={selectedCategory === child.id ? "secondary" : "ghost"}
                       size="sm"
-                      onClick={() => setSelectedCategory(category.id)}
-                      className="gap-1 flex-shrink-0"
+                      onClick={() => setSelectedCategory(child.id)}
+                      className="gap-1 text-[10px] sm:text-xs flex-shrink-0 h-7 sm:h-8"
                     >
-                      {getCategoryIcon(category.icon)}
-                      <span className="hidden sm:inline">{category.name}</span>
-                      <span className="sm:hidden">{category.name.substring(0, 6)}{category.name.length > 6 ? '…' : ''}</span>
+                      {getCategoryIcon(child.icon)}
+                      {child.name}
                     </Button>
                   ))}
                 </div>
               </div>
-              
-              {/* Child Categories - Show when parent is selected */}
-              {selectedParentId && getChildCategories(selectedParentId).length > 0 && (
-                <div className="overflow-x-auto pb-2 -mx-4 px-4">
-                  <div className="flex items-center gap-2 min-w-max justify-center">
-                    <Button
-                      variant={selectedCategory === selectedParentId ? "secondary" : "ghost"}
-                      size="sm"
-                      onClick={() => setSelectedCategory(selectedParentId)}
-                      className="text-xs flex-shrink-0"
-                    >
-                      All {categories.find(c => c.id === selectedParentId)?.name}
-                    </Button>
-                    {getChildCategories(selectedParentId).map((child) => (
-                      <Button
-                        key={child.id}
-                        variant={selectedCategory === child.id ? "secondary" : "ghost"}
-                        size="sm"
-                        onClick={() => setSelectedCategory(child.id)}
-                        className="gap-1 text-xs flex-shrink-0"
-                      >
-                        {getCategoryIcon(child.icon)}
-                        {child.name}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {selectedCategory && (
-                <div className="text-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedCategory(null)}
-                    className="text-muted-foreground text-xs"
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    Clear filter
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {loading ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">Loading products...</p>
-            </div>
-          ) : filteredProducts.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">
-                {selectedCategory ? "No products in this category" : "No products available at the moment"}
-              </p>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
-              {(() => {
-                // Calculate base price per day (from shortest duration product)
-                const basePricePerDay = filteredProducts.length > 0
-                  ? Math.min(...filteredProducts.map(p => p.price / p.duration_days))
-                  : 0;
-
-                return filteredProducts.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    {...product}
-                    quantity={Math.min(quantities[product.id] || 1, product.stock || 1)}
-                    onQuantityChange={handleQuantityChange}
-                    onPurchase={handlePurchase}
-                    isAuthenticated={!!user}
-                    isBestSeller={product.id === bestSellerId}
-                    basePrice={basePricePerDay}
-                  />
-                ));
-              })()}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Testimonials Section */}
-      {ratings.length > 0 && (
-        <section className="py-20 bg-background">
-          <div className="container mx-auto px-4">
-            <div className="text-center space-y-4 mb-12">
-              <h2 className="text-4xl font-bold">What Our Customers Say</h2>
-              <p className="text-xl text-muted-foreground">Real reviews from verified customers</p>
-            </div>
+            )}
             
-            <div className="flex justify-center items-center gap-4 mb-6">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setCurrentRatingPage(Math.max(0, currentRatingPage - 1))}
-                disabled={currentRatingPage === 0}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {currentRatingPage + 1} of {Math.ceil(ratings.length / ratingsPerPage)}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setCurrentRatingPage(Math.min(Math.ceil(ratings.length / ratingsPerPage) - 1, currentRatingPage + 1))}
-                disabled={currentRatingPage >= Math.ceil(ratings.length / ratingsPerPage) - 1}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-              {ratings
-                .slice(currentRatingPage * ratingsPerPage, (currentRatingPage + 1) * ratingsPerPage)
-                .map((rating) => (
-                  <Card key={rating.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-                    <CardContent className="p-6 space-y-3">
-                      <div className="flex items-center gap-1 mb-2">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-4 w-4 ${
-                              i < rating.rating
-                                ? "fill-yellow-400 text-yellow-400"
-                                : "text-muted-foreground"
-                            }`}
-                          />
-                        ))}
-                      </div>
-                      {rating.review && (
-                        <p className="text-sm text-foreground line-clamp-4">{rating.review}</p>
-                      )}
-                      <div className="pt-2 border-t">
-                        <p className="text-sm font-medium">{rating.profiles?.full_name || "Anonymous"}</p>
-                        <p className="text-xs text-muted-foreground">{rating.products?.name}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
+            {selectedCategory && (
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSelectedCategory(null)}
+                  className="text-muted-foreground text-[10px] sm:text-xs h-6 sm:h-7"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Clear filter
+                </Button>
+              </div>
+            )}
           </div>
-        </section>
+        </div>
       )}
+
+      {/* Product Grid */}
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading products...</p>
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">
+              {selectedCategory ? "No products in this category" : "No products available at the moment"}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 max-w-6xl mx-auto">
+            {(() => {
+              // Calculate base price per day (from shortest duration product)
+              const basePricePerDay = filteredProducts.length > 0
+                ? Math.min(...filteredProducts.map(p => p.price / p.duration_days))
+                : 0;
+
+              return filteredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  {...product}
+                  quantity={Math.min(quantities[product.id] || 1, product.stock || 1)}
+                  onQuantityChange={handleQuantityChange}
+                  onPurchase={handlePurchase}
+                  isAuthenticated={!!user}
+                  isBestSeller={product.id === bestSellerId}
+                  basePrice={basePricePerDay}
+                />
+              ));
+            })()}
+          </div>
+        )}
+      </div>
 
       {/* Order Confirmation Dialog */}
       {selectedProduct && (
