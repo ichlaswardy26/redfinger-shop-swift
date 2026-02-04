@@ -1,16 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Loader2, CheckCircle, AlertTriangle, RefreshCw, Zap, Package } from "lucide-react";
 import { format } from "date-fns";
+import { CodeInputWithHighlight } from "@/components/CodeInputWithHighlight";
 
 interface Order {
   id: string;
@@ -472,7 +472,7 @@ export const BulkOrderVerification = ({ open, onOpenChange, onSuccess }: BulkOrd
                                 )}
 
                                 <div>
-                                  <Label className="text-sm flex items-center justify-between">
+                                  <Label className="text-sm flex items-center justify-between mb-1">
                                     <span>Redeem Codes ({order.quantity} required, one per line)</span>
                                     {order.useAutoDelivery && (
                                       <Badge variant="secondary" className="text-xs gap-1">
@@ -481,48 +481,25 @@ export const BulkOrderVerification = ({ open, onOpenChange, onSuccess }: BulkOrd
                                       </Badge>
                                     )}
                                   </Label>
-                                  <Textarea
-                                    placeholder={`Enter ${order.quantity} code(s), one per line`}
+                                  <CodeInputWithHighlight
                                     value={redeemCodes[order.id] || ''}
-                                    onChange={(e) => updateRedeemCodes(order.id, e.target.value)}
+                                    onChange={(value) => updateRedeemCodes(order.id, value)}
+                                    placeholder={`Enter ${order.quantity} code(s), one per line`}
                                     rows={Math.min(order.quantity, 3)}
-                                    className="mt-1"
                                     disabled={order.useAutoDelivery}
+                                    requiredCount={order.quantity}
+                                    allCodesAcrossOrders={
+                                      // Get all codes from OTHER selected orders (not this one)
+                                      selectedOrders
+                                        .filter(id => id !== order.id)
+                                        .flatMap(id => 
+                                          (redeemCodes[id] || '')
+                                            .split('\n')
+                                            .map(c => c.trim())
+                                            .filter(c => c.length > 0)
+                                        )
+                                    }
                                   />
-                                  {/* Real-time code validation indicator */}
-                                  {redeemCodes[order.id] && (
-                                    <div className="flex items-center gap-2 text-sm mt-1">
-                                      {(() => {
-                                        const codes = redeemCodes[order.id].split('\n').map(c => c.trim()).filter(c => c.length > 0);
-                                        const uniqueCodes = new Set(codes.map(c => c.toLowerCase()));
-                                        const hasDuplicates = uniqueCodes.size !== codes.length;
-                                        const countCorrect = codes.length === order.quantity;
-                                        
-                                        if (hasDuplicates) {
-                                          return (
-                                            <span className="text-destructive flex items-center gap-1">
-                                              <AlertTriangle className="h-3 w-3" />
-                                              Duplicate codes detected
-                                            </span>
-                                          );
-                                        }
-                                        if (!countCorrect) {
-                                          return (
-                                            <span className="text-amber-500 dark:text-amber-400 flex items-center gap-1">
-                                              <AlertTriangle className="h-3 w-3" />
-                                              {codes.length}/{order.quantity} codes
-                                            </span>
-                                          );
-                                        }
-                                        return (
-                                          <span className="text-green-600 dark:text-green-500 flex items-center gap-1">
-                                            <CheckCircle className="h-3 w-3" />
-                                            {codes.length}/{order.quantity} codes
-                                          </span>
-                                        );
-                                      })()}
-                                    </div>
-                                  )}
                                 </div>
                               </div>
                             )}
