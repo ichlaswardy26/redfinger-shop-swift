@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { CheckCircle, XCircle, ExternalLink, Copy, RefreshCw, Loader2, Zap, Package } from "lucide-react";
+import { CheckCircle, XCircle, ExternalLink, Copy, RefreshCw, Loader2, Zap, Package, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getSignedUrl } from "@/hooks/useSignedUrl";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,6 +56,8 @@ export const OrderVerificationDialog = ({
   const [loadingInventory, setLoadingInventory] = useState(false);
   const [useAutoDelivery, setUseAutoDelivery] = useState(false);
   const [otherPendingCount, setOtherPendingCount] = useState(0);
+  const [showStockConfirm, setShowStockConfirm] = useState(false);
+  const [currentStock, setCurrentStock] = useState<number | null>(null);
   const { toast } = useToast();
 
   // Fetch available codes from inventory for this product
@@ -107,9 +110,21 @@ export const OrderVerificationDialog = ({
       setProofUrl(null);
     }
 
-    // Fetch inventory codes and pending orders when dialog opens
+    // Fetch inventory codes, product stock, and pending orders when dialog opens
     if (open && order?.product_id) {
       fetchInventoryCodes();
+      
+      // Fetch current product stock
+      const fetchProductStock = async () => {
+        const { data: productData } = await supabase
+          .from("products")
+          .select("stock")
+          .eq("id", order.product_id)
+          .single();
+        setCurrentStock(productData?.stock ?? null);
+      };
+      fetchProductStock();
+      
       // Fetch other pending orders for same product
       const fetchPendingOrders = async () => {
         const { data } = await supabase
@@ -124,6 +139,7 @@ export const OrderVerificationDialog = ({
       fetchPendingOrders();
     } else {
       setOtherPendingCount(0);
+      setCurrentStock(null);
     }
   }, [open, order?.payment_proof, order?.product_id, order?.quantity]);
 
@@ -136,6 +152,8 @@ export const OrderVerificationDialog = ({
       setUseAutoDelivery(false);
       setRedeemCodes([]);
       setOtherPendingCount(0);
+      setShowStockConfirm(false);
+      setCurrentStock(null);
     } else {
       setRedeemCodes([]);
     }
@@ -148,8 +166,8 @@ export const OrderVerificationDialog = ({
     setUseAutoDelivery(true);
   };
 
-  const handleVerify = async () => {
-    if (!order) return;
+  const validateCodes = (): boolean => {
+    if (!order) return false;
     
     // Validate all codes are filled
     if (redeemCodes.length !== order.quantity) {
@@ -158,7 +176,7 @@ export const OrderVerificationDialog = ({
         description: `Please provide exactly ${order.quantity} redeem codes`,
         variant: "destructive",
       });
-      return;
+      return false;
     }
     
     if (redeemCodes.some(code => !code.trim())) {
@@ -167,7 +185,7 @@ export const OrderVerificationDialog = ({
         description: "Please fill in all redeem codes",
         variant: "destructive",
       });
-      return;
+      return false;
     }
     
     // Check for duplicate codes
@@ -178,9 +196,31 @@ export const OrderVerificationDialog = ({
         description: "Duplicate codes detected. Each code must be unique.",
         variant: "destructive",
       });
-      return;
+      return false;
     }
     
+    return true;
+  };
+
+  const handleVerifyClick = () => {
+    if (!validateCodes()) return;
+    
+    // Show confirmation if stock will be low after verification
+    if (currentStock !== null) {
+      const stockAfter = currentStock - (order?.quantity || 0);
+      if (stockAfter <= 5) {
+        setShowStockConfirm(true);
+        return;
+      }
+    }
+    
+    handleVerify();
+  };
+
+  const handleVerify = async () => {
+    if (!order) return;
+    
+    setShowStockConfirm(false);
     setSubmitting(true);
     try {
       await onVerify(order.id, redeemCodes, adminNotes);
@@ -397,7 +437,7 @@ export const OrderVerificationDialog = ({
               />
             </div>
             <Button 
-              onClick={handleVerify} 
+              onClick={handleVerifyClick} 
               disabled={submitting}
               className="w-full"
             >
@@ -429,6 +469,51 @@ export const OrderVerificationDialog = ({
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* Stock Confirmation Dialog */}
+      <AlertDialog open={showStockConfirm} onOpenChange={setShowStockConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Confirm Stock Reduction
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p>Verifying this order will reduce stock:</p>
+                <div className="p-4 bg-muted rounded-lg space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Current Stock:</span>
+                    <span className="font-bold">{currentStock}</span>
+                  </div>
+                  <div className="flex justify-between text-red-500">
+                    <span>Order Quantity:</span>
+                    <span className="font-bold">-{order?.quantity}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between">
+                    <span className="text-muted-foreground">After Verification:</span>
+                    <span className={`font-bold ${(currentStock || 0) - (order?.quantity || 0) <= 3 ? "text-red-500" : ""}`}>
+                      {(currentStock || 0) - (order?.quantity || 0)}
+                    </span>
+                  </div>
+                </div>
+                {(currentStock || 0) - (order?.quantity || 0) <= 3 && (
+                  <Badge variant="destructive" className="w-full justify-center py-2">
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Low stock warning! Consider restocking soon.
+                  </Badge>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleVerify}>
+              Confirm & Verify
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 };

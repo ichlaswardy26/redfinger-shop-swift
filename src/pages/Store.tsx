@@ -7,9 +7,13 @@ import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
 import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
-import { X, Layers, ShoppingBag } from "lucide-react";
+import { X, Layers, ShoppingBag, Package, Sparkles, TrendingUp } from "lucide-react";
 import { OrderConfirmationDialog } from "@/components/OrderConfirmationDialog";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Category {
   id: string;
@@ -40,6 +44,26 @@ interface ProductQuantity {
   [key: string]: number;
 }
 
+const ITEMS_PER_PAGE = 10;
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { type: "spring" as const, stiffness: 300, damping: 24 }
+  }
+};
+
 const Store = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -51,6 +75,7 @@ const Store = () => {
   const [isCreatingOrder, setIsCreatingOrder] = useState(false);
   const [bestSellerId, setBestSellerId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { settings: siteSettings } = useSiteSettings();
@@ -94,6 +119,11 @@ const Store = () => {
       }
     });
   }, [products]);
+
+  // Reset display count when category changes
+  useEffect(() => {
+    setDisplayCount(ITEMS_PER_PAGE);
+  }, [selectedCategory]);
 
   const fetchCategories = async () => {
     try {
@@ -304,7 +334,7 @@ const Store = () => {
     ? (categories.find(c => c.id === selectedCategory)?.parent_id || selectedCategory)
     : null;
 
-  // Fix: When parent category selected, include products from all child categories
+  // Filter products by category
   const filteredProducts = (() => {
     if (!selectedCategory) return products;
     
@@ -327,6 +357,29 @@ const Store = () => {
       p.category_id && relevantCategoryIds.includes(p.category_id)
     );
   })();
+
+  // Pagination
+  const displayedProducts = filteredProducts.slice(0, displayCount);
+  const hasMore = displayCount < filteredProducts.length;
+  const remainingCount = filteredProducts.length - displayCount;
+
+  // Get product count per category
+  const getProductCount = (categoryId: string) => {
+    const cat = categories.find(c => c.id === categoryId);
+    if (!cat) return 0;
+    
+    if (cat.parent_id) {
+      return products.filter(p => p.category_id === categoryId).length;
+    }
+    
+    const childCategoryIds = categories
+      .filter(c => c.parent_id === categoryId)
+      .map(c => c.id);
+    
+    return products.filter(p => 
+      p.category_id === categoryId || (p.category_id && childCategoryIds.includes(p.category_id))
+    ).length;
+  };
 
   const getCategoryImage = (imageUrl: string | null) => {
     if (imageUrl) {
@@ -353,26 +406,65 @@ const Store = () => {
       />
       <Navbar />
       
-      {/* Simple Header */}
-      <div className="border-b-2 border-border bg-muted/30">
-        <div className="container mx-auto px-4 py-4 sm:py-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary border-2 border-border shadow-brutal-sm flex items-center justify-center">
-              <ShoppingBag className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
+      {/* Enhanced Header */}
+      <div className="relative overflow-hidden border-b-2 border-border bg-gradient-to-br from-background via-muted/30 to-background">
+        {/* Decorative elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-accent/20 rounded-full blur-2xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+        </div>
+        
+        <div className="relative container mx-auto px-4 py-8 sm:py-12">
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col sm:flex-row items-center justify-between gap-6"
+          >
+            <div className="flex items-center gap-4">
+              <motion.div 
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                className="w-14 h-14 sm:w-16 sm:h-16 bg-primary border-2 border-border shadow-brutal flex items-center justify-center"
+              >
+                <ShoppingBag className="h-7 w-7 sm:h-8 sm:w-8 text-primary-foreground" />
+              </motion.div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black flex items-center gap-2">
+                  Our Products
+                  <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-accent" />
+                </h1>
+                <p className="text-sm sm:text-base text-muted-foreground">
+                  Premium cloud phone services
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-black">Products</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'} available
-              </p>
-            </div>
-          </div>
+            
+            {/* Quick Stats */}
+            <motion.div 
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+              className="flex gap-3 sm:gap-4"
+            >
+              <div className="text-center px-4 py-2 bg-background/80 backdrop-blur border-2 border-border rounded-lg shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal transition-all">
+                <p className="text-xl sm:text-2xl font-black text-primary">{products.length}</p>
+                <p className="text-xs text-muted-foreground">Products</p>
+              </div>
+              <div className="text-center px-4 py-2 bg-background/80 backdrop-blur border-2 border-border rounded-lg shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal transition-all">
+                <p className="text-xl sm:text-2xl font-black text-primary">{parentCategories.length}</p>
+                <p className="text-xs text-muted-foreground">Categories</p>
+              </div>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
 
       {/* Sticky Category Filter */}
       {categories.length > 0 && (
-        <div className="sticky top-16 z-20 bg-background/95 backdrop-blur border-b border-border">
+        <div className="sticky top-16 z-20 bg-background/95 backdrop-blur border-b border-border shadow-sm">
           <div className="container mx-auto px-4 py-5 sm:py-6 space-y-4">
             {/* Parent Categories */}
             <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide mb-2">
@@ -381,9 +473,12 @@ const Store = () => {
                   variant={selectedCategory === null ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedCategory(null)}
-                  className="flex-shrink-0 text-sm h-9 sm:h-10 px-4"
+                  className="flex-shrink-0 text-sm h-9 sm:h-10 px-4 gap-2"
                 >
                   All
+                  <Badge variant="secondary" className="ml-1 text-xs bg-background/50">
+                    {products.length}
+                  </Badge>
                 </Button>
                 {parentCategories.map((category) => (
                   <Button
@@ -395,6 +490,9 @@ const Store = () => {
                   >
                     {getCategoryImage(category.image_url)}
                     {category.name}
+                    <Badge variant="secondary" className="ml-1 text-xs bg-background/50">
+                      {getProductCount(category.id)}
+                    </Badge>
                   </Button>
                 ))}
               </div>
@@ -402,7 +500,12 @@ const Store = () => {
             
             {/* Child Categories - Show when parent is selected */}
             {selectedParentId && getChildCategories(selectedParentId).length > 0 && (
-              <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide">
+              <motion.div 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-x-auto -mx-4 px-4 scrollbar-hide"
+              >
                 <div className="flex items-center gap-1.5 sm:gap-2 min-w-max">
                   <Button
                     variant={selectedCategory === selectedParentId ? "secondary" : "ghost"}
@@ -425,7 +528,7 @@ const Store = () => {
                     </Button>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             )}
             
             {selectedCategory && (
@@ -446,39 +549,128 @@ const Store = () => {
       )}
 
       {/* Product Grid */}
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 md:py-8">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-10">
         {loading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading products...</p>
+          // Skeleton Loading
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Card key={i} className="overflow-hidden">
+                <CardHeader className="p-4 space-y-3">
+                  <Skeleton className="h-12 w-12 mx-auto rounded-lg" />
+                  <Skeleton className="h-6 w-3/4 mx-auto" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
+                </CardHeader>
+                <CardContent className="p-4 pt-0 space-y-3">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-10 w-full mt-4" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">
-              {selectedCategory ? "No products in this category" : "No products available at the moment"}
-            </p>
-          </div>
+          // Empty State
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16 space-y-6"
+          >
+            <div className="w-24 h-24 mx-auto bg-muted rounded-full flex items-center justify-center border-2 border-border">
+              <Package className="h-12 w-12 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold mb-2">No Products Found</h3>
+              <p className="text-muted-foreground max-w-sm mx-auto">
+                {selectedCategory 
+                  ? "No products in this category yet. Try selecting a different category."
+                  : "No products available at the moment. Check back soon!"}
+              </p>
+            </div>
+            {selectedCategory && (
+              <Button variant="outline" onClick={() => setSelectedCategory(null)} className="gap-2">
+                <Layers className="h-4 w-4" />
+                View All Products
+              </Button>
+            )}
+          </motion.div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 max-w-6xl mx-auto">
-            {(() => {
-              // Calculate base price per day (from shortest duration product)
-              const basePricePerDay = filteredProducts.length > 0
-                ? Math.min(...filteredProducts.map(p => p.price / p.duration_days))
-                : 0;
+          <>
+            {/* Showing count */}
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-sm text-muted-foreground mb-6 text-center"
+            >
+              Showing {displayedProducts.length} of {filteredProducts.length} products
+            </motion.p>
 
-              return filteredProducts.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  {...product}
-                  quantity={Math.min(quantities[product.id] || 1, product.stock || 1)}
-                  onQuantityChange={handleQuantityChange}
-                  onPurchase={handlePurchase}
-                  isAuthenticated={!!user}
-                  isBestSeller={product.id === bestSellerId}
-                  basePrice={basePricePerDay}
-                />
-              ));
-            })()}
-          </div>
+            {/* Products Grid */}
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto"
+            >
+              <AnimatePresence mode="popLayout">
+                {(() => {
+                  // Calculate base price per day (from shortest duration product)
+                  const basePricePerDay = filteredProducts.length > 0
+                    ? Math.min(...filteredProducts.map(p => p.price / p.duration_days))
+                    : 0;
+
+                  return displayedProducts.map((product) => (
+                    <motion.div
+                      key={product.id}
+                      variants={itemVariants}
+                      layout
+                      exit={{ opacity: 0, scale: 0.9 }}
+                    >
+                      <ProductCard
+                        {...product}
+                        quantity={Math.min(quantities[product.id] || 1, product.stock || 1)}
+                        onQuantityChange={handleQuantityChange}
+                        onPurchase={handlePurchase}
+                        isAuthenticated={!!user}
+                        isBestSeller={product.id === bestSellerId}
+                        basePrice={basePricePerDay}
+                      />
+                    </motion.div>
+                  ));
+                })()}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Load More Button */}
+            {hasMore && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex flex-col items-center gap-4 mt-10"
+              >
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  onClick={() => setDisplayCount(prev => prev + ITEMS_PER_PAGE)}
+                  className="gap-2 px-8 shadow-brutal-sm hover:shadow-brutal hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  Load More ({remainingCount} remaining)
+                </Button>
+              </motion.div>
+            )}
+
+            {/* All Loaded Indicator */}
+            {!hasMore && filteredProducts.length > ITEMS_PER_PAGE && (
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center text-sm text-muted-foreground mt-10"
+              >
+                ✨ All {filteredProducts.length} products loaded
+              </motion.p>
+            )}
+          </>
         )}
       </div>
 
