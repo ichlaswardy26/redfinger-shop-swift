@@ -2,3 +2,12 @@ project_id = "jstzgqmqwcjtffefwcxj"
 
 [functions.send-notification]
 verify_jwt = false
+
+[functions.create-tokopay-payment]
+verify_jwt = false
+
+[functions.tokopay-callback]
+verify_jwt = false
+
+[functions.check-payment-status]
+verify_jwt = false

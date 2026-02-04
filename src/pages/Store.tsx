@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { usePaymentGateway, QRPaymentData } from "@/hooks/usePaymentGateway";
 import { User } from "@supabase/supabase-js";
 import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
@@ -13,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { X, Layers, ShoppingBag, Package, Sparkles, TrendingUp } from "lucide-react";
 import { OrderConfirmationDialog } from "@/components/OrderConfirmationDialog";
+import { QRPaymentDialog } from "@/components/QRPaymentDialog";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface Category {
@@ -76,9 +78,13 @@ const Store = () => {
   const [bestSellerId, setBestSellerId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE);
+  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [qrPaymentData, setQrPaymentData] = useState<QRPaymentData | null>(null);
+  const [showQRDialog, setShowQRDialog] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { settings: siteSettings } = useSiteSettings();
+  const { createPayment, checkPaymentStatus, isCheckingStatus } = usePaymentGateway();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -253,7 +259,7 @@ const Store = () => {
     setConfirmDialogOpen(true);
   };
 
-  const handleConfirmOrder = async () => {
+  const handleConfirmOrder = async (paymentMethod: "manual" | "qris" = "manual") => {
     if (!selectedProduct || !user) return;
 
     setIsCreatingOrder(true);
@@ -285,7 +291,7 @@ const Store = () => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + selectedProduct.duration_days);
 
-      const { error: orderError } = await supabase
+      const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert({
           user_id: user.id,
@@ -294,21 +300,51 @@ const Store = () => {
           expires_at: expiresAt.toISOString(),
           status: "pending",
           payment_status: "pending",
-        });
+          payment_method: paymentMethod,
+        })
+        .select("id")
+        .single();
 
       if (orderError) throw orderError;
 
-      toast({
-        title: "Order created successfully!",
-        description: "Please upload your payment proof in My Transactions to complete the order.",
-      });
+      const orderId = orderData.id;
+      setCreatedOrderId(orderId);
 
-      setQuantities({ ...quantities, [selectedProduct.id]: 1 });
-      setConfirmDialogOpen(false);
-      setSelectedProduct(null);
-      fetchProducts();
-      
-      navigate("/transactions");
+      // Handle QRIS payment
+      if (paymentMethod === "qris") {
+        const totalPrice = selectedProduct.price * quantity;
+        const qrData = await createPayment(orderId, totalPrice);
+        
+        if (qrData) {
+          setQrPaymentData(qrData);
+          setConfirmDialogOpen(false);
+          setShowQRDialog(true);
+        } else {
+          // If QR creation fails, let user know they can pay manually
+          toast({
+            title: "QR Payment Failed",
+            description: "Order created. Please pay manually via bank transfer in My Transactions.",
+            variant: "destructive",
+          });
+          setQuantities({ ...quantities, [selectedProduct.id]: 1 });
+          setConfirmDialogOpen(false);
+          setSelectedProduct(null);
+          navigate("/transactions");
+        }
+      } else {
+        // Manual payment flow
+        toast({
+          title: "Order created successfully!",
+          description: "Please upload your payment proof in My Transactions to complete the order.",
+        });
+
+        setQuantities({ ...quantities, [selectedProduct.id]: 1 });
+        setConfirmDialogOpen(false);
+        setSelectedProduct(null);
+        fetchProducts();
+        
+        navigate("/transactions");
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -318,6 +354,27 @@ const Store = () => {
     } finally {
       setIsCreatingOrder(false);
     }
+  };
+
+  const handleQRPaymentVerified = () => {
+    setShowQRDialog(false);
+    setQrPaymentData(null);
+    setCreatedOrderId(null);
+    setSelectedProduct(null);
+    setQuantities(prev => selectedProduct ? { ...prev, [selectedProduct.id]: 1 } : prev);
+    fetchProducts();
+    
+    toast({
+      title: "Payment Successful!",
+      description: "Your order has been verified. Check your transactions for redeem codes.",
+    });
+    
+    navigate("/transactions");
+  };
+
+  const handleCheckQRStatus = async () => {
+    if (!createdOrderId) return null;
+    return await checkPaymentStatus(createdOrderId);
   };
 
   // Separate parent and child categories
@@ -689,6 +746,21 @@ const Store = () => {
           quantity={quantities[selectedProduct.id] || 1}
           onConfirm={handleConfirmOrder}
           isLoading={isCreatingOrder}
+          orderId={createdOrderId}
+        />
+      )}
+
+      {/* QR Payment Dialog */}
+      {qrPaymentData && selectedProduct && (
+        <QRPaymentDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          paymentData={qrPaymentData}
+          productName={selectedProduct.name}
+          quantity={quantities[selectedProduct.id] || 1}
+          onCheckStatus={handleCheckQRStatus}
+          onPaymentVerified={handleQRPaymentVerified}
+          isCheckingStatus={isCheckingStatus}
         />
       )}
     </div>

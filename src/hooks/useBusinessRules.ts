@@ -21,6 +21,13 @@ export interface BusinessRules {
     testimonials_count: number;
     best_seller_period: string;
   };
+  payment_gateway: {
+    enabled: boolean;
+    provider: string;
+    merchant_id: string;
+    qris_enabled: boolean;
+    auto_delivery: boolean;
+  };
 }
 
 const defaultRules: BusinessRules = {
@@ -42,6 +49,13 @@ const defaultRules: BusinessRules = {
     products_per_page: 12,
     testimonials_count: 6,
     best_seller_period: "month",
+  },
+  payment_gateway: {
+    enabled: false,
+    provider: "tokopay",
+    merchant_id: "",
+    qris_enabled: true,
+    auto_delivery: true,
   },
 };
 

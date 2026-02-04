@@ -46,10 +46,15 @@ export type Database = {
           admin_notes: string | null
           created_at: string
           expires_at: string
+          gateway_expired_at: string | null
+          gateway_trx_id: string | null
           id: string
+          payment_method: string | null
           payment_proof: string | null
           payment_status: string
+          payment_url: string | null
           product_id: string
+          qr_link: string | null
           quantity: number
           redeem_codes: string[] | null
           status: string
@@ -61,10 +66,15 @@ export type Database = {
           admin_notes?: string | null
           created_at?: string
           expires_at: string
+          gateway_expired_at?: string | null
+          gateway_trx_id?: string | null
           id?: string
+          payment_method?: string | null
           payment_proof?: string | null
           payment_status?: string
+          payment_url?: string | null
           product_id: string
+          qr_link?: string | null
           quantity?: number
           redeem_codes?: string[] | null
           status?: string
@@ -76,10 +86,15 @@ export type Database = {
           admin_notes?: string | null
           created_at?: string
           expires_at?: string
+          gateway_expired_at?: string | null
+          gateway_trx_id?: string | null
           id?: string
+          payment_method?: string | null
           payment_proof?: string | null
           payment_status?: string
+          payment_url?: string | null
           product_id?: string
+          qr_link?: string | null
           quantity?: number
           redeem_codes?: string[] | null
           status?: string

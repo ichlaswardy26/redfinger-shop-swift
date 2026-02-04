@@ -2,19 +2,27 @@ import { useState } from "react";
 import { CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Upload, X, Star, MessageSquare, Download } from "lucide-react";
+import { ExternalLink, Upload, X, Star, MessageSquare, Download, QrCode, RefreshCw, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import CopyButton from "./CopyButton";
 import { MotionCard } from "@/components/ui/motion";
+import { QRPaymentDialog } from "@/components/QRPaymentDialog";
+import { usePaymentGateway, QRPaymentData } from "@/hooks/usePaymentGateway";
+
 interface OrderCardProps {
   order: {
     id: string;
     product_id: string;
-    product: { name: string; duration_days: number };
+    product: { name: string; duration_days: number; price?: number };
     quantity: number;
     status: string;
     payment_status: string;
     payment_proof: string | null;
+    payment_method?: string | null;
+    gateway_trx_id?: string | null;
+    qr_link?: string | null;
+    payment_url?: string | null;
+    gateway_expired_at?: string | null;
     created_at: string;
     expires_at: string;
     redeem_codes: string[] | null;
@@ -25,9 +33,13 @@ interface OrderCardProps {
   onCancelOrder: (orderId: string) => void;
   onRate: (orderId: string, productId: string, productName: string) => void;
   onCreateTicket: (orderId: string) => void;
+  onOrderUpdated?: () => void;
 }
 
-export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreateTicket }: OrderCardProps) => {
+export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreateTicket, onOrderUpdated }: OrderCardProps) => {
+  const [showQRDialog, setShowQRDialog] = useState(false);
+  const { checkPaymentStatus, createPayment, isCheckingStatus, isCreatingPayment } = usePaymentGateway();
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'verified': return 'default';
@@ -44,6 +56,45 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
       case 'resolved': return 'outline';
       case 'closed': return 'outline';
       default: return 'secondary';
+    }
+  };
+
+  // Check if QRIS payment is expired
+  const isQRISExpired = order.payment_method === 'qris' && order.gateway_expired_at 
+    ? new Date(order.gateway_expired_at) < new Date()
+    : false;
+
+  // Build QR payment data from order
+  const qrPaymentData: QRPaymentData | null = order.qr_link && order.payment_url && order.gateway_expired_at
+    ? {
+        trx_id: order.gateway_trx_id || '',
+        qr_link: order.qr_link,
+        pay_url: order.payment_url,
+        nominal: (order.product.price || 0) * order.quantity,
+        expired_at: order.gateway_expired_at,
+      }
+    : null;
+
+  const handleCheckStatus = async () => {
+    const result = await checkPaymentStatus(order.id);
+    if (result?.status === 'verified') {
+      onOrderUpdated?.();
+    }
+    return result;
+  };
+
+  const handlePaymentVerified = () => {
+    setShowQRDialog(false);
+    onOrderUpdated?.();
+  };
+
+  const handleRetryQRIS = async () => {
+    const totalPrice = (order.product.price || 0) * order.quantity;
+    const result = await createPayment(order.id, totalPrice);
+    if (result) {
+      // Force refresh the order data
+      onOrderUpdated?.();
+      setShowQRDialog(true);
     }
   };
 
@@ -154,6 +205,25 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
             </div>
           </div>
         )}
+
+        {/* QRIS Payment Indicator */}
+        {order.payment_method === 'qris' && order.payment_status === 'pending' && (
+          <div className={`border rounded-lg p-3 ${isQRISExpired ? 'bg-destructive/10 border-destructive/20' : 'bg-accent/10 border-accent/20'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <QrCode className="h-4 w-4" />
+                <p className="text-sm font-medium">
+                  {isQRISExpired ? 'QRIS Expired' : 'Waiting for QRIS Payment'}
+                </p>
+              </div>
+              {!isQRISExpired && order.gateway_expired_at && (
+                <Badge variant="secondary" className="text-xs">
+                  Expires {format(new Date(order.gateway_expired_at), 'HH:mm')}
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="bg-muted/30 flex gap-2 flex-wrap">
@@ -180,7 +250,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
           </>
         )}
 
-        {order.payment_status === 'pending' && (
+        {order.payment_status === 'pending' && order.payment_method !== 'qris' && (
           <>
             <Button 
               size="sm" 
@@ -203,6 +273,69 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
           </>
         )}
 
+        {/* QRIS Pending - Show Pay Now or Retry */}
+        {order.payment_status === 'pending' && order.payment_method === 'qris' && (
+          <>
+            {!isQRISExpired && qrPaymentData ? (
+              <>
+                <Button 
+                  size="sm" 
+                  variant="default"
+                  onClick={() => setShowQRDialog(true)}
+                  className="flex-1 min-w-0"
+                >
+                  <QrCode className="h-4 w-4 mr-1 flex-shrink-0" />
+                  <span className="truncate">Pay Now</span>
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={handleCheckStatus}
+                  disabled={isCheckingStatus}
+                  className="flex-1 min-w-0"
+                >
+                  {isCheckingStatus ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-1 flex-shrink-0" />
+                      <span className="truncate">Check</span>
+                    </>
+                  )}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  size="sm" 
+                  variant="default"
+                  onClick={handleRetryQRIS}
+                  disabled={isCreatingPayment}
+                  className="flex-1 min-w-0"
+                >
+                  {isCreatingPayment ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <QrCode className="h-4 w-4 mr-1 flex-shrink-0" />
+                      <span className="truncate">New QR</span>
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => onCancelOrder(order.id)}
+                  className="flex-1 min-w-0"
+                >
+                  <X className="h-4 w-4 mr-1 flex-shrink-0" />
+                  <span className="truncate">Cancel</span>
+                </Button>
+              </>
+            )}
+          </>
+        )}
+
         {order.payment_status === 'rejected' && !order.ticket && (
           <Button 
             size="sm" 
@@ -215,6 +348,20 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
           </Button>
         )}
       </CardFooter>
+
+      {/* QR Payment Dialog */}
+      {qrPaymentData && (
+        <QRPaymentDialog
+          open={showQRDialog}
+          onOpenChange={setShowQRDialog}
+          paymentData={qrPaymentData}
+          productName={order.product.name}
+          quantity={order.quantity}
+          onCheckStatus={handleCheckStatus}
+          onPaymentVerified={handlePaymentVerified}
+          isCheckingStatus={isCheckingStatus}
+        />
+      )}
     </MotionCard>
   );
 };
