@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
@@ -9,7 +9,8 @@ import { FloatingChatButton } from "@/components/FloatingChatButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from "@/components/ui/carousel";
+import Autoplay from "embla-carousel-autoplay";
 import heroImage from "@/assets/hero-cloud-phone.jpg";
 import { Smartphone, Cloud, Shield, Zap, Star, Quote, TrendingUp, Mail, Phone, MessageCircle, Facebook, Instagram, Twitter, ArrowRight, CheckCircle, Layers, Clock, Headphones, CreditCard } from "lucide-react";
 
@@ -636,7 +637,17 @@ const Index = () => {
           </div>
 
           <div className="max-w-6xl mx-auto">
-            <Carousel opts={{ align: "start", loop: true }} className="w-full">
+            <Carousel 
+              opts={{ align: "start", loop: true }} 
+              plugins={[
+                Autoplay({
+                  delay: 4000,
+                  stopOnInteraction: false,
+                  stopOnMouseEnter: true,
+                })
+              ]}
+              className="w-full"
+            >
               <CarouselContent>
                 {ratings.map((rating) => (
                   <CarouselItem key={rating.id} className="md:basis-1/2 lg:basis-1/3">

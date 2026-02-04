@@ -16,6 +16,7 @@ interface Order {
   quantity: number;
   payment_status: string;
   created_at: string;
+  product_id: string;
   product_name: string;
   customer_name: string;
   customer_email: string;
@@ -29,6 +30,7 @@ export interface BulkOrderVerificationProps {
 
 export const BulkOrderVerification = ({ open, onOpenChange, onSuccess }: BulkOrderVerificationProps) => {
   const [orders, setOrders] = useState<Order[]>([]);
+  const [products, setProducts] = useState<{ id: string; stock: number }[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [redeemCodes, setRedeemCodes] = useState<Record<string, string>>({});
@@ -60,18 +62,22 @@ export const BulkOrderVerification = ({ open, onOpenChange, onSuccess }: BulkOrd
       const userIds = [...new Set(ordersData?.map(o => o.user_id) || [])];
 
       const [productsRes, profilesRes] = await Promise.all([
-        supabase.from("products").select("id, name").in("id", productIds),
+        supabase.from("products").select("id, name, stock").in("id", productIds),
         supabase.from("profiles").select("id, full_name, email").in("id", userIds),
       ]);
 
       const productMap = new Map(productsRes.data?.map(p => [p.id, p]) || []);
       const profileMap = new Map(profilesRes.data?.map(p => [p.id, p]) || []);
 
+      // Store products for stock update
+      setProducts(productsRes.data || []);
+
       const enrichedOrders = (ordersData || []).map(order => ({
         id: order.id,
         quantity: order.quantity,
         payment_status: order.payment_status,
         created_at: order.created_at,
+        product_id: order.product_id,
         product_name: productMap.get(order.product_id)?.name || "Unknown Product",
         customer_name: profileMap.get(order.user_id)?.full_name || "",
         customer_email: profileMap.get(order.user_id)?.email || "",
@@ -136,6 +142,7 @@ export const BulkOrderVerification = ({ open, onOpenChange, onSuccess }: BulkOrd
 
     for (const orderId of selectedOrders) {
       try {
+        const order = pendingOrders.find(o => o.id === orderId);
         const codes = redeemCodes[orderId]?.trim().split('\n').filter(c => c.trim()) || [];
         
         const { error } = await supabase
@@ -149,6 +156,19 @@ export const BulkOrderVerification = ({ open, onOpenChange, onSuccess }: BulkOrd
           .eq("id", orderId);
 
         if (error) throw error;
+
+        // Update product stock
+        if (order) {
+          const product = products.find(p => p.id === order.product_id);
+          if (product) {
+            const newStock = Math.max(0, product.stock - order.quantity);
+            await supabase.from("products").update({ stock: newStock }).eq("id", product.id);
+            // Update local products state
+            setProducts(prev => prev.map(p => 
+              p.id === product.id ? { ...p, stock: newStock } : p
+            ));
+          }
+        }
 
         // Send notification
         try {

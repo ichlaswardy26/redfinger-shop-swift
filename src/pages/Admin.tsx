@@ -1175,6 +1175,14 @@ const Admin = () => {
               verified_by: user?.id
             }).eq("id", orderId);
             
+            // Update product stock
+            const product = products.find(p => p.id === verifyingOrder.product_id);
+            if (product) {
+              await supabase.from("products").update({ 
+                stock: Math.max(0, product.stock - verifyingOrder.quantity) 
+              }).eq("id", product.id);
+            }
+            
             // Send email notification
             try {
               await supabase.functions.invoke("send-notification", {
