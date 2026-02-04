@@ -158,23 +158,69 @@ export const BulkOrderVerification = ({ open, onOpenChange, onSuccess }: BulkOrd
     }
   };
 
+  const validateAllCodes = (): { valid: boolean; error?: string } => {
+    const allCodes: string[] = [];
+    
+    for (const orderId of selectedOrders) {
+      const order = pendingOrders.find(o => o.id === orderId);
+      if (!order) continue;
+      
+      const rawCodes = redeemCodes[orderId]?.trim() || '';
+      const codes = rawCodes.split('\n').map(c => c.trim()).filter(c => c.length > 0);
+      
+      // Check exact count
+      if (codes.length !== order.quantity) {
+        return { 
+          valid: false, 
+          error: `Order "${order.product_name}" requires exactly ${order.quantity} code(s), but ${codes.length} provided` 
+        };
+      }
+      
+      // Check duplicates within this order
+      const uniqueInOrder = new Set(codes.map(c => c.toLowerCase()));
+      if (uniqueInOrder.size !== codes.length) {
+        return { 
+          valid: false, 
+          error: `Duplicate codes found within order for "${order.product_name}"` 
+        };
+      }
+      
+      // Collect for cross-order duplicate check
+      allCodes.push(...codes.map(c => c.toLowerCase()));
+    }
+    
+    // Check duplicates across all orders
+    const uniqueAcrossAll = new Set(allCodes);
+    if (uniqueAcrossAll.size !== allCodes.length) {
+      const seen = new Set<string>();
+      const duplicates: string[] = [];
+      for (const code of allCodes) {
+        if (seen.has(code)) {
+          duplicates.push(code);
+        }
+        seen.add(code);
+      }
+      return { 
+        valid: false, 
+        error: `Duplicate code(s) found across orders: ${duplicates.slice(0, 3).join(', ')}${duplicates.length > 3 ? '...' : ''}` 
+      };
+    }
+    
+    return { valid: true };
+  };
+
   const handleVerifyClick = () => {
     if (selectedOrders.length === 0) {
       toast({ title: "No orders selected", variant: "destructive" });
       return;
     }
 
-    // Validate all selected orders have redeem codes
-    const missingCodes = selectedOrders.filter(orderId => {
-      const order = pendingOrders.find(o => o.id === orderId);
-      const codes = redeemCodes[orderId]?.trim().split('\n').filter(c => c.trim());
-      return !codes || codes.length < (order?.quantity || 1);
-    });
-
-    if (missingCodes.length > 0) {
+    // Comprehensive code validation
+    const validation = validateAllCodes();
+    if (!validation.valid) {
       toast({ 
-        title: "Missing redeem codes", 
-        description: `${missingCodes.length} order(s) don't have enough redeem codes`,
+        title: "Code Validation Error", 
+        description: validation.error,
         variant: "destructive" 
       });
       return;
@@ -443,6 +489,40 @@ export const BulkOrderVerification = ({ open, onOpenChange, onSuccess }: BulkOrd
                                     className="mt-1"
                                     disabled={order.useAutoDelivery}
                                   />
+                                  {/* Real-time code validation indicator */}
+                                  {redeemCodes[order.id] && (
+                                    <div className="flex items-center gap-2 text-sm mt-1">
+                                      {(() => {
+                                        const codes = redeemCodes[order.id].split('\n').map(c => c.trim()).filter(c => c.length > 0);
+                                        const uniqueCodes = new Set(codes.map(c => c.toLowerCase()));
+                                        const hasDuplicates = uniqueCodes.size !== codes.length;
+                                        const countCorrect = codes.length === order.quantity;
+                                        
+                                        if (hasDuplicates) {
+                                          return (
+                                            <span className="text-destructive flex items-center gap-1">
+                                              <AlertTriangle className="h-3 w-3" />
+                                              Duplicate codes detected
+                                            </span>
+                                          );
+                                        }
+                                        if (!countCorrect) {
+                                          return (
+                                            <span className="text-amber-500 dark:text-amber-400 flex items-center gap-1">
+                                              <AlertTriangle className="h-3 w-3" />
+                                              {codes.length}/{order.quantity} codes
+                                            </span>
+                                          );
+                                        }
+                                        return (
+                                          <span className="text-green-600 dark:text-green-500 flex items-center gap-1">
+                                            <CheckCircle className="h-3 w-3" />
+                                            {codes.length}/{order.quantity} codes
+                                          </span>
+                                        );
+                                      })()}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             )}
