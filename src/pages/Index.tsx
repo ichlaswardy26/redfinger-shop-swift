@@ -13,7 +13,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import Autoplay from "embla-carousel-autoplay";
 import heroImage from "@/assets/hero-cloud-phone.jpg";
 import { Smartphone, Cloud, Shield, Zap, Star, Quote, TrendingUp, Mail, Phone, MessageCircle, Facebook, Instagram, Twitter, ArrowRight, CheckCircle, Layers, Clock, Headphones, CreditCard } from "lucide-react";
-
+import { cn } from "@/lib/utils";
 interface Category {
   id: string;
   name: string;
@@ -151,6 +151,9 @@ const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [bestSellerId, setBestSellerId] = useState<string | null>(null);
+  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [slideCount, setSlideCount] = useState(0);
   const [settings, setSettings] = useState<WebSettings>(defaultSettings);
   const navigate = useNavigate();
 
@@ -161,6 +164,18 @@ const Index = () => {
     fetchBestSeller();
     fetchSettings();
   }, []);
+
+  // Carousel slide tracking
+  useEffect(() => {
+    if (!carouselApi) return;
+    
+    setSlideCount(carouselApi.scrollSnapList().length);
+    setCurrentSlide(carouselApi.selectedScrollSnap());
+    
+    carouselApi.on("select", () => {
+      setCurrentSlide(carouselApi.selectedScrollSnap());
+    });
+  }, [carouselApi]);
 
   const fetchSettings = async () => {
     try {
@@ -638,6 +653,7 @@ const Index = () => {
 
           <div className="max-w-6xl mx-auto">
             <Carousel 
+              setApi={setCarouselApi}
               opts={{ align: "start", loop: true }} 
               plugins={[
                 Autoplay({
@@ -672,6 +688,25 @@ const Index = () => {
               <CarouselPrevious className="hidden md:flex" />
               <CarouselNext className="hidden md:flex" />
             </Carousel>
+            
+            {/* Carousel Indicators */}
+            {slideCount > 0 && (
+              <div className="flex justify-center gap-2 mt-6">
+                {Array.from({ length: slideCount }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => carouselApi?.scrollTo(i)}
+                    className={cn(
+                      "h-2 rounded-full transition-all duration-300",
+                      currentSlide === i 
+                        ? "bg-primary w-6" 
+                        : "bg-muted-foreground/30 hover:bg-muted-foreground/50 w-2"
+                    )}
+                    aria-label={`Go to slide ${i + 1}`}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
