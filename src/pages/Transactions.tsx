@@ -419,27 +419,34 @@ const Transactions = () => {
       {/* Ticket Conversation Dialog */}
       {selectedTicket && (
         <Dialog open={ticketConversationOpen} onOpenChange={setTicketConversationOpen}>
-          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{selectedTicket.subject}</DialogTitle>
-              <DialogDescription>
-                <Badge className={getTicketStatusColor(selectedTicket.status)}>{selectedTicket.status.replace("_", " ")}</Badge>
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm">{selectedTicket.description}</p>
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
+            <div className="p-6 pb-0">
+              <DialogHeader>
+                <DialogTitle className="text-xl">{selectedTicket.subject}</DialogTitle>
+                <DialogDescription className="flex items-center gap-2 pt-1">
+                  <Badge className={getTicketStatusColor(selectedTicket.status)}>{selectedTicket.status.replace("_", " ")}</Badge>
+                  <span className="text-xs text-muted-foreground">Created {new Date(selectedTicket.created_at).toLocaleDateString()}</span>
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+            <div className="px-6 pb-6 space-y-4">
+              {/* Original Description Card */}
+              <div className="p-4 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border-2 border-border/50 shadow-brutal-sm">
+                <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Original Message</p>
+                <p className="text-sm leading-relaxed">{selectedTicket.description}</p>
                 {selectedTicket.image_proof && (
-                  <div className="mt-4">
+                  <div className="mt-4 pt-4 border-t border-border/30">
+                    <p className="text-xs font-bold text-muted-foreground mb-2 uppercase tracking-wide">Attachment</p>
                     <FilePreview filePath={selectedTicket.image_proof} />
                   </div>
                 )}
               </div>
+              
+              {/* Conversation */}
               <TicketConversation 
                 ticketId={selectedTicket.id} 
                 ticketStatus={selectedTicket.status}
                 ticketOwnerId={selectedTicket.user_id}
-                imageProof={selectedTicket.image_proof}
               />
             </div>
           </DialogContent>

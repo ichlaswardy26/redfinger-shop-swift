@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
-import { X, Layers, ShoppingBag, Package, Sparkles, TrendingUp } from "lucide-react";
+import { X, Layers, ShoppingBag, Package, Sparkles, TrendingUp, CheckCircle } from "lucide-react";
 import { OrderConfirmationDialog } from "@/components/OrderConfirmationDialog";
 import { QRPaymentDialog } from "@/components/QRPaymentDialog";
 import { motion, AnimatePresence } from "framer-motion";
@@ -504,15 +504,28 @@ const Store = () => {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.3 }}
-              className="flex gap-3 sm:gap-4"
+              className="flex gap-2 sm:gap-3"
             >
-              <div className="text-center px-4 py-2 bg-background/80 backdrop-blur border-2 border-border rounded-lg shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal transition-all">
-                <p className="text-xl sm:text-2xl font-black text-primary">{products.length}</p>
-                <p className="text-xs text-muted-foreground">Products</p>
+              <div className="text-center px-3 sm:px-4 py-2 bg-background/80 backdrop-blur border-2 border-border rounded-lg shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal transition-all">
+                <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                  <Package className="h-3.5 w-3.5 text-primary" />
+                  <p className="text-lg sm:text-xl font-black text-primary">{products.length}</p>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Products</p>
               </div>
-              <div className="text-center px-4 py-2 bg-background/80 backdrop-blur border-2 border-border rounded-lg shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal transition-all">
-                <p className="text-xl sm:text-2xl font-black text-primary">{parentCategories.length}</p>
-                <p className="text-xs text-muted-foreground">Categories</p>
+              <div className="text-center px-3 sm:px-4 py-2 bg-background/80 backdrop-blur border-2 border-border rounded-lg shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal transition-all">
+                <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                  <Layers className="h-3.5 w-3.5 text-primary" />
+                  <p className="text-lg sm:text-xl font-black text-primary">{parentCategories.length}</p>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">Categories</p>
+              </div>
+              <div className="text-center px-3 sm:px-4 py-2 bg-background/80 backdrop-blur border-2 border-border rounded-lg shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal transition-all">
+                <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                  <CheckCircle className="h-3.5 w-3.5 text-primary" />
+                  <p className="text-lg sm:text-xl font-black text-primary">{products.filter(p => p.stock > 0).length}</p>
+                </div>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">In Stock</p>
               </div>
             </motion.div>
           </motion.div>
@@ -521,19 +534,23 @@ const Store = () => {
 
       {/* Sticky Category Filter */}
       {categories.length > 0 && (
-        <div className="sticky top-16 z-20 bg-background/95 backdrop-blur border-b border-border shadow-sm">
-          <div className="container mx-auto px-4 py-5 sm:py-6 space-y-4">
+        <div className="sticky top-16 z-20 bg-background/90 backdrop-blur-md border-b-2 border-border/50 shadow-sm">
+          <div className="container mx-auto px-4 py-4 sm:py-5 space-y-3">
             {/* Parent Categories */}
-            <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide mb-2">
-              <div className="flex items-center gap-2.5 sm:gap-3 min-w-max">
+            <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide">
+              <div className="flex items-center gap-2 sm:gap-2.5 min-w-max">
                 <Button
                   variant={selectedCategory === null ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedCategory(null)}
-                  className="flex-shrink-0 text-sm h-9 sm:h-10 px-4 gap-2"
+                  className={`flex-shrink-0 text-sm h-9 sm:h-10 px-4 gap-2 transition-all duration-200 ${
+                    selectedCategory === null 
+                      ? "ring-2 ring-primary/50 ring-offset-2 ring-offset-background" 
+                      : "hover:border-primary/50"
+                  }`}
                 >
                   All
-                  <Badge variant="secondary" className="ml-1 text-xs bg-background/50">
+                  <Badge variant="secondary" className="ml-1 text-xs bg-primary/10 text-primary border-0">
                     {products.length}
                   </Badge>
                 </Button>
@@ -543,11 +560,15 @@ const Store = () => {
                     variant={selectedParentId === category.id ? "default" : "outline"}
                     size="sm"
                     onClick={() => setSelectedCategory(category.id)}
-                    className="gap-1.5 flex-shrink-0 text-sm h-9 sm:h-10 px-4"
+                    className={`gap-1.5 flex-shrink-0 text-sm h-9 sm:h-10 px-4 transition-all duration-200 ${
+                      selectedParentId === category.id 
+                        ? "ring-2 ring-primary/50 ring-offset-2 ring-offset-background" 
+                        : "hover:border-primary/50"
+                    }`}
                   >
                     {getCategoryImage(category.image_url)}
                     {category.name}
-                    <Badge variant="secondary" className="ml-1 text-xs bg-background/50">
+                    <Badge variant="secondary" className="ml-1 text-xs bg-primary/10 text-primary border-0">
                       {getProductCount(category.id)}
                     </Badge>
                   </Button>
@@ -561,14 +582,16 @@ const Store = () => {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
-                className="overflow-x-auto -mx-4 px-4 scrollbar-hide"
+                className="overflow-x-auto -mx-4 px-4 scrollbar-hide pt-1"
               >
-                <div className="flex items-center gap-1.5 sm:gap-2 min-w-max">
+                <div className="flex items-center gap-1.5 sm:gap-2 min-w-max bg-muted/50 p-1.5 rounded-lg">
                   <Button
                     variant={selectedCategory === selectedParentId ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => setSelectedCategory(selectedParentId)}
-                    className="text-[10px] sm:text-xs flex-shrink-0 h-7 sm:h-8"
+                    className={`text-[10px] sm:text-xs flex-shrink-0 h-7 sm:h-8 ${
+                      selectedCategory === selectedParentId ? "ring-1 ring-primary/30" : ""
+                    }`}
                   >
                     All {categories.find(c => c.id === selectedParentId)?.name}
                   </Button>
@@ -578,7 +601,9 @@ const Store = () => {
                       variant={selectedCategory === child.id ? "secondary" : "ghost"}
                       size="sm"
                       onClick={() => setSelectedCategory(child.id)}
-                      className="gap-1 text-[10px] sm:text-xs flex-shrink-0 h-7 sm:h-8"
+                      className={`gap-1 text-[10px] sm:text-xs flex-shrink-0 h-7 sm:h-8 ${
+                        selectedCategory === child.id ? "ring-1 ring-primary/30" : ""
+                      }`}
                     >
                       {getCategoryImage(child.image_url)}
                       {child.name}
@@ -589,12 +614,12 @@ const Store = () => {
             )}
             
             {selectedCategory && (
-              <div className="flex justify-center">
+              <div className="flex justify-center pt-1">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setSelectedCategory(null)}
-                  className="text-muted-foreground text-[10px] sm:text-xs h-6 sm:h-7"
+                  className="text-muted-foreground text-[10px] sm:text-xs h-6 sm:h-7 hover:text-destructive hover:bg-destructive/10 transition-colors"
                 >
                   <X className="h-3 w-3 mr-1" />
                   Clear filter
