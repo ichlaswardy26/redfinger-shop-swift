@@ -100,7 +100,7 @@ export const OrderConfirmationDialog = ({
   return (
     <>
       <Dialog open={open && !showQRDialog} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
