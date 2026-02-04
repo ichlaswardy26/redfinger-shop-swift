@@ -1,73 +1,274 @@
 
-# Fix: Modal Checkout Confirmation Responsiveness
+# Refactor Design Style: Shop Page & Ticket Conversation Modal
 
-## Masalah
-Modal `OrderConfirmationDialog` dan `QRPaymentDialog` tidak dapat di-scroll pada layar mobile karena tidak ada constraint `max-height` dan `overflow` pada `DialogContent`.
+## Ringkasan
 
-## Penyebab Root
-File `src/components/ui/dialog.tsx` line 44-46:
-```css
-fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%]
-```
-Dialog di-center secara absolut, tetapi tidak ada batasan tinggi maksimum atau overflow handling.
+Melakukan refactoring design style pada dua komponen utama untuk meningkatkan visual appeal, interaktivitas, dan konsistensi dengan Neo-Brutalism Glassmorphism design system yang sudah ada.
 
-## Solusi
+---
 
-### 1. Update DialogContent Component
-**File:** `src/components/ui/dialog.tsx`
+## 1. Shop Page Refactor
 
-Tambahkan responsive constraints:
+### A. Header Section Enhancement
+
+**Current Issues:**
+- Header cukup bagus tapi bisa lebih impactful
+- Quick stats cards bisa lebih integrated dengan design
+
+**Refactoring:**
 ```text
-max-h-[90vh]          /* Batasi tinggi max 90% viewport */
-overflow-y-auto       /* Aktifkan vertical scroll */
-my-4                  /* Margin vertikal untuk safe area */
+┌─────────────────────────────────────────────────────────────────┐
+│  HEADER SECTION                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  🛒  Our Products                                         │  │
+│  │      Premium cloud phone services                         │  │
+│  │                                                           │  │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐                  │  │
+│  │  │  24     │  │  5      │  │  ⚡     │  ◄── Stat Cards   │  │
+│  │  │Products │  │ Categories│ │In Stock │      with icons   │  │
+│  │  └─────────┘  └─────────┘  └─────────┘                  │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-**Perubahan Spesifik (line 44-46):**
-```diff
-- "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] ..."
-+ "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg max-h-[90vh] overflow-y-auto translate-x-[-50%] translate-y-[-50%] ..."
-```
+**Perubahan:**
+- Tambah stat ketiga: "In Stock" count
+- Stat cards dengan icon (Package, Layers, CheckCircle)
+- Gradient overlay yang lebih subtle
+- Responsive spacing improvements
 
-### 2. Update OrderConfirmationDialog
-**File:** `src/components/OrderConfirmationDialog.tsx`
+### B. Category Filter Bar
 
-Tambahkan custom class untuk mobile:
+**Current Issues:**
+- Category buttons standar
+- Child categories bisa lebih distinctive
+
+**Refactoring:**
 ```text
-<DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+┌─────────────────────────────────────────────────────────────────┐
+│  STICKY CATEGORY BAR                                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  [All ●24]  [Cloud ●12]  [Redmi ●8]  [Gaming ●4]        │   │
+│  │                                                          │   │
+│  │  ↳ Sub: [All Cloud] [Daily] [Weekly] [Monthly]          │   │
+│  │                                                          │   │
+│  │                    ✕ Clear filter                        │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  Perubahan:                                                     │
+│  - Pills dengan backdrop-blur glass effect                      │
+│  - Active state dengan ring glow                                │
+│  - Smooth transition animations                                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 3. Update QRPaymentDialog
-**File:** `src/components/QRPaymentDialog.tsx`
+**Perubahan:**
+- Glass effect pada bar container
+- Active category dengan ring-2 ring-primary glow
+- Badge count dengan bg-primary/20 styling
+- Child categories dengan pills yang lebih kecil
 
-Tambahkan class yang sama:
+### C. Product Grid Improvements
+
+**Perubahan:**
+- Grid gap yang lebih consistent
+- Better empty state dengan ilustrasi
+- Product count text lebih prominent
+- Load more button dengan better styling
+
+### D. File Changes untuk Store.tsx
+
+**Line 466-520 (Header):**
+- Tambah stat ketiga
+- Icons untuk stats
+- Better responsive classes
+
+**Line 522-606 (Category Bar):**
+- Glass effect container
+- Ring glow untuk active state
+- Smoother animations
+
+---
+
+## 2. Ticket Conversation Chat Modal Refactor
+
+### A. Current Issues
+- Basic chat bubbles tanpa visual polish
+- Input area kurang engaging
+- Missing avatar/initials
+- Header bisa lebih informative
+
+### B. New Design
+
 ```text
-<DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
+┌─────────────────────────────────────────────────────────────────┐
+│  TICKET CONVERSATION MODAL                                      │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │  ╔════════════════════════════════════════════════════╗ │   │
+│  │  ║  📎 Original Attachment (if any)                   ║ │   │
+│  │  ║  [Image Preview]                                   ║ │   │
+│  │  ╚════════════════════════════════════════════════════╝ │   │
+│  │                                                          │   │
+│  │  ┌──── Messages Container with Glass Effect ─────────┐  │   │
+│  │  │                                                    │  │   │
+│  │  │     ┌────────────────────┐                        │  │   │
+│  │  │     │  Staff Message     │ ◄── Left aligned       │  │   │
+│  │  │     │  with avatar       │     with border-l-4    │  │   │
+│  │  │     └────────────────────┘                        │  │   │
+│  │  │                                                    │  │   │
+│  │  │              ┌────────────────────┐               │  │   │
+│  │  │              │  Your Message      │ ◄── Right     │  │   │
+│  │  │              │  with gradient bg  │     aligned   │  │   │
+│  │  │              └────────────────────┘               │  │   │
+│  │  │                                                    │  │   │
+│  │  └────────────────────────────────────────────────────┘  │   │
+│  │                                                          │   │
+│  │  ┌────────────────────────────────────────────────────┐  │   │
+│  │  │  [Avatar] ┌──────────────────────────────┐ [Send] │  │   │
+│  │  │           │ Type your message...          │        │  │   │
+│  │  │           └──────────────────────────────┘        │  │   │
+│  │  │  Enter to send • Shift+Enter for new line         │  │   │
+│  │  └────────────────────────────────────────────────────┘  │   │
+│  │                                                          │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Detail Teknis
+### C. Detailed Changes
 
-### Mengapa 85vh/90vh?
-- 85vh memberikan ruang 15% untuk browser UI (address bar, navigation)
-- Pada mobile Safari/Chrome, address bar dapat menyusut/expand
-- Safe area untuk notch dan rounded corners
+#### Message Bubbles
+```text
+BEFORE:
+- Basic rounded-xl
+- Simple bg-primary atau bg-card
 
-### Overflow Behavior
-- `overflow-y-auto` hanya menampilkan scrollbar saat diperlukan
-- Tidak mengganggu UX pada layar besar
-- Touch scrolling otomatis aktif pada mobile
+AFTER:
+- Left messages: border-l-4 border-primary dengan bg-card
+- Right messages: gradient bg-gradient-to-r from-primary to-primary/80
+- Shadow-brutal-sm untuk depth
+- Avatar circle dengan initials
+- Message tail untuk direction indicator
+```
+
+#### Messages Container
+```text
+BEFORE:
+- bg-muted/30 rounded-lg border
+
+AFTER:
+- bg-gradient-to-b from-muted/20 to-muted/40
+- backdrop-blur-sm untuk glass effect
+- border-2 border-border/30
+- shadow-inner untuk depth
+- Rounded-xl untuk softer look
+```
+
+#### Input Area
+```text
+BEFORE:
+- Basic textarea + button
+
+AFTER:
+- Avatar circle di kiri
+- Textarea dengan shadow-brutal-sm
+- Send button dengan gradient primary
+- Hover effects pada button
+- Better disabled state
+```
+
+#### Empty State
+```text
+BEFORE:
+- Plain text "No messages yet"
+
+AFTER:
+- Icon MessageSquare besar
+- Engaging copy
+- Subtle animation
+```
+
+### D. File Changes
+
+#### TicketConversation.tsx (Lines 143-248)
+
+**Attachment Preview (Lines 145-151):**
+- Better card styling dengan shadow-brutal-sm
+- Icon dengan background circle
+
+**Messages Container (Lines 153-208):**
+- Glass effect background
+- Better empty state dengan icon
+- Refined message bubble styling
+- Avatar initials
+- Border-l accent untuk left messages
+- Gradient untuk right messages
+
+**Input Area (Lines 210-247):**
+- Avatar dengan initials
+- Better textarea styling
+- Gradient send button
+- Improved disabled state for closed tickets
+
+---
+
+## 3. Transactions Page Dialog Update
+
+### DialogContent untuk Ticket Conversation
+
+**Current (Line 422):**
+```tsx
+<DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+```
+
+**Updated:**
+```tsx
+<DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
+```
+
+**Changes:**
+- Remove padding (`p-0`) untuk full-bleed design
+- Inner container akan handle padding
+- Better conversation area coverage
+
+---
 
 ## Files yang Akan Dimodifikasi
 
-| File | Perubahan |
-|------|-----------|
-| `src/components/ui/dialog.tsx` | Tambah `max-h-[90vh] overflow-y-auto` di DialogContent |
-| `src/components/OrderConfirmationDialog.tsx` | Tambah `max-h-[85vh] overflow-y-auto` di className |
-| `src/components/QRPaymentDialog.tsx` | Tambah `max-h-[85vh] overflow-y-auto` di className |
+| File | Aksi | Scope |
+|------|------|-------|
+| `src/pages/Store.tsx` | Modify | Lines 466-606 - Header & Category bar styling |
+| `src/components/TicketConversation.tsx` | Modify | Lines 143-248 - Complete chat UI overhaul |
+| `src/pages/Transactions.tsx` | Modify | Lines 419-446 - Dialog container styling |
 
-## Testing Checklist
-- [ ] Test pada viewport 360x640 (Android kecil)
-- [ ] Test pada viewport 375x812 (iPhone X/11/12)
-- [ ] Test scroll behavior pada konten panjang
-- [ ] Verify close button tetap accessible
-- [ ] Test dengan QRIS enabled (konten lebih panjang)
+---
+
+## Design Tokens Used
+
+**Shadows:**
+- `shadow-brutal-sm` - Message bubbles, input
+- `shadow-brutal` - Cards, buttons
+- `shadow-inner` - Messages container
+
+**Colors:**
+- `bg-gradient-to-r from-primary to-primary/80` - Sent messages
+- `border-l-4 border-primary` - Received messages accent
+- `bg-muted/30 backdrop-blur-sm` - Glass containers
+
+**Typography:**
+- `font-bold` - Names
+- `text-xs` - Timestamps, hints
+- `text-sm` - Message content
+
+**Spacing:**
+- `gap-3` - Between messages
+- `p-4` - Container padding
+- `rounded-2xl` - Softer message bubbles
