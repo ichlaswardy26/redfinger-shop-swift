@@ -8,7 +8,7 @@ import ProductCard from "@/components/ProductCard";
 import { SEOHead } from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Smartphone, Cloud, Shield, Zap, X, Layers, ShoppingBag } from "lucide-react";
+import { X, Layers, ShoppingBag } from "lucide-react";
 import { OrderConfirmationDialog } from "@/components/OrderConfirmationDialog";
 
 interface Category {
@@ -16,6 +16,7 @@ interface Category {
   name: string;
   description: string | null;
   icon: string | null;
+  image_url: string | null;
   is_active: boolean;
   parent_id: string | null;
 }
@@ -327,14 +328,20 @@ const Store = () => {
     );
   })();
 
-  const getCategoryIcon = (iconName: string | null) => {
-    switch (iconName) {
-      case "smartphone": return <Smartphone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
-      case "cloud": return <Cloud className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
-      case "shield": return <Shield className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
-      case "zap": return <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
-      default: return <Layers className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
+  const getCategoryImage = (imageUrl: string | null) => {
+    if (imageUrl) {
+      return (
+        <img 
+          src={imageUrl} 
+          alt="" 
+          className="h-4 w-4 sm:h-5 sm:w-5 object-cover rounded-sm"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      );
     }
+    return <Layers className="h-3.5 w-3.5 sm:h-4 sm:w-4" />;
   };
 
   return (
@@ -366,10 +373,10 @@ const Store = () => {
       {/* Sticky Category Filter */}
       {categories.length > 0 && (
         <div className="sticky top-16 z-20 bg-background/95 backdrop-blur border-b border-border">
-          <div className="container mx-auto px-4 py-4 sm:py-5 space-y-3">
+          <div className="container mx-auto px-4 py-5 sm:py-6 space-y-4">
             {/* Parent Categories */}
-            <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide mb-1">
-              <div className="flex items-center gap-1.5 sm:gap-2 min-w-max">
+            <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide mb-2">
+              <div className="flex items-center gap-2 sm:gap-2.5 min-w-max">
                 <Button
                   variant={selectedCategory === null ? "default" : "outline"}
                   size="sm"
@@ -386,7 +393,7 @@ const Store = () => {
                     onClick={() => setSelectedCategory(category.id)}
                     className="gap-1 flex-shrink-0 text-xs sm:text-sm h-8 sm:h-9"
                   >
-                    {getCategoryIcon(category.icon)}
+                    {getCategoryImage(category.image_url)}
                     <span className="hidden xs:inline sm:inline">{category.name}</span>
                     <span className="xs:hidden sm:hidden">{category.name.substring(0, 4)}{category.name.length > 4 ? '…' : ''}</span>
                   </Button>
@@ -414,7 +421,7 @@ const Store = () => {
                       onClick={() => setSelectedCategory(child.id)}
                       className="gap-1 text-[10px] sm:text-xs flex-shrink-0 h-7 sm:h-8"
                     >
-                      {getCategoryIcon(child.icon)}
+                      {getCategoryImage(child.image_url)}
                       {child.name}
                     </Button>
                   ))}
