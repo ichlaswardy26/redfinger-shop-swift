@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, CheckCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CodeInputWithHighlightProps {
   value: string;
@@ -85,47 +86,72 @@ export const CodeInputWithHighlight = ({
   const isCountCorrect = validCodeCount === requiredCount;
 
   return (
-    <div className="space-y-1">
-      <div className="relative">
-        {/* Line indicators overlay */}
-        <div 
-          ref={overlayRef}
-          className="absolute left-0 top-0 w-8 h-full overflow-hidden pointer-events-none border-r border-border bg-muted/30 rounded-l-md"
-          style={{ height: `${Math.min(rows, 5) * 1.5}rem` }}
-        >
-          <div className="flex flex-col py-2">
-            {lineStatuses.map((status, index) => (
-              <div 
-                key={index} 
-                className="h-6 flex items-center justify-center text-xs"
-              >
-                {status.code && (
-                  status.isDuplicate ? (
-                    <div 
-                      className={cn(
-                        "w-5 h-5 rounded-full flex items-center justify-center",
-                        status.isCrossOrderDuplicate 
-                          ? "bg-destructive/20 text-destructive" 
-                          : "bg-amber-500/20 text-amber-600 dark:text-amber-400"
-                      )}
-                      title={
-                        status.isCrossOrderDuplicate 
-                          ? "Duplicate: used in another order" 
-                          : "Duplicate: appears multiple times"
-                      }
-                    >
-                      <AlertTriangle className="h-3 w-3" />
-                    </div>
-                  ) : (
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center bg-green-500/20 text-green-600 dark:text-green-400">
-                      <CheckCircle className="h-3 w-3" />
-                    </div>
-                  )
-                )}
-              </div>
-            ))}
+    <TooltipProvider delayDuration={200}>
+      <div className="space-y-1">
+        <div className="relative">
+          {/* Line indicators overlay */}
+          <div 
+            ref={overlayRef}
+            className="absolute left-0 top-0 w-8 h-full overflow-hidden border-r border-border bg-muted/30 rounded-l-md z-10"
+            style={{ height: `${Math.min(rows, 5) * 1.5}rem` }}
+          >
+            <div className="flex flex-col py-2">
+              {lineStatuses.map((status, index) => (
+                <div 
+                  key={index} 
+                  className="h-6 flex items-center justify-center text-xs"
+                >
+                  {status.code && (
+                    status.isDuplicate ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div 
+                            className={cn(
+                              "w-5 h-5 rounded-full flex items-center justify-center cursor-help",
+                              status.isCrossOrderDuplicate 
+                                ? "bg-destructive/20 text-destructive" 
+                                : "bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                            )}
+                          >
+                            <AlertTriangle className="h-3 w-3" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          {status.isCrossOrderDuplicate && status.isIntraOrderDuplicate ? (
+                            <div className="space-y-1">
+                              <p className="font-medium text-destructive">Duplicate Code</p>
+                              <p className="text-xs">This code appears multiple times in this order AND is also used in another order.</p>
+                            </div>
+                          ) : status.isCrossOrderDuplicate ? (
+                            <div className="space-y-1">
+                              <p className="font-medium text-destructive">Cross-Order Duplicate</p>
+                              <p className="text-xs">This code is already assigned to another order in this batch.</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <p className="font-medium text-amber-600 dark:text-amber-400">Intra-Order Duplicate</p>
+                              <p className="text-xs">This code appears multiple times within this order.</p>
+                            </div>
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="w-5 h-5 rounded-full flex items-center justify-center bg-green-500/20 text-green-600 dark:text-green-400 cursor-help">
+                            <CheckCircle className="h-3 w-3" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="right">
+                          <p className="text-xs">Valid unique code</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
         {/* Actual textarea */}
         <textarea
@@ -191,5 +217,6 @@ export const CodeInputWithHighlight = ({
         </span>
       </div>
     </div>
+    </TooltipProvider>
   );
 };
