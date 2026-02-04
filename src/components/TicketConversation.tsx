@@ -3,10 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Send, User, UserCog } from "lucide-react";
-import { FilePreview } from "@/components/FilePreview";
+import { Send, User, UserCog, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 
 interface Message {
@@ -23,22 +21,32 @@ interface TicketConversationProps {
   ticketStatus: string;
   ticketOwnerId: string;
   imageProof?: string | null;
-  viewerRole?: 'owner' | 'staff'; // owner = customer viewing their ticket, staff = admin/staff viewing
+  viewerRole?: 'owner' | 'staff';
   onClose?: () => void;
 }
+
+// Helper to get initials from name/email
+const getInitials = (name: string | null | undefined, email: string | undefined): string => {
+  if (name) {
+    const parts = name.split(' ');
+    return parts.length > 1 
+      ? `${parts[0][0]}${parts[1][0]}`.toUpperCase() 
+      : name.slice(0, 2).toUpperCase();
+  }
+  return email ? email.slice(0, 2).toUpperCase() : 'U';
+};
 
 export const TicketConversation = ({ 
   ticketId, 
   ticketStatus, 
   ticketOwnerId, 
-  imageProof,
   viewerRole = 'owner',
-  onClose 
 }: TicketConversationProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserProfile, setCurrentUserProfile] = useState<{ full_name: string | null; email: string } | null>(null);
   const [staffUserIds, setStaffUserIds] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -46,13 +54,21 @@ export const TicketConversation = ({
   useEffect(() => {
     const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (user) setCurrentUserId(user.id);
+      if (user) {
+        setCurrentUserId(user.id);
+        // Fetch current user profile for avatar
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", user.id)
+          .single();
+        if (profile) setCurrentUserProfile(profile);
+      }
       fetchMessages();
       fetchStaffUsers();
     };
     initData();
 
-    // Realtime subscription
     const channel = supabase
       .channel(`ticket-messages-${ticketId}`)
       .on('postgres_changes', { 
@@ -94,7 +110,6 @@ export const TicketConversation = ({
       return;
     }
 
-    // Fetch profiles
     const userIds = [...new Set(data?.map(m => m.user_id) || [])];
     const { data: profiles } = await supabase
       .from("profiles")
@@ -137,69 +152,96 @@ export const TicketConversation = ({
     }
   };
 
-
   const isOpen = ticketStatus === 'open';
 
   return (
-    <div className="flex flex-col h-full max-h-[70vh]">
-      {/* Ticket attachment preview */}
-      {imageProof && (
-        <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border/50">
-          <p className="text-sm font-medium mb-2 text-muted-foreground">Original Attachment:</p>
-          <FilePreview filePath={imageProof} />
-        </div>
-      )}
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-3 p-3 sm:p-4 min-h-[200px] bg-muted/30 rounded-lg border border-border/50">
+    <div className="flex flex-col h-full max-h-[60vh]">
+      {/* Messages Container with Glass Effect */}
+      <div className="flex-1 overflow-y-auto space-y-3 p-4 min-h-[200px] bg-gradient-to-b from-muted/20 to-muted/40 backdrop-blur-sm rounded-xl border-2 border-border/30 shadow-inner">
         {messages.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
-            <p className="text-sm">No messages yet. Start the conversation!</p>
+          <div className="flex flex-col items-center justify-center text-muted-foreground py-12 space-y-3">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center border-2 border-border/30">
+              <MessageSquare className="h-8 w-8" />
+            </div>
+            <div className="text-center">
+              <p className="font-medium">No messages yet</p>
+              <p className="text-sm">Start the conversation below!</p>
+            </div>
           </div>
         ) : (
           messages.map((msg) => {
             const isStaffMessage = staffUserIds.has(msg.user_id);
             const isTicketOwnerMessage = msg.user_id === ticketOwnerId;
-            
-            // Determine alignment based on viewer role
-            // If viewer is owner: owner messages on right, staff on left
-            // If viewer is staff: staff messages on right, owner on left
             const isRightAligned = viewerRole === 'owner' 
               ? isTicketOwnerMessage 
               : isStaffMessage;
             
+            const initials = getInitials(msg.profiles?.full_name, msg.profiles?.email);
+            
             return (
               <div 
                 key={msg.id} 
-                className={`flex ${isRightAligned ? 'justify-end' : 'justify-start'}`}
+                className={`flex items-end gap-2 ${isRightAligned ? 'justify-end' : 'justify-start'}`}
               >
-                <div className={`max-w-[85%] sm:max-w-[75%] p-2.5 sm:p-3 rounded-xl shadow-sm ${
-                  isRightAligned 
-                    ? 'bg-primary text-primary-foreground rounded-br-sm' 
-                    : 'bg-card border border-border rounded-bl-sm'
-                }`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    {isStaffMessage ? (
-                      <UserCog className="h-3 w-3 flex-shrink-0" />
-                    ) : (
-                      <User className="h-3 w-3 flex-shrink-0" />
-                    )}
-                    <span className="text-xs font-medium truncate">
-                      {msg.profiles?.full_name || msg.profiles?.email || 'User'}
-                    </span>
-                    {isStaffMessage && (
-                      <Badge variant="secondary" className="text-[10px] px-1 py-0 flex-shrink-0">
-                        Staff
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
-                  <p className={`text-[10px] mt-1.5 ${
-                    isRightAligned ? 'text-primary-foreground/70' : 'text-muted-foreground'
+                {/* Avatar for left-aligned messages */}
+                {!isRightAligned && (
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                    isStaffMessage 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-muted border-2 border-border text-muted-foreground'
                   }`}>
-                    {format(new Date(msg.created_at), 'PP p')}
-                  </p>
+                    {isStaffMessage ? <UserCog className="h-4 w-4" /> : initials}
+                  </div>
+                )}
+                
+                {/* Message Bubble */}
+                <div className={`max-w-[80%] sm:max-w-[70%] ${
+                  isRightAligned 
+                    ? 'bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-2xl rounded-br-md shadow-brutal-sm' 
+                    : 'bg-card border-2 border-border border-l-4 border-l-primary rounded-2xl rounded-bl-md shadow-brutal-sm'
+                }`}>
+                  <div className="p-3">
+                    {/* Header */}
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-xs font-bold truncate">
+                        {msg.profiles?.full_name || msg.profiles?.email || 'User'}
+                      </span>
+                      {isStaffMessage && (
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-[10px] px-1.5 py-0 h-4 ${
+                            isRightAligned 
+                              ? 'bg-primary-foreground/20 text-primary-foreground border-0' 
+                              : 'bg-primary/10 text-primary border-0'
+                          }`}
+                        >
+                          Staff
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    {/* Message Content */}
+                    <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">{msg.message}</p>
+                    
+                    {/* Timestamp */}
+                    <p className={`text-[10px] mt-2 ${
+                      isRightAligned ? 'text-primary-foreground/60' : 'text-muted-foreground'
+                    }`}>
+                      {format(new Date(msg.created_at), 'PP p')}
+                    </p>
+                  </div>
                 </div>
+                
+                {/* Avatar for right-aligned messages */}
+                {isRightAligned && (
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
+                    isStaffMessage 
+                      ? 'bg-primary text-primary-foreground' 
+                      : 'bg-accent border-2 border-border text-accent-foreground'
+                  }`}>
+                    {isStaffMessage ? <UserCog className="h-4 w-4" /> : initials}
+                  </div>
+                )}
               </div>
             );
           })
@@ -207,40 +249,53 @@ export const TicketConversation = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
+      {/* Input Area */}
       {isOpen ? (
-        <div className="pt-4 border-t mt-4">
-          <div className="flex gap-2">
-            <Textarea
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type your message..."
-              rows={2}
-              className="resize-none"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-            />
-            <Button 
-              onClick={handleSend} 
-              disabled={sending || !newMessage.trim()}
-              size="icon"
-              className="h-auto"
-            >
-              <Send className="h-4 w-4" />
-            </Button>
+        <div className="pt-4 mt-4 border-t-2 border-border/30">
+          <div className="flex items-start gap-3">
+            {/* Current User Avatar */}
+            <div className="w-10 h-10 rounded-full bg-accent border-2 border-border flex items-center justify-center text-sm font-bold text-accent-foreground flex-shrink-0 shadow-brutal-sm">
+              {currentUserProfile 
+                ? getInitials(currentUserProfile.full_name, currentUserProfile.email)
+                : <User className="h-5 w-5" />
+              }
+            </div>
+            
+            {/* Input + Send */}
+            <div className="flex-1 flex gap-2">
+              <Textarea
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                placeholder="Type your message..."
+                rows={2}
+                className="resize-none flex-1 border-2 border-border shadow-brutal-sm focus:shadow-brutal transition-all"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+              />
+              <Button 
+                onClick={handleSend} 
+                disabled={sending || !newMessage.trim()}
+                size="icon"
+                className="h-auto min-h-[60px] w-12 bg-gradient-to-r from-primary to-primary/80 shadow-brutal-sm hover:shadow-brutal disabled:opacity-50"
+              >
+                <Send className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
-          <p className="text-xs text-muted-foreground mt-1">
-            Press Enter to send, Shift+Enter for new line
+          <p className="text-[10px] text-muted-foreground mt-2 ml-[52px]">
+            Press Enter to send • Shift+Enter for new line
           </p>
         </div>
       ) : (
-        <div className="pt-4 border-t mt-4 text-center">
-          <Badge variant="secondary">Ticket is {ticketStatus}</Badge>
-          <p className="text-xs text-muted-foreground mt-2">
+        <div className="pt-4 mt-4 border-t-2 border-border/30 text-center">
+          <Badge variant="secondary" className="text-sm px-4 py-1.5 shadow-brutal-sm">
+            Ticket is {ticketStatus}
+          </Badge>
+          <p className="text-xs text-muted-foreground mt-3">
             This ticket is no longer accepting messages
           </p>
         </div>
