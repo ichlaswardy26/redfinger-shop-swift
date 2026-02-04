@@ -1,219 +1,369 @@
 
-# Comprehensive Feature Verification Report
+# Integrasi Payment Gateway Otomatis (Tokopay QRIS)
 
-## Summary
-Setelah review mendalam terhadap seluruh implementasi, berikut adalah analisis lengkap mengenai kesesuaian fitur dengan kebutuhan:
+## Ringkasan
 
----
-
-## 1. Auto-Delivery Integration di Bulk Order Verification ✅
-
-**Status: Terimplementasi dengan Benar**
-
-**Implementasi yang Ditemukan:**
-- `BulkOrderVerification.tsx` (lines 26-34, 77-91, 142-159)
-- Interface `OrderWithInventory` dengan `availableCodes` dan `useAutoDelivery`
-- Fetch inventory codes dari `redeem_code_inventory` table
-- Toggle `useAutoDelivery` per order dengan button "Use Inventory"
-- Auto-populate codes ke textarea saat toggle aktif
-- Badge menunjukkan jumlah kode tersedia per order
-- Visual indicator "Auto-filled" saat menggunakan inventory
-- Mark codes sebagai `is_used` saat verification berhasil (lines 288-301)
-
-**Flow yang Benar:**
-1. Dialog dibuka → Fetch pending orders + inventory codes per product
-2. Admin pilih order → Jika inventory cukup, tampilkan "Use Inventory" button
-3. Click "Use Inventory" → Kode otomatis diisi ke textarea
-4. Verification → Kode inventory di-mark sebagai `is_used`
+Menambahkan opsi pembayaran otomatis menggunakan Tokopay QRIS sebagai alternatif dari pembayaran manual (transfer bank + upload bukti). Integrasi ini memungkinkan verifikasi pembayaran real-time melalui webhook dan auto-delivery kode redeem.
 
 ---
 
-## 2. Carousel Indicators untuk Testimonials ✅
+## Analisa Dokumentasi Tokopay QRIS
 
-**Status: Terimplementasi dengan Benar**
+Berdasarkan dokumentasi Tokopay (https://docs.tokopay.id/persiapan-awal/metode-pembayaran), berikut adalah detail teknis untuk integrasi QRIS:
 
-**Implementasi yang Ditemukan:**
-- `Index.tsx` (lines 154-156, 169-178, 692-709)
-- State: `carouselApi`, `currentSlide`, `slideCount`
-- Carousel dengan `setApi={setCarouselApi}`
-- Effect tracking slide changes via `carouselApi.on("select", ...)`
-- Dot indicators dengan animated width (active = `w-6`, inactive = `w-2`)
-- Clickable dots dengan `carouselApi?.scrollTo(i)`
-- Accessibility: `aria-label` pada setiap dot
+### API Endpoints
+| Endpoint | Method | Fungsi |
+|----------|--------|--------|
+| `https://api.tokopay.id/v1/order` | GET | Membuat transaksi QRIS baru |
+| `https://api.tokopay.id/v1/order/check` | GET | Cek status pembayaran |
+| Callback URL (konfigurasi dashboard) | POST | Webhook notifikasi pembayaran |
 
-**Flow yang Benar:**
-1. Carousel mount → setApi dipanggil
-2. Effect hook track slideCount dan currentSlide
-3. Slide berubah → currentSlide update → dot indicator update
-4. User click dot → scrollTo(i) navigasi langsung
+### Parameter Create Order (QRIS)
+```text
+merchant    = MERCHANT_ID
+secret      = SECRET_KEY  
+ref_id      = Order ID (unique reference)
+nominal     = Jumlah pembayaran (Rupiah)
+metode      = QRIS
+```
 
----
+### Response Success
+```json
+{
+  "status": "Success",
+  "data": {
+    "trx_id": "TPY123456789",
+    "ref_id": "ORDER-001",
+    "qr_link": "https://api.tokopay.id/qrcode/...",
+    "qr_string": "00020101021126...",
+    "pay_url": "https://order.tokopay.id/...",
+    "nominal": 50000,
+    "expired_time": "2024-01-15 12:00:00"
+  }
+}
+```
 
-## 3. Konfirmasi Pengurangan Stok ✅
-
-**Status: Terimplementasi dengan Benar**
-
-**Implementasi Single Order (`OrderVerificationDialog.tsx`):**
-- Fetch current stock saat dialog open (lines 118-126)
-- `handleVerifyClick` cek jika `stockAfter <= 5` → show confirmation
-- AlertDialog dengan:
-  - Current Stock display
-  - Order Quantity dengan warna merah
-  - After Verification calculation
-  - Low stock warning badge jika `<= 3`
-- Confirm button → proceed to `handleVerify()`
-
-**Implementasi Bulk Order (`BulkOrderVerification.tsx`):**
-- Calculate stock summary per product (lines 229-250)
-- Show confirmation jika `hasLowStock` (any product after <= 5)
-- AlertDialog menampilkan semua product changes
-- Per-product display dengan current → reduce → after
-- Low Stock badge pada products yang akan <= 3
-
----
-
-## 4. Store Refactor - Design Modern & Interaktif ✅
-
-**Status: Terimplementasi dengan Benar**
-
-**Implementasi yang Ditemukan (`Store.tsx`):**
-
-**A. Enhanced Header Section (lines 409-463):**
-- Decorative blur elements (primary/accent colors)
-- Animated header dengan framer-motion
-- Quick stats cards (Products count, Categories count)
-- Hover effects dengan shadow-brutal transition
-
-**B. Category Navigation (lines 466-549):**
-- Sticky category bar dengan backdrop blur
-- Parent categories dengan product count badges
-- Child categories muncul saat parent selected (animated)
-- Clear filter button
-- Horizontal scroll untuk mobile
-
-**C. Product Grid (lines 597-674):**
-- Skeleton loading dengan proper structure (lines 553-571)
-- Empty state dengan animated illustration (lines 572-596)
-- Stagger animation variants (`containerVariants`, `itemVariants`)
-- AnimatePresence untuk smooth transitions
-- Layout animation pada product cards
-
-**D. Animation Configuration (lines 49-65):**
-- Spring physics untuk natural feel
-- Stagger delay 0.08s antar items
+### Callback Webhook Data
+```json
+{
+  "status": "Paid",
+  "trx_id": "TPY123456789",
+  "ref_id": "ORDER-001",
+  "amount": 50000,
+  "signature": "md5(MERCHANT_ID:SECRET:ref_id)"
+}
+```
 
 ---
 
-## 5. Load More Pagination ✅
+## Kondisi Sistem Saat Ini
 
-**Status: Terimplementasi dengan Benar**
+### Alur Pembayaran Manual (Existing)
+```text
+Customer → Pilih Produk → Create Order → Upload Bukti Transfer 
+→ Admin Verifikasi Manual → Assign Redeem Code → Customer Terima Kode
+```
 
-**Implementasi yang Ditemukan (`Store.tsx`):**
-
-- Constant: `ITEMS_PER_PAGE = 10` (line 47)
-- State: `displayCount` dengan initial 10 (line 78)
-- Computed values (lines 362-364):
-  - `displayedProducts = filteredProducts.slice(0, displayCount)`
-  - `hasMore = displayCount < filteredProducts.length`
-  - `remainingCount = filteredProducts.length - displayCount`
-- Reset on category change (lines 124-126)
-- "Showing X of Y products" text (lines 600-606)
-- Load More button dengan remaining count (lines 645-661)
-- "All products loaded" indicator (lines 664-672)
-
----
-
-## 6. Duplicate Code Detection & Highlighting ✅
-
-**Status: Terimplementasi dengan Benar**
-
-**Component: `CodeInputWithHighlight.tsx`**
-
-**Features:**
-- Line-by-line status indicators (green check / amber/red warning)
-- Intra-order duplicate detection (same code in same textarea)
-- Cross-order duplicate detection (code used in another order)
-- Tooltips explaining duplicate type:
-  - "Intra-Order Duplicate" - muncul beberapa kali dalam order ini
-  - "Cross-Order Duplicate" - sudah diassign ke order lain
-  - Hybrid - keduanya
-- Status summary (X duplicates detected / No duplicates)
-- Code count indicator (X/Y codes)
-- Red border saat ada duplicates
-
-**Integration (`BulkOrderVerification.tsx` lines 484-502):**
-- `CodeInputWithHighlight` menggantikan `Textarea`
-- `allCodesAcrossOrders` prop berisi semua kode dari order LAIN yang terseleksi
-- Dynamic filtering untuk exclude current order codes
+### Komponen yang Terlibat
+- `src/pages/Store.tsx` - Halaman toko & checkout
+- `src/components/OrderConfirmationDialog.tsx` - Dialog konfirmasi order
+- `src/components/OrderCard.tsx` - Card order di halaman transaksi
+- `src/pages/Transactions.tsx` - Halaman transaksi customer
+- `src/components/BusinessRulesEditor.tsx` - Pengaturan admin
+- `src/pages/Admin.tsx` - Dashboard admin
+- Tabel `orders` - payment_status: pending/verified/rejected
 
 ---
 
-## 7. Code Validation di Bulk Verify ✅
+## Arsitektur Solusi
 
-**Status: Terimplementasi dengan Benar**
+### A. Perubahan Database Schema
 
-**Function: `validateAllCodes()` (lines 161-210)**
+```sql
+-- Tambah kolom pada tabel orders
+ALTER TABLE orders ADD COLUMN payment_method text DEFAULT 'manual';
+ALTER TABLE orders ADD COLUMN gateway_trx_id text;
+ALTER TABLE orders ADD COLUMN payment_url text;
+ALTER TABLE orders ADD COLUMN qr_link text;
+ALTER TABLE orders ADD COLUMN gateway_expired_at timestamptz;
 
-**Validations:**
-1. Exact code count = order.quantity (not less, not more)
-2. No duplicates within each order (case-insensitive)
-3. No duplicates across all selected orders
-4. Empty/whitespace codes filtered out
+-- Tambah key untuk konfigurasi payment gateway di business_rules
+INSERT INTO business_rules (key, value, description) VALUES 
+('payment_gateway', '{
+  "enabled": false,
+  "provider": "tokopay",
+  "merchant_id": "",
+  "qris_enabled": true,
+  "auto_delivery": true
+}', 'Payment gateway configuration');
+```
 
-**Error Messages:**
-- "requires exactly X code(s), but Y provided"
-- "Duplicate codes found within order for..."
-- "Duplicate code(s) found across orders: ABC, DEF..."
+### B. Secrets Management (Edge Function)
+- `TOKOPAY_MERCHANT_ID` - Merchant ID dari Tokopay
+- `TOKOPAY_SECRET_KEY` - Secret Key untuk generate signature
+
+### C. Edge Functions Baru
+
+#### 1. `create-tokopay-payment/index.ts`
+```text
+Fungsi:
+- Menerima order_id dan amount dari frontend
+- Generate signature MD5(MERCHANT_ID:SECRET:ref_id)
+- Hit API Tokopay create order QRIS
+- Update tabel orders dengan gateway_trx_id, qr_link, payment_url
+- Return QR code data ke frontend
+
+Security:
+- Validasi JWT token
+- Validasi order milik user
+- Validasi order masih pending
+```
+
+#### 2. `tokopay-callback/index.ts`
+```text
+Fungsi:
+- Terima webhook dari Tokopay
+- Validasi signature dari Tokopay
+- Jika status = "Paid":
+  - Update orders.payment_status = 'verified'
+  - Update orders.status = 'active'
+  - Auto-assign redeem codes dari inventory (jika tersedia)
+  - Kurangi stock produk
+  - Kirim email notifikasi
+
+Security:
+- Validasi signature MD5
+- Endpoint public (tanpa JWT) karena dipanggil Tokopay
+```
+
+#### 3. `check-payment-status/index.ts`
+```text
+Fungsi:
+- Polling manual untuk cek status pembayaran
+- Digunakan jika webhook gagal
+- Hit API Tokopay check status
+```
 
 ---
 
-## Issues Found & Recommendations
+## Flow Pembayaran QRIS (Baru)
 
-### Issue 1: Minor - Missing Export Statement
-**File:** `src/components/BulkOrderVerification.tsx`
-**Line:** End of file
-**Problem:** Missing `export default BulkOrderVerification;` (tapi sudah ada named export yang benar)
-**Status:** ✅ OK - Named export sudah benar
-
-### Issue 2: Potential Edge Case - Empty Inventory Handling
-**File:** `BulkOrderVerification.tsx`
-**Context:** Saat auto-delivery enabled tapi inventory codes berubah (race condition)
-**Recommendation:** Sudah di-handle dengan re-fetch saat dialog open
-
-### Issue 3: UX Enhancement Opportunity
-**Context:** CodeInputWithHighlight tidak auto-adjust height untuk banyak codes
-**Current:** Fixed `rows` prop
-**Recommendation:** Bisa ditambahkan auto-resize, tapi current implementation sudah functional
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│                     CUSTOMER CHECKOUT FLOW                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  1. Customer pilih produk & klik "Buy Now"                         │
+│                        ▼                                            │
+│  2. Dialog konfirmasi muncul dengan 2 opsi:                        │
+│     ┌─────────────────┐  ┌─────────────────┐                       │
+│     │  Bank Transfer  │  │   QRIS (Auto)   │                       │
+│     │    (Manual)     │  │   ✓ Instant     │                       │
+│     └─────────────────┘  └─────────────────┘                       │
+│                                                                     │
+│  ══════════════ JIKA PILIH QRIS ══════════════                     │
+│                        ▼                                            │
+│  3. Frontend call Edge Function "create-tokopay-payment"           │
+│                        ▼                                            │
+│  4. Edge Function → API Tokopay → Return QR Code                   │
+│                        ▼                                            │
+│  5. Tampilkan QR Code di dialog (gambar + pay_url)                 │
+│     - Customer scan QR dengan e-wallet                              │
+│     - Timer countdown expiry                                        │
+│                        ▼                                            │
+│  6. Customer bayar via e-wallet                                     │
+│                        ▼                                            │
+│  7. Tokopay kirim webhook ke "tokopay-callback"                    │
+│                        ▼                                            │
+│  8. Webhook handler:                                                │
+│     - Validasi signature                                            │
+│     - Update payment_status = 'verified'                           │
+│     - Auto-assign redeem codes                                      │
+│     - Kirim email notifikasi                                        │
+│                        ▼                                            │
+│  9. Customer refresh halaman → Lihat kode redeem                   │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Validation Checklist
+## Implementasi Detail
 
-| Feature | Implemented | Flow Correct | Edge Cases Handled |
-|---------|-------------|--------------|-------------------|
-| Auto-Delivery in Bulk | ✅ | ✅ | ✅ |
-| Carousel Indicators | ✅ | ✅ | ✅ |
-| Stock Confirmation (Single) | ✅ | ✅ | ✅ |
-| Stock Confirmation (Bulk) | ✅ | ✅ | ✅ |
-| Store Animations | ✅ | ✅ | ✅ |
-| Load More Pagination | ✅ | ✅ | ✅ |
-| Duplicate Detection (Intra) | ✅ | ✅ | ✅ |
-| Duplicate Detection (Cross) | ✅ | ✅ | ✅ |
-| Tooltip Explanations | ✅ | ✅ | ✅ |
-| Code Count Validation | ✅ | ✅ | ✅ |
+### 1. Perubahan UI - Checkout Flow
+
+**File: `src/components/OrderConfirmationDialog.tsx`**
+
+Tambahkan:
+- Radio button pilihan metode pembayaran (Manual / QRIS)
+- State `paymentMethod` dan `isCreatingPayment`
+- Jika QRIS dipilih, tampilkan loading → QR Code
+- Timer countdown untuk expiry QRIS
+- Tombol "Sudah Bayar? Cek Status"
+
+**File: `src/pages/Store.tsx`**
+
+Update `handleConfirmOrder`:
+- Terima parameter payment_method
+- Jika QRIS: panggil edge function, simpan QR data ke state
+- Jika Manual: flow existing (create order → redirect transaksi)
+
+### 2. Perubahan UI - Transaction Page
+
+**File: `src/components/OrderCard.tsx`**
+
+Tambahkan:
+- Deteksi `payment_method === 'qris'` dan `payment_status === 'pending'`
+- Tampilkan tombol "Bayar Sekarang" → Modal QR Code
+- Tampilkan status "Menunggu Pembayaran QRIS"
+- Tombol "Cek Status Pembayaran"
+
+### 3. Pengaturan Admin
+
+**File: `src/components/BusinessRulesEditor.tsx`**
+
+Tambahkan tab baru "Payment Gateway":
+```text
+┌─────────────────────────────────────────────────────────┐
+│  Payment Gateway Settings                               │
+├─────────────────────────────────────────────────────────┤
+│                                                         │
+│  Enable Payment Gateway    [Toggle Switch]              │
+│                                                         │
+│  Provider                                               │
+│  ┌──────────────────────────────────────┐              │
+│  │ Tokopay                           ▼ │              │
+│  └──────────────────────────────────────┘              │
+│                                                         │
+│  Merchant ID                                            │
+│  ┌──────────────────────────────────────┐              │
+│  │ M12345                               │              │
+│  └──────────────────────────────────────┘              │
+│  ⚠️ Secret Key dikelola via Secrets                    │
+│                                                         │
+│  Methods                                                │
+│  ☑ QRIS                                                │
+│                                                         │
+│  Auto Delivery                                          │
+│  ☑ Kirim kode otomatis setelah pembayaran             │
+│                                                         │
+│  [Save Payment Gateway Settings]                        │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 4. Edge Functions
+
+**File: `supabase/functions/create-tokopay-payment/index.ts`**
+
+```typescript
+// Pseudocode structure
+- Validate JWT & get user
+- Fetch order by ID, validate ownership & pending status
+- Fetch payment_gateway settings from business_rules
+- Generate signature: MD5(MERCHANT_ID:SECRET:order_id)
+- Call Tokopay API: GET /v1/order?merchant=...&secret=...
+- Parse response, extract qr_link, pay_url, trx_id
+- Update orders table with gateway data
+- Return QR data to frontend
+```
+
+**File: `supabase/functions/tokopay-callback/index.ts`**
+
+```typescript
+// Pseudocode structure
+- Parse POST body from Tokopay
+- Validate signature: MD5(MERCHANT_ID:SECRET:ref_id)
+- If status === "Paid":
+  - Fetch order by ref_id
+  - Update payment_status = 'verified', status = 'active'
+  - If auto_delivery enabled:
+    - Fetch available codes from redeem_code_inventory
+    - Assign to order, mark codes as used
+    - Reduce product stock
+  - Call send-notification function
+- Return success response
+```
+
+### 5. Hook & State Management
+
+**File: `src/hooks/usePaymentGateway.ts` (Baru)**
+
+```typescript
+export const usePaymentGateway = () => {
+  // Fetch payment gateway settings
+  // Check if QRIS enabled
+  // Create payment function
+  // Check payment status function
+}
+```
 
 ---
 
-## Conclusion
+## File yang Akan Dimodifikasi/Dibuat
 
-**Semua 5 fitur utama + fitur tambahan (duplicate detection) telah diimplementasikan dengan benar:**
+| File | Aksi | Deskripsi |
+|------|------|-----------|
+| `src/components/OrderConfirmationDialog.tsx` | Modify | Tambah pilihan metode pembayaran & QR display |
+| `src/components/OrderCard.tsx` | Modify | Tampilkan status QRIS & tombol bayar |
+| `src/pages/Store.tsx` | Modify | Handle payment method selection |
+| `src/components/BusinessRulesEditor.tsx` | Modify | Tambah tab Payment Gateway settings |
+| `src/hooks/useBusinessRules.ts` | Modify | Tambah interface payment_gateway |
+| `src/hooks/usePaymentGateway.ts` | Create | Hook untuk payment gateway operations |
+| `src/components/QRPaymentDialog.tsx` | Create | Modal tampilan QR Code + timer |
+| `supabase/functions/create-tokopay-payment/index.ts` | Create | Edge function create payment |
+| `supabase/functions/tokopay-callback/index.ts` | Create | Webhook handler |
+| `supabase/functions/check-payment-status/index.ts` | Create | Manual status check |
+| Database migration | Create | Tambah kolom payment gateway di orders |
 
-1. ✅ Auto-Delivery terintegrasi di Bulk Verify
-2. ✅ Carousel Indicators untuk Testimonials
-3. ✅ Stock Reduction Confirmation (single & bulk)
-4. ✅ Store Refactor dengan animations & modern design
-5. ✅ Load More Pagination (10 items per page)
-6. ✅ Code duplicate detection dengan visual highlighting
-7. ✅ Tooltips menjelaskan jenis duplikat
+---
 
-**Tidak ditemukan bug kritis.** Implementasi sudah sesuai dengan plan dan best practices.
+## Langkah Implementasi
+
+### Phase 1: Database & Backend Setup
+1. Buat migration untuk kolom baru di tabel `orders`
+2. Tambah konfigurasi `payment_gateway` di `business_rules`
+3. Request secrets `TOKOPAY_MERCHANT_ID` dan `TOKOPAY_SECRET_KEY`
+4. Buat edge function `create-tokopay-payment`
+5. Buat edge function `tokopay-callback`
+
+### Phase 2: Admin Settings
+6. Update `BusinessRulesEditor.tsx` dengan tab Payment Gateway
+7. Update `useBusinessRules.ts` untuk include payment_gateway config
+
+### Phase 3: Customer UI
+8. Buat komponen `QRPaymentDialog.tsx`
+9. Update `OrderConfirmationDialog.tsx` dengan pilihan metode
+10. Update `Store.tsx` untuk handle payment method
+11. Update `OrderCard.tsx` untuk tampilan QRIS pending
+12. Buat hook `usePaymentGateway.ts`
+
+### Phase 4: Testing & Polish
+13. Test end-to-end flow dengan sandbox Tokopay
+14. Handle edge cases (expired, failed, duplicate callback)
+15. Add proper error messages & loading states
+
+---
+
+## Keamanan
+
+1. **Secret Key tidak pernah diexpose ke frontend** - Semua operasi yang membutuhkan secret key dilakukan di Edge Function
+2. **Signature Validation** - Setiap callback dari Tokopay divalidasi dengan MD5 signature
+3. **Order Ownership Validation** - User hanya bisa create payment untuk order miliknya sendiri
+4. **Idempotency** - Callback handler mencegah duplicate processing
+5. **RLS Policies** - Kolom baru mengikuti RLS existing pada tabel orders
+
+---
+
+## Catatan Penting
+
+1. **Webhook URL**: Setelah deploy, admin perlu mengkonfigurasi callback URL di dashboard Tokopay:
+   ```
+   https://jstzgqmqwcjtffefwcxj.supabase.co/functions/v1/tokopay-callback
+   ```
+
+2. **Testing Mode**: Tokopay menyediakan sandbox environment untuk testing sebelum go-live
+
+3. **Backward Compatibility**: Sistem pembayaran manual tetap berfungsi, QRIS adalah opsi tambahan
+
+4. **Auto-Delivery**: Jika inventory kosong saat pembayaran verified, order tetap verified tapi redeem_codes kosong (admin perlu assign manual)
