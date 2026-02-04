@@ -376,12 +376,12 @@ const Store = () => {
           <div className="container mx-auto px-4 py-5 sm:py-6 space-y-4">
             {/* Parent Categories */}
             <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide mb-2">
-              <div className="flex items-center gap-2 sm:gap-2.5 min-w-max">
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-max">
                 <Button
                   variant={selectedCategory === null ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedCategory(null)}
-                  className="flex-shrink-0 text-xs sm:text-sm h-8 sm:h-9"
+                  className="flex-shrink-0 text-sm h-9 sm:h-10 px-4"
                 >
                   All
                 </Button>
@@ -391,11 +391,10 @@ const Store = () => {
                     variant={selectedParentId === category.id ? "default" : "outline"}
                     size="sm"
                     onClick={() => setSelectedCategory(category.id)}
-                    className="gap-1 flex-shrink-0 text-xs sm:text-sm h-8 sm:h-9"
+                    className="gap-1.5 flex-shrink-0 text-sm h-9 sm:h-10 px-4"
                   >
                     {getCategoryImage(category.image_url)}
-                    <span className="hidden xs:inline sm:inline">{category.name}</span>
-                    <span className="xs:hidden sm:hidden">{category.name.substring(0, 4)}{category.name.length > 4 ? '…' : ''}</span>
+                    {category.name}
                   </Button>
                 ))}
               </div>
