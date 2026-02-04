@@ -10,25 +10,19 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Edit2, Trash2, GripVertical, Loader2, Package, Folder, Tag, Layers } from "lucide-react";
+import { Plus, Edit2, Trash2, Loader2, Layers, X } from "lucide-react";
 
 interface Category {
   id: string;
   name: string;
   description: string | null;
   icon: string;
+  image_url: string | null;
   display_order: number;
   is_active: boolean;
   created_at: string;
   parent_id: string | null;
 }
-
-const ICONS = [
-  { value: "package", icon: Package, label: "Package" },
-  { value: "folder", icon: Folder, label: "Folder" },
-  { value: "tag", icon: Tag, label: "Tag" },
-  { value: "layers", icon: Layers, label: "Layers" },
-];
 
 export const CategoryManager = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -36,7 +30,8 @@ export const CategoryManager = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", icon: "package", parent_id: "" });
+  const [uploading, setUploading] = useState(false);
+  const [form, setForm] = useState({ name: "", description: "", image_url: "", parent_id: "" });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -59,6 +54,43 @@ export const CategoryManager = () => {
     }
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Max 2MB allowed", variant: "destructive" });
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+
+      const { error } = await supabase.storage
+        .from('category-images')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage
+        .from('category-images')
+        .getPublicUrl(fileName);
+
+      setForm({ ...form, image_url: urlData.publicUrl });
+      toast({ title: "Image uploaded successfully" });
+    } catch (error) {
+      toast({ 
+        title: "Upload failed", 
+        description: error instanceof Error ? error.message : "Unknown error",
+        variant: "destructive" 
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -74,7 +106,7 @@ export const CategoryManager = () => {
           .update({
             name: form.name.trim(),
             description: form.description.trim() || null,
-            icon: form.icon,
+            image_url: form.image_url || null,
             parent_id: form.parent_id || null,
           })
           .eq("id", editingCategory.id);
@@ -88,7 +120,7 @@ export const CategoryManager = () => {
           .insert({
             name: form.name.trim(),
             description: form.description.trim() || null,
-            icon: form.icon,
+            image_url: form.image_url || null,
             display_order: maxOrder + 1,
             parent_id: form.parent_id || null,
           });
@@ -99,7 +131,7 @@ export const CategoryManager = () => {
 
       setDialogOpen(false);
       setEditingCategory(null);
-      setForm({ name: "", description: "", icon: "package", parent_id: "" });
+      setForm({ name: "", description: "", image_url: "", parent_id: "" });
       fetchCategories();
     } catch (error) {
       toast({ 
@@ -117,7 +149,7 @@ export const CategoryManager = () => {
     setForm({
       name: category.name,
       description: category.description || "",
-      icon: category.icon,
+      image_url: category.image_url || "",
       parent_id: category.parent_id || "",
     });
     setDialogOpen(true);
@@ -159,13 +191,20 @@ export const CategoryManager = () => {
     }
   };
 
-  const getIconComponent = (iconName: string) => {
-    const iconItem = ICONS.find(i => i.value === iconName);
-    if (iconItem) {
-      const IconComponent = iconItem.icon;
-      return <IconComponent className="h-4 w-4" />;
+  const getCategoryImage = (imageUrl: string | null) => {
+    if (imageUrl) {
+      return (
+        <img 
+          src={imageUrl} 
+          alt="" 
+          className="h-6 w-6 object-cover rounded-sm"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+        />
+      );
     }
-    return <Package className="h-4 w-4" />;
+    return <Layers className="h-4 w-4" />;
   };
 
   if (loading) {
@@ -187,7 +226,7 @@ export const CategoryManager = () => {
           setDialogOpen(open);
           if (!open) {
             setEditingCategory(null);
-            setForm({ name: "", description: "", icon: "package", parent_id: "" });
+            setForm({ name: "", description: "", image_url: "", parent_id: "" });
           }
         }}>
           <DialogTrigger asChild>
@@ -242,29 +281,46 @@ export const CategoryManager = () => {
                 />
               </div>
               <div>
-                <Label>Icon</Label>
-                <div className="flex gap-2 mt-2">
-                  {ICONS.map((iconItem) => {
-                    const IconComponent = iconItem.icon;
-                    return (
-                      <Button
-                        key={iconItem.value}
+                <Label>Category Image (Optional)</Label>
+                <div className="space-y-3 mt-2">
+                  {form.image_url && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-md border-2 border-border overflow-hidden bg-muted">
+                        <img src={form.image_url} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <Button 
                         type="button"
-                        variant={form.icon === iconItem.value ? "default" : "outline"}
-                        size="icon"
-                        onClick={() => setForm({ ...form, icon: iconItem.value })}
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setForm({ ...form, image_url: "" })}
                       >
-                        <IconComponent className="h-4 w-4" />
+                        <X className="h-4 w-4 mr-1" /> Remove
                       </Button>
-                    );
-                  })}
+                    </div>
+                  )}
+                  <Input
+                    placeholder="Image URL (or upload below)"
+                    value={form.image_url}
+                    onChange={(e) => setForm({ ...form, image_url: e.target.value })}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                      onChange={handleImageUpload}
+                      disabled={uploading}
+                      className="text-xs"
+                    />
+                    {uploading && <Loader2 className="h-4 w-4 animate-spin" />}
+                  </div>
+                  <p className="text-xs text-muted-foreground">Max 2MB. Supports JPG, PNG, WebP, SVG</p>
                 </div>
               </div>
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={saving}>
+                <Button type="submit" disabled={saving || uploading}>
                   {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   {editingCategory ? "Update" : "Create"}
                 </Button>
@@ -294,7 +350,7 @@ export const CategoryManager = () => {
                 <TableRow key={category.id}>
                   <TableCell>
                     <div className="flex items-center justify-center text-muted-foreground">
-                      {getIconComponent(category.icon)}
+                      {getCategoryImage(category.image_url)}
                     </div>
                   </TableCell>
                   <TableCell className="font-medium">{category.name}</TableCell>
