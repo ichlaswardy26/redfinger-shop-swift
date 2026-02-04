@@ -29,9 +29,14 @@ interface Order {
   status: string;
   payment_status: string;
   payment_proof: string | null;
+  payment_method: string | null;
+  gateway_trx_id: string | null;
+  qr_link: string | null;
+  payment_url: string | null;
+  gateway_expired_at: string | null;
   expires_at: string;
   created_at: string;
-  products: { name: string; duration_days: number };
+  products: { name: string; duration_days: number; price: number };
   support_tickets: { id: string; status: string } | null;
 }
 
@@ -134,7 +139,7 @@ const Transactions = () => {
 
       const { data, error } = await supabase
         .from("orders")
-        .select(`*, products (name, duration_days), support_tickets (id, status)`)
+        .select(`*, products (name, duration_days, price), support_tickets (id, status)`)
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false });
 
@@ -335,11 +340,22 @@ const Transactions = () => {
                   {paginatedOrders.map((order, index) => (
                     <OrderCard
                       key={order.id}
-                      order={{ ...order, product_id: order.product_id, product: order.products, ticket: order.support_tickets }}
+                      order={{ 
+                        ...order, 
+                        product_id: order.product_id, 
+                        product: order.products, 
+                        ticket: order.support_tickets,
+                        payment_method: order.payment_method,
+                        gateway_trx_id: order.gateway_trx_id,
+                        qr_link: order.qr_link,
+                        payment_url: order.payment_url,
+                        gateway_expired_at: order.gateway_expired_at,
+                      }}
                       onUploadProof={(id) => { setSelectedOrderId(id); setUploadDialogOpen(true); }}
                       onCancelOrder={handleCancelOrder}
                       onRate={(orderId, productId, productName) => { setSelectedRating({ orderId, productId, productName }); setRatingDialogOpen(true); }}
                       onCreateTicket={(orderId) => { setSelectedOrderId(orderId); setTicketDialogOpen(true); }}
+                      onOrderUpdated={fetchOrders}
                     />
                   ))}
                 </MotionContainer>

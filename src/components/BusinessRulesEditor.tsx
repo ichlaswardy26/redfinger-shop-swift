@@ -8,7 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Save, Loader2, ShoppingCart, Package, Ticket as TicketIcon, Layout } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Save, Loader2, ShoppingCart, Package, Ticket as TicketIcon, Layout, Wallet, Info, ExternalLink, Copy, Check } from "lucide-react";
+import { usePaymentGateway, PaymentGatewayConfig } from "@/hooks/usePaymentGateway";
 
 interface BusinessRulesState {
   order: {
@@ -58,11 +61,35 @@ export const BusinessRulesEditor = () => {
   const [rules, setRules] = useState<BusinessRulesState>(defaultRules);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+  
+  // Payment gateway state
+  const { 
+    config: gatewayConfig, 
+    isLoadingConfig: isLoadingGateway, 
+    saveConfig: saveGatewayConfig 
+  } = usePaymentGateway();
+  
+  const [gatewaySettings, setGatewaySettings] = useState<PaymentGatewayConfig>({
+    enabled: false,
+    provider: "tokopay",
+    merchant_id: "",
+    qris_enabled: true,
+    auto_delivery: true,
+  });
+  const [savingGateway, setSavingGateway] = useState(false);
 
   useEffect(() => {
     fetchRules();
   }, []);
+
+  // Sync gateway settings when loaded
+  useEffect(() => {
+    if (!isLoadingGateway && gatewayConfig) {
+      setGatewaySettings(gatewayConfig);
+    }
+  }, [gatewayConfig, isLoadingGateway]);
 
   const fetchRules = async () => {
     try {
@@ -133,6 +160,21 @@ export const BusinessRulesEditor = () => {
     }));
   };
 
+  const handleSaveGateway = async () => {
+    setSavingGateway(true);
+    await saveGatewayConfig(gatewaySettings);
+    setSavingGateway(false);
+  };
+
+  const webhookUrl = "https://jstzgqmqwcjtffefwcxj.supabase.co/functions/v1/tokopay-callback";
+
+  const copyWebhookUrl = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    toast({ title: "Webhook URL copied!" });
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -160,6 +202,10 @@ export const BusinessRulesEditor = () => {
           <TabsTrigger value="display" className="gap-2">
             <Layout className="h-4 w-4" />
             Display
+          </TabsTrigger>
+          <TabsTrigger value="payment" className="gap-2">
+            <Wallet className="h-4 w-4" />
+            Payment
           </TabsTrigger>
         </TabsList>
       </div>
@@ -387,6 +433,151 @@ export const BusinessRulesEditor = () => {
                 <Save className="h-4 w-4 mr-2" />
               )}
               Save Display Rules
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Payment Gateway Rules */}
+      <TabsContent value="payment">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Wallet className="h-5 w-5" />
+                  Payment Gateway
+                </CardTitle>
+                <CardDescription>Configure automatic payment via QRIS</CardDescription>
+              </div>
+              <Badge variant={gatewaySettings.enabled ? "default" : "secondary"}>
+                {gatewaySettings.enabled ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Enable Toggle */}
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <Label htmlFor="gateway-enabled" className="text-base font-medium">Enable Payment Gateway</Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow customers to pay automatically via QRIS
+                </p>
+              </div>
+              <Switch
+                id="gateway-enabled"
+                checked={gatewaySettings.enabled}
+                onCheckedChange={(checked) => setGatewaySettings(prev => ({ ...prev, enabled: checked }))}
+              />
+            </div>
+
+            {gatewaySettings.enabled && (
+              <>
+                {/* Provider Selection */}
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="gateway-provider">Provider</Label>
+                    <Select
+                      value={gatewaySettings.provider}
+                      onValueChange={(val) => setGatewaySettings(prev => ({ ...prev, provider: val }))}
+                    >
+                      <SelectTrigger id="gateway-provider">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tokopay">Tokopay</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="merchant-id">Merchant ID</Label>
+                    <Input
+                      id="merchant-id"
+                      placeholder="Enter your Merchant ID"
+                      value={gatewaySettings.merchant_id}
+                      onChange={(e) => setGatewaySettings(prev => ({ ...prev, merchant_id: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Webhook URL */}
+                <div className="space-y-2">
+                  <Label>Webhook URL (Callback)</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={webhookUrl}
+                      readOnly
+                      className="font-mono text-sm"
+                    />
+                    <Button variant="outline" size="icon" onClick={copyWebhookUrl}>
+                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Configure this URL in your Tokopay dashboard under Callback Settings
+                  </p>
+                </div>
+
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    <strong>Important:</strong> Make sure you have configured your <code className="bg-muted px-1 rounded">TOKOPAY_MERCHANT_ID</code> and <code className="bg-muted px-1 rounded">TOKOPAY_SECRET_KEY</code> in the secrets settings.
+                    <Button
+                      variant="link"
+                      className="p-0 h-auto ml-1"
+                      onClick={() => window.open("https://docs.tokopay.id/persiapan-awal/metode-pembayaran", "_blank")}
+                    >
+                      View Documentation <ExternalLink className="h-3 w-3 ml-1" />
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+
+                {/* Payment Methods */}
+                <div className="space-y-4">
+                  <Label className="text-base">Payment Methods</Label>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Wallet className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">QRIS</p>
+                        <p className="text-sm text-muted-foreground">
+                          GoPay, OVO, DANA, LinkAja, and all QRIS-enabled e-wallets
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={gatewaySettings.qris_enabled}
+                      onCheckedChange={(checked) => setGatewaySettings(prev => ({ ...prev, qris_enabled: checked }))}
+                    />
+                  </div>
+                </div>
+
+                {/* Auto Delivery */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <Label htmlFor="auto-delivery" className="text-base font-medium">Auto Delivery</Label>
+                    <p className="text-sm text-muted-foreground">
+                      Automatically assign and send redeem codes after payment is verified
+                    </p>
+                  </div>
+                  <Switch
+                    id="auto-delivery"
+                    checked={gatewaySettings.auto_delivery}
+                    onCheckedChange={(checked) => setGatewaySettings(prev => ({ ...prev, auto_delivery: checked }))}
+                  />
+                </div>
+              </>
+            )}
+
+            <Button onClick={handleSaveGateway} disabled={savingGateway}>
+              {savingGateway ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Save Payment Gateway Settings
             </Button>
           </CardContent>
         </Card>
