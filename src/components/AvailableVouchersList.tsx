@@ -3,10 +3,11 @@
  import { Skeleton } from "@/components/ui/skeleton";
  import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
  import { AvailableVoucher } from "@/hooks/useAvailableVouchers";
- import { Tag, ChevronDown, ChevronUp, Percent, Clock, Sparkles } from "lucide-react";
- import { format, differenceInDays } from "date-fns";
+ import { Tag, ChevronDown, ChevronUp, Percent, Clock, Sparkles, TicketX } from "lucide-react";
+ import { differenceInDays } from "date-fns";
  import { useState } from "react";
  import { motion, AnimatePresence } from "framer-motion";
+ import { t } from "@/lib/translations";
  
  interface AvailableVouchersListProps {
    vouchers: AvailableVoucher[];
@@ -39,7 +40,21 @@
    }
  
    if (vouchers.length === 0) {
-     return null;
+     return (
+       <div className="mt-4 p-4 rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/30">
+         <div className="flex flex-col items-center justify-center text-center gap-2 py-2">
+           <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+             <TicketX className="h-5 w-5 text-muted-foreground" />
+           </div>
+           <p className="text-sm text-muted-foreground">
+             {t.vouchers.suggestions.empty}
+           </p>
+           <p className="text-xs text-muted-foreground/70">
+             {t.vouchers.suggestions.emptyHint}
+           </p>
+         </div>
+       </div>
+     );
    }
  
    const bestVoucher = vouchers[0];
@@ -53,7 +68,7 @@
          >
            <div className="flex items-center gap-2 text-sm">
              <Tag className="h-4 w-4 text-primary" />
-             <span className="font-medium">Available vouchers for you</span>
+             <span className="font-medium">{t.vouchers.suggestions.title}</span>
              <Badge variant="secondary" className="text-xs">
                {vouchers.length}
              </Badge>
@@ -94,7 +109,7 @@
                      <div className="absolute -top-2 -right-2">
                        <Badge className="bg-primary text-primary-foreground text-xs flex items-center gap-1">
                          <Sparkles className="h-3 w-3" />
-                         Best Value
+                       {t.vouchers.suggestions.bestValue}
                        </Badge>
                      </div>
                    )}
@@ -123,21 +138,21 @@
  
                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground flex-wrap">
                          {voucher.min_order_amount && voucher.min_order_amount > 0 && (
-                           <span>Min: Rp {voucher.min_order_amount.toLocaleString()}</span>
+                           <span>{t.vouchers.suggestions.min}: Rp {voucher.min_order_amount.toLocaleString()}</span>
                          )}
                          {voucher.max_discount_amount && (
-                           <span>Max: Rp {voucher.max_discount_amount.toLocaleString()}</span>
+                           <span>{t.vouchers.suggestions.max}: Rp {voucher.max_discount_amount.toLocaleString()}</span>
                          )}
                          {isExpiringSoon && (
                            <span className="flex items-center gap-1 text-destructive">
                              <Clock className="h-3 w-3" />
-                             {daysUntilExpiry <= 0 ? "Expires today" : `${daysUntilExpiry}d left`}
+                             {daysUntilExpiry <= 0 ? t.vouchers.suggestions.expiresToday : `${daysUntilExpiry} ${t.vouchers.suggestions.expiresInDays}`}
                            </span>
                          )}
                        </div>
  
                        <p className="text-sm font-bold text-primary mt-1">
-                         Save Rp {voucher.potential_discount.toLocaleString()}
+                         {t.vouchers.suggestions.save} Rp {voucher.potential_discount.toLocaleString()}
                        </p>
                      </div>
  
@@ -148,7 +163,7 @@
                        disabled={disabled}
                        className="shrink-0"
                      >
-                       Apply
+                         {t.vouchers.suggestions.apply}
                      </Button>
                    </div>
                  </motion.div>

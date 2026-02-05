@@ -2,13 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+ import { t } from "@/lib/translations";
 
 interface CopyButtonProps {
   text: string;
   label?: string;
 }
 
-const CopyButton = ({ text, label = "Copy" }: CopyButtonProps) => {
+ const CopyButton = ({ text, label }: CopyButtonProps) => {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
@@ -17,12 +18,12 @@ const CopyButton = ({ text, label = "Copy" }: CopyButtonProps) => {
       await navigator.clipboard.writeText(text);
       setCopied(true);
       toast({
-        title: "Copied to clipboard",
+        title: t.toasts.copied,
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
       toast({
-        title: "Failed to copy",
+        title: t.toasts.copyFailed,
         variant: "destructive",
       });
     }
@@ -38,12 +39,12 @@ const CopyButton = ({ text, label = "Copy" }: CopyButtonProps) => {
       {copied ? (
         <>
           <Check className="h-4 w-4" />
-          Copied!
+        {t.actions.copied}
         </>
       ) : (
         <>
           <Copy className="h-4 w-4" />
-          {label}
+        {label || t.actions.copy}
         </>
       )}
     </Button>

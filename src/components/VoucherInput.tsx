@@ -9,6 +9,7 @@
  import { useBusinessRule } from "@/hooks/useBusinessRules";
  import { AvailableVouchersList } from "@/components/AvailableVouchersList";
  import { motion, AnimatePresence } from "framer-motion";
+ import { t } from "@/lib/translations";
  
  interface VoucherInputProps {
    orderAmount: number;
@@ -75,7 +76,7 @@
      <div className="space-y-3">
        <Label className="flex items-center gap-2 text-sm font-medium">
          <Tag className="h-4 w-4" />
-         Voucher Code
+        {t.vouchers.voucherCode}
        </Label>
  
        <AnimatePresence mode="wait">
@@ -130,7 +131,7 @@
            >
              <div className="flex-1">
                <Input
-                 placeholder="Enter voucher code"
+                placeholder={t.vouchers.enterCode}
                  value={code}
                  onChange={(e) => setCode(e.target.value.toUpperCase())}
                  onKeyDown={handleKeyDown}
@@ -146,7 +147,7 @@
                {isValidating ? (
                  <Loader2 className="h-4 w-4 animate-spin" />
                ) : (
-                 "Apply"
+                  t.actions.apply
                )}
              </Button>
            </motion.div>
