@@ -2,13 +2,14 @@
  import { supabase } from "@/integrations/supabase/client";
  import { useToast } from "@/hooks/use-toast";
  import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
  import { Button } from "@/components/ui/button";
  import { Badge } from "@/components/ui/badge";
  import { Switch } from "@/components/ui/switch";
  import { MotionContainer, MotionStatCard } from "@/components/ui/motion";
  import { 
-   Plus, Tag, Percent, Calendar, Users, TrendingUp, 
+  Plus, Tag, Percent, Calendar, Users, TrendingUp, BarChart3,
    MoreHorizontal, Pencil, Trash2, Copy, Check, Loader2, Package
  } from "lucide-react";
  import {
@@ -19,6 +20,7 @@
  } from "@/components/ui/dropdown-menu";
  import { VoucherFormDialog, VoucherFormData } from "@/components/VoucherFormDialog";
  import { BulkVoucherGeneratorDialog } from "@/components/BulkVoucherGeneratorDialog";
+import { VoucherAnalytics } from "@/components/VoucherAnalytics";
  import {
    Select,
    SelectContent,
@@ -258,7 +260,19 @@
    }
  
    return (
-     <div className="space-y-6">
+    <Tabs defaultValue="management" className="space-y-6">
+      <TabsList>
+        <TabsTrigger value="management" className="gap-2">
+          <Tag className="h-4 w-4" />
+          Management
+        </TabsTrigger>
+        <TabsTrigger value="analytics" className="gap-2">
+          <BarChart3 className="h-4 w-4" />
+          Analytics
+        </TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="management" className="space-y-6">
        {/* Stats */}
        <MotionContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
          <MotionStatCard>
@@ -481,6 +495,11 @@
             fetchCampaigns();
           }}
         />
-     </div>
+      </TabsContent>
+
+      <TabsContent value="analytics">
+        <VoucherAnalytics />
+      </TabsContent>
+    </Tabs>
    );
  };
