@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Save, Loader2, ShoppingCart, Package, Ticket as TicketIcon, Layout, Wallet, Info, ExternalLink, Copy, Check } from "lucide-react";
+import { Tag } from "lucide-react";
 import { usePaymentGateway, PaymentGatewayConfig } from "@/hooks/usePaymentGateway";
 
 interface BusinessRulesState {
@@ -33,6 +34,13 @@ interface BusinessRulesState {
     testimonials_count: number;
     best_seller_period: string;
   };
+  voucher: {
+    enabled: boolean;
+    max_stackable: number;
+    min_order_for_voucher: number;
+    allow_first_order_discount: boolean;
+    show_available_vouchers: boolean;
+  };
 }
 
 const defaultRules: BusinessRulesState = {
@@ -54,6 +62,13 @@ const defaultRules: BusinessRulesState = {
     products_per_page: 12,
     testimonials_count: 6,
     best_seller_period: "month",
+  },
+  voucher: {
+    enabled: true,
+    max_stackable: 1,
+    min_order_for_voucher: 0,
+    allow_first_order_discount: true,
+    show_available_vouchers: true,
   },
 };
 
@@ -207,6 +222,10 @@ export const BusinessRulesEditor = () => {
             <Wallet className="h-4 w-4" />
             Payment
           </TabsTrigger>
+        <TabsTrigger value="voucher" className="gap-2">
+          <Tag className="h-4 w-4" />
+          Voucher
+        </TabsTrigger>
         </TabsList>
       </div>
 
@@ -578,6 +597,86 @@ export const BusinessRulesEditor = () => {
                 <Save className="h-4 w-4 mr-2" />
               )}
               Save Payment Gateway Settings
+            </Button>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Voucher Rules */}
+      <TabsContent value="voucher">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="h-5 w-5" />
+                  Voucher System
+                </CardTitle>
+                <CardDescription>Configure discount voucher settings</CardDescription>
+              </div>
+              <Badge variant={rules.voucher?.enabled ? "default" : "secondary"}>
+                {rules.voucher?.enabled ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+              <div>
+                <Label htmlFor="voucher-enabled" className="text-base font-medium">Enable Voucher System</Label>
+                <p className="text-sm text-muted-foreground">Allow customers to apply discount vouchers</p>
+              </div>
+              <Switch
+                id="voucher-enabled"
+                checked={rules.voucher?.enabled ?? true}
+                onCheckedChange={(checked) => updateRule("voucher", "enabled", checked)}
+              />
+            </div>
+
+            {rules.voucher?.enabled && (
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Label htmlFor="max-stackable">Max Stackable Vouchers</Label>
+                    <Select
+                      value={(rules.voucher?.max_stackable ?? 1).toString()}
+                      onValueChange={(val) => updateRule("voucher", "max_stackable", parseInt(val))}
+                    >
+                      <SelectTrigger id="max-stackable"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1 (Single voucher only)</SelectItem>
+                        <SelectItem value="2">2 vouchers</SelectItem>
+                        <SelectItem value="3">3 vouchers</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="min-order-voucher">Min. Order for Voucher (Rp)</Label>
+                    <Input
+                      id="min-order-voucher"
+                      type="number"
+                      min={0}
+                      value={rules.voucher?.min_order_for_voucher ?? 0}
+                      onChange={(e) => updateRule("voucher", "min_order_for_voucher", parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div>
+                    <Label htmlFor="first-order-discount">Allow First Order Discount</Label>
+                    <p className="text-sm text-muted-foreground">Enable special vouchers for first-time customers</p>
+                  </div>
+                  <Switch
+                    id="first-order-discount"
+                    checked={rules.voucher?.allow_first_order_discount ?? true}
+                    onCheckedChange={(checked) => updateRule("voucher", "allow_first_order_discount", checked)}
+                  />
+                </div>
+              </>
+            )}
+
+            <Button onClick={() => handleSave("voucher")} disabled={saving === "voucher"}>
+              {saving === "voucher" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
+              Save Voucher Settings
             </Button>
           </CardContent>
         </Card>

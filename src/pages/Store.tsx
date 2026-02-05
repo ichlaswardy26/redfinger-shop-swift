@@ -287,7 +287,7 @@ const Store = () => {
     setConfirmDialogOpen(true);
   };
 
-  const handleConfirmOrder = async (paymentMethod: "manual" | "qris" = "manual") => {
+ const handleConfirmOrder = async (paymentMethod: "manual" | "qris" = "manual", voucherId?: string, discountAmount?: number) => {
     if (!selectedProduct || !user) return;
 
     setIsCreatingOrder(true);
@@ -319,6 +319,9 @@ const Store = () => {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + selectedProduct.duration_days);
 
+     const originalAmount = selectedProduct.price * quantity;
+     const finalAmount = originalAmount - (discountAmount || 0);
+ 
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .insert({
@@ -329,6 +332,10 @@ const Store = () => {
           status: "pending",
           payment_status: "pending",
           payment_method: paymentMethod,
+         voucher_id: voucherId || null,
+         discount_amount: discountAmount || 0,
+         original_amount: originalAmount,
+         final_amount: finalAmount,
         })
         .select("id")
         .single();
@@ -340,8 +347,7 @@ const Store = () => {
 
       // Handle QRIS payment
       if (paymentMethod === "qris") {
-        const totalPrice = selectedProduct.price * quantity;
-        const qrData = await createPayment(orderId, totalPrice);
+       const qrData = await createPayment(orderId, finalAmount);
         
         if (qrData) {
           setQrPaymentData(qrData);

@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Wallet, CreditCard, Loader2, QrCode } from "lucide-react";
 import { usePaymentGateway, QRPaymentData } from "@/hooks/usePaymentGateway";
 import { QRPaymentDialog } from "@/components/QRPaymentDialog";
+ import { VoucherInput } from "@/components/VoucherInput";
+ import { ValidatedVoucher } from "@/hooks/useVoucher";
 
 interface Product {
   id: string;
@@ -22,6 +24,7 @@ interface Product {
   description: string | null;
   price: number;
   duration_days: number;
+   category_id?: string | null;
 }
 
 interface OrderConfirmationDialogProps {
@@ -29,7 +32,7 @@ interface OrderConfirmationDialogProps {
   onOpenChange: (open: boolean) => void;
   product: Product | null;
   quantity: number;
-  onConfirm: (paymentMethod: "manual" | "qris") => void;
+   onConfirm: (paymentMethod: "manual" | "qris", voucherId?: string, discountAmount?: number) => void;
   isLoading?: boolean;
   orderId?: string | null;
 }
@@ -46,6 +49,8 @@ export const OrderConfirmationDialog = ({
   const [paymentMethod, setPaymentMethod] = useState<"manual" | "qris">("manual");
   const [qrPaymentData, setQrPaymentData] = useState<QRPaymentData | null>(null);
   const [showQRDialog, setShowQRDialog] = useState(false);
+   const [appliedVoucher, setAppliedVoucher] = useState<ValidatedVoucher | null>(null);
+   const [discountAmount, setDiscountAmount] = useState(0);
   
   const { 
     config, 
@@ -62,24 +67,22 @@ export const OrderConfirmationDialog = ({
       setPaymentMethod("manual");
       setQrPaymentData(null);
       setShowQRDialog(false);
+       setAppliedVoucher(null);
+       setDiscountAmount(0);
     }
   }, [open]);
 
   if (!product) return null;
 
   const totalPrice = product.price * quantity;
+   const finalPrice = totalPrice - discountAmount;
 
   const handleConfirm = async () => {
-    if (paymentMethod === "manual") {
-      onConfirm("manual");
-    } else {
-      // For QRIS, we first create the order, then create payment
-      onConfirm("qris");
-    }
+     onConfirm(paymentMethod, appliedVoucher?.id, discountAmount);
   };
 
   const handleCreateQRISPayment = async (newOrderId: string) => {
-    const qrData = await createPayment(newOrderId, totalPrice);
+     const qrData = await createPayment(newOrderId, finalPrice);
     if (qrData) {
       setQrPaymentData(qrData);
       setShowQRDialog(true);
@@ -97,6 +100,11 @@ export const OrderConfirmationDialog = ({
     // Redirect will be handled by parent component
   };
 
+   const handleVoucherApplied = (voucher: ValidatedVoucher | null, discount: number) => {
+     setAppliedVoucher(voucher);
+     setDiscountAmount(discount);
+   };
+ 
   return (
     <>
       <Dialog open={open && !showQRDialog} onOpenChange={onOpenChange}>
@@ -133,10 +141,35 @@ export const OrderConfirmationDialog = ({
 
             <Separator />
 
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total:</span>
-              <span className="text-primary">Rp {totalPrice.toLocaleString()}</span>
-            </div>
+             {/* Voucher Input */}
+             <VoucherInput
+               orderAmount={totalPrice}
+               productId={product.id}
+               categoryId={product.category_id || undefined}
+               onVoucherApplied={handleVoucherApplied}
+               disabled={isLoading || isCreatingPayment}
+             />
+ 
+             <Separator />
+ 
+             {/* Price Summary */}
+             <div className="space-y-2">
+               <div className="flex justify-between">
+                 <span className="text-muted-foreground">Subtotal:</span>
+                 <span className="font-medium">Rp {totalPrice.toLocaleString()}</span>
+               </div>
+               {discountAmount > 0 && (
+                 <div className="flex justify-between text-primary">
+                   <span>Discount ({appliedVoucher?.code}):</span>
+                   <span className="font-medium">-Rp {discountAmount.toLocaleString()}</span>
+                 </div>
+               )}
+               <Separator />
+               <div className="flex justify-between text-lg font-bold">
+                 <span>Total:</span>
+                 <span className="text-primary">Rp {finalPrice.toLocaleString()}</span>
+               </div>
+             </div>
 
             <Separator />
 
@@ -228,10 +261,10 @@ export const OrderConfirmationDialog = ({
               ) : paymentMethod === "qris" ? (
                 <>
                   <QrCode className="h-4 w-4 mr-2" />
-                  Pay with QRIS
+                   Pay Rp {finalPrice.toLocaleString()}
                 </>
               ) : (
-                "Confirm Order"
+                 `Confirm Order - Rp ${finalPrice.toLocaleString()}`
               )}
             </Button>
           </DialogFooter>

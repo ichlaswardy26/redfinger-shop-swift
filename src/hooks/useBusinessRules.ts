@@ -28,6 +28,13 @@ export interface BusinessRules {
     qris_enabled: boolean;
     auto_delivery: boolean;
   };
+   voucher: {
+     enabled: boolean;
+     max_stackable: number;
+     min_order_for_voucher: number;
+     allow_first_order_discount: boolean;
+     show_available_vouchers: boolean;
+   };
 }
 
 const defaultRules: BusinessRules = {
@@ -57,6 +64,13 @@ const defaultRules: BusinessRules = {
     qris_enabled: true,
     auto_delivery: true,
   },
+   voucher: {
+     enabled: true,
+     max_stackable: 1,
+     min_order_for_voucher: 0,
+     allow_first_order_discount: true,
+     show_available_vouchers: true,
+   },
 };
 
 export const useBusinessRules = () => {

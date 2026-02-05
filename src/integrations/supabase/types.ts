@@ -45,10 +45,13 @@ export type Database = {
         Row: {
           admin_notes: string | null
           created_at: string
+          discount_amount: number | null
           expires_at: string
+          final_amount: number | null
           gateway_expired_at: string | null
           gateway_trx_id: string | null
           id: string
+          original_amount: number | null
           payment_method: string | null
           payment_proof: string | null
           payment_status: string
@@ -61,14 +64,19 @@ export type Database = {
           user_id: string
           verified_at: string | null
           verified_by: string | null
+          voucher_code: string | null
+          voucher_id: string | null
         }
         Insert: {
           admin_notes?: string | null
           created_at?: string
+          discount_amount?: number | null
           expires_at: string
+          final_amount?: number | null
           gateway_expired_at?: string | null
           gateway_trx_id?: string | null
           id?: string
+          original_amount?: number | null
           payment_method?: string | null
           payment_proof?: string | null
           payment_status?: string
@@ -81,14 +89,19 @@ export type Database = {
           user_id: string
           verified_at?: string | null
           verified_by?: string | null
+          voucher_code?: string | null
+          voucher_id?: string | null
         }
         Update: {
           admin_notes?: string | null
           created_at?: string
+          discount_amount?: number | null
           expires_at?: string
+          final_amount?: number | null
           gateway_expired_at?: string | null
           gateway_trx_id?: string | null
           id?: string
+          original_amount?: number | null
           payment_method?: string | null
           payment_proof?: string | null
           payment_status?: string
@@ -101,6 +114,8 @@ export type Database = {
           user_id?: string
           verified_at?: string | null
           verified_by?: string | null
+          voucher_code?: string | null
+          voucher_id?: string | null
         }
         Relationships: [
           {
@@ -108,6 +123,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
             referencedColumns: ["id"]
           },
         ]
@@ -479,6 +501,126 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      voucher_usage: {
+        Row: {
+          created_at: string
+          discount_applied: number
+          id: string
+          order_id: string
+          original_amount: number
+          user_id: string
+          voucher_id: string
+        }
+        Insert: {
+          created_at?: string
+          discount_applied: number
+          id?: string
+          order_id: string
+          original_amount: number
+          user_id: string
+          voucher_id: string
+        }
+        Update: {
+          created_at?: string
+          discount_applied?: number
+          id?: string
+          order_id?: string
+          original_amount?: number
+          user_id?: string
+          voucher_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voucher_usage_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voucher_usage_voucher_id_fkey"
+            columns: ["voucher_id"]
+            isOneToOne: false
+            referencedRelation: "vouchers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vouchers: {
+        Row: {
+          applies_to: string
+          category_ids: string[] | null
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          discount_type: string
+          discount_value: number
+          first_order_only: boolean
+          id: string
+          is_active: boolean
+          max_discount_amount: number | null
+          min_order_amount: number | null
+          name: string
+          per_user_limit: number | null
+          product_ids: string[] | null
+          stackable: boolean
+          updated_at: string
+          usage_count: number
+          usage_limit: number | null
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          applies_to?: string
+          category_ids?: string[] | null
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_type?: string
+          discount_value: number
+          first_order_only?: boolean
+          id?: string
+          is_active?: boolean
+          max_discount_amount?: number | null
+          min_order_amount?: number | null
+          name: string
+          per_user_limit?: number | null
+          product_ids?: string[] | null
+          stackable?: boolean
+          updated_at?: string
+          usage_count?: number
+          usage_limit?: number | null
+          valid_from?: string
+          valid_until: string
+        }
+        Update: {
+          applies_to?: string
+          category_ids?: string[] | null
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          first_order_only?: boolean
+          id?: string
+          is_active?: boolean
+          max_discount_amount?: number | null
+          min_order_amount?: number | null
+          name?: string
+          per_user_limit?: number | null
+          product_ids?: string[] | null
+          stackable?: boolean
+          updated_at?: string
+          usage_count?: number
+          usage_limit?: number | null
+          valid_from?: string
+          valid_until?: string
         }
         Relationships: []
       }
