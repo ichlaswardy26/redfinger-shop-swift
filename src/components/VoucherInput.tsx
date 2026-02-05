@@ -5,6 +5,9 @@
  import { Badge } from "@/components/ui/badge";
  import { Loader2, Tag, X, CheckCircle, Percent } from "lucide-react";
  import { useVoucher, ValidatedVoucher } from "@/hooks/useVoucher";
+ import { useAvailableVouchers } from "@/hooks/useAvailableVouchers";
+ import { useBusinessRule } from "@/hooks/useBusinessRules";
+ import { AvailableVouchersList } from "@/components/AvailableVouchersList";
  import { motion, AnimatePresence } from "framer-motion";
  
  interface VoucherInputProps {
@@ -25,8 +28,31 @@
    const [code, setCode] = useState("");
    const { validateVoucher, clearVoucher, isValidating, validatedVoucher, discountAmount } = useVoucher();
  
+   // Fetch business rules for show_available_vouchers setting
+   const { data: voucherSettings } = useBusinessRule("voucher");
+   const showAvailableVouchers = voucherSettings?.show_available_vouchers ?? true;
+ 
+   // Fetch available vouchers
+   const {
+     vouchers: availableVouchers,
+     isLoading: isLoadingVouchers,
+   } = useAvailableVouchers(
+     orderAmount,
+     productId,
+     categoryId,
+     showAvailableVouchers && !validatedVoucher
+   );
+ 
    const handleApply = async () => {
      const result = await validateVoucher(code, orderAmount, productId, categoryId);
+     if (result.valid && result.voucher) {
+       onVoucherApplied(result.voucher, result.discount_amount || 0);
+     }
+   };
+ 
+   const handleApplyFromSuggestion = async (voucherCode: string) => {
+     setCode(voucherCode);
+     const result = await validateVoucher(voucherCode, orderAmount, productId, categoryId);
      if (result.valid && result.voucher) {
        onVoucherApplied(result.voucher, result.discount_amount || 0);
      }
@@ -126,6 +152,16 @@
            </motion.div>
          )}
        </AnimatePresence>
+ 
+       {/* Available vouchers suggestions */}
+       {showAvailableVouchers && !validatedVoucher && (
+         <AvailableVouchersList
+           vouchers={availableVouchers}
+           isLoading={isLoadingVouchers}
+           onApply={handleApplyFromSuggestion}
+           disabled={disabled || isValidating}
+         />
+       )}
      </div>
    );
  };
