@@ -1,271 +1,372 @@
 
-
-# Admin/Staff Sidebar Navigation Implementation
+# Complete Indonesian Translation Implementation
 
 ## Overview
 
-Replace the horizontal tab navigation in Admin.tsx and Staff.tsx with a modern grouped vertical sidebar using the existing Shadcn sidebar components. This will improve navigation, especially on desktop, while maintaining mobile accessibility through a collapsible drawer.
+This plan covers the translation of all remaining pages and components to Indonesian using the centralized `src/lib/translations.ts` file. The translation file already contains comprehensive Indonesian translations - we now need to apply them consistently across all UI.
 
 ---
 
-## Current State Analysis
+## Current Translation Status
 
-### Admin.tsx (1273 lines)
-- Uses horizontal `Tabs` with 10 tab triggers
-- TabsList is cramped on mobile (requires horizontal scroll)
-- No visual grouping of related functions
-- All content sections embedded in one large component
+### Already Translated (Previously Completed)
+- `src/pages/SignIn.tsx` - Auth translations applied
+- `src/pages/SignUp.tsx` - Auth translations applied
+- `src/pages/ForgotPassword.tsx` - Auth translations applied
+- `src/pages/ResetPassword.tsx` - Auth translations applied
+- `src/pages/NotFound.tsx` - UI translations applied
+- `src/components/CopyButton.tsx` - Action translations applied
+- `src/components/VoucherInput.tsx` - Voucher translations applied
+- `src/components/AvailableVouchersList.tsx` - Voucher suggestions translated
 
-### Staff.tsx (524 lines)  
-- Similar horizontal tabs approach with 4 tabs
-- Same mobile usability issues
-- No descriptive empty states
-
-### Available Sidebar Components
-The project already has a full `src/components/ui/sidebar.tsx` with:
-- `SidebarProvider` - Context and state management
-- `Sidebar` - Main container with mobile Sheet support
-- `SidebarTrigger` - Toggle button
-- `SidebarHeader/Footer/Content` - Layout sections
-- `SidebarGroup/GroupLabel/GroupContent` - Grouping
-- `SidebarMenu/MenuItem/MenuButton` - Navigation items
-- `useSidebar` hook - Access sidebar state
+### Still Using English (Needs Translation)
+- **Pages**: Index.tsx, Store.tsx, Transactions.tsx, Analytics.tsx
+- **Components**: ProductCard.tsx, OrderCard.tsx, OrderConfirmationDialog.tsx, TrustIndicators.tsx, FAQSection.tsx, FloatingChatButton.tsx, TicketDialog.tsx, RatingDialog.tsx, Navbar.tsx, and others
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Create AdminSidebar Component
+### Phase 1: Core Public Pages
 
-**New File: `src/components/AdminSidebar.tsx`**
+#### 1.1 Update Index.tsx (Landing Page)
+Add import and translate all hardcoded English text:
 
-Features:
-- Grouped navigation by category (Ikhtisar, Produk, Operasional, Sistem)
-- Active state highlighting with visual indicator
-- Notification badges for pending items (orders, tickets)
-- Uses existing Shadcn sidebar primitives
-- Indonesian labels from translations.ts
+| Current English | Indonesian Translation |
+|-----------------|------------------------|
+| "Our Plans" | settings.products.title (from web_settings) |
+| "days" | `{t.products.daysValidity}` |
+| "Instant Digital Delivery" | `{t.products.instantDelivery}` |
+| "24/7 Support" | `{t.trust.support24_7}` |
+| "/day" | `{t.products.perDay}` |
+| "View All Plans" | `{t.store.title}` (Lihat Semua Paket) |
+| "BEST" (ribbon) | `{t.products.bestSeller}` |
 
-```text
-Structure:
-┌─────────────────┐
-│  Site Logo      │
-├─────────────────┤
-│  IKHTISAR       │
-│  ├ Dasbor       │
-│  └ Analitik     │
-│                 │
-│  PRODUK         │
-│  ├ Produk       │
-│  ├ Kategori     │
-│  ├ Kode         │
-│  └ Voucher      │
-│                 │
-│  OPERASIONAL    │
-│  ├ Pesanan (12) │ ← Badge for pending
-│  ├ Tiket (5)    │ ← Badge for open
-│  └ Ulasan       │
-│                 │
-│  SISTEM         │
-│  ├ Pengguna     │
-│  └ Pengaturan   │
-├─────────────────┤
-│  Collapse       │
-└─────────────────┘
+**Note**: Most landing page content comes from `web_settings` database, which admin can customize. Only fallback defaults need translation.
+
+#### 1.2 Update Store.tsx (Shop Page)
+```typescript
+// Add import
+import { t } from "@/lib/translations";
+
+// Translations needed:
+"All" → t.ui.all
+"Products" → t.store.products
+"Total Products" → t.store.stats.totalProducts
+"Categories" → t.store.stats.categories
+"Happy Customers" → t.store.stats.happyCustomers
+"All Products" → t.store.allProducts
+"Load More" → t.store.loadMore
+"Showing X of Y" → `${t.store.showing} ${count} ${t.store.of} ${total}`
+"Authentication required" → (add to translations)
+"Please sign in to purchase" → (add to translations)
+"Insufficient stock" → t.status.lowStock
+"Out of stock" → t.status.outOfStock
+"Order created successfully!" → t.checkout.orderCreated
 ```
 
-Props interface:
+#### 1.3 Update Transactions.tsx (My Orders Page)
 ```typescript
-interface AdminSidebarProps {
-  activeSection: string;
-  onSectionChange: (section: string) => void;
-  pendingOrdersCount: number;
-  openTicketsCount: number;
+// Translations needed:
+"My Dashboard" → t.transactions.myDashboard
+"My Support Tickets" → t.tickets.myTickets
+"View and track your support requests" → t.tickets.viewTrack
+"Created:" → t.tickets.created
+"Resolved:" → t.tickets.resolved
+"My Orders" → t.transactions.title
+"View and manage your orders" → t.transactions.subtitle
+"Search by product or status..." → t.transactions.searchPlaceholder
+"Show:" → t.transactions.show
+"No orders yet..." → t.transactions.noOrdersDesc
+"No orders match your search" → t.transactions.noOrdersMatch
+"First" → t.table.first
+"Last" → t.table.last
+"Page X of Y" → `${t.ui.page} ${page} ${t.ui.ofPages} ${total}`
+"Upload Payment Proof" → t.transactions.uploadPaymentProof
+"Payment Proof Image" → t.transactions.paymentProofImage
+"Upload Proof" → t.transactions.uploadProofButton
+"Success" → t.toasts.success
+"Payment proof uploaded successfully" → t.transactions.proofUploadedSuccess
+"Order cancelled" → t.transactions.orderCancelled
+"Are you sure you want to cancel this order?" → t.transactions.confirmCancelOrder
+```
+
+---
+
+### Phase 2: Key UI Components
+
+#### 2.1 Update ProductCard.tsx
+```typescript
+// Add import
+import { t } from "@/lib/translations";
+
+// Translations:
+"Best Seller" / "Top" → t.products.bestSeller
+"New" → t.products.new
+"Save X%" → `${t.products.savePercent} ${percent}%`
+"Available" / "Out of Stock" → t.status.available / t.status.outOfStock
+"days validity" → t.products.daysValidity
+"Digital Redeem Code" → t.products.digitalRedeemCode
+"Instant Delivery" → t.products.instantDelivery
+"Only X left!" → `${t.products.onlyLeft} ${count}!`
+"Low stock - X remaining" → `${t.status.lowStock} - ${count} ${t.stockManagement.inStock}`
+"/day" → t.products.perDay
+"Sign In to Purchase" → t.products.signInToPurchase
+"Out of Stock" → t.products.outOfStock
+"Purchase Now" / "Purchase (xN)" → t.products.purchaseNow
+```
+
+#### 2.2 Update OrderCard.tsx
+```typescript
+// Translations:
+"Quantity:" → `${t.orders.quantity}:`
+"days" → (use duration_days directly)
+"Order Date" → t.orders.orderCreated
+"Expires" → t.status.expired
+"Redeem Codes:" → `${t.orders.redeemCodes}:`
+"Download TXT" → t.actions.download
+"codes available..." → `{count} ${t.codeInventory.code.toLowerCase()} ${t.status.available.toLowerCase()}`
+"Rejection Reason:" → `${t.orders.rejectionReason}:`
+"Support Ticket" → t.tickets.title
+"QRIS Expired" → "QRIS Kedaluwarsa"
+"Waiting for QRIS Payment" → "Menunggu Pembayaran QRIS"
+"Expires" → t.status.expired
+"Rate" → t.ratings.rateProduct
+"Redeem" → "Redeem" (keep as-is, brand name)
+"Upload" → t.actions.upload
+"Cancel" → t.actions.cancel
+"Pay Now" → "Bayar Sekarang"
+"Check" → "Cek"
+"New QR" → "QR Baru"
+"Create Ticket" → t.tickets.createTicket
+```
+
+#### 2.3 Update OrderConfirmationDialog.tsx
+```typescript
+// Translations:
+"Confirm Your Order" → t.checkout.title
+"Review your order details..." → (add to translations)
+"Product:" → `${t.checkout.product}:`
+"Duration:" → `${t.products.duration}:`
+"Quantity:" → `${t.checkout.quantity}:`
+"Price per item:" → `${t.checkout.unitPrice}:`
+"Subtotal:" → `${t.checkout.subtotal}:`
+"Discount" → `${t.checkout.discount}`
+"Total:" → `${t.checkout.total}:`
+"Payment Method" → t.checkout.paymentMethod
+"Bank Transfer (Manual)" → "Transfer Bank (Manual)"
+"Transfer and upload payment proof..." → "Transfer dan unggah bukti pembayaran untuk verifikasi"
+"QRIS (Instant)" → "QRIS (Instan)"
+"Recommended" → "Disarankan"
+"Pay with any e-wallet..." → "Bayar dengan e-wallet apapun (GoPay, OVO, DANA, dll.)"
+"Next Steps:" → "Langkah Selanjutnya:"
+(step instructions) → Full Indonesian translation
+"Cancel" → t.actions.cancel
+"Creating Order..." → t.checkout.creatingOrder
+"Pay Rp X" → `Bayar Rp ${amount}`
+"Confirm Order - Rp X" → `${t.actions.confirm} ${t.orders.title} - Rp ${amount}`
+```
+
+#### 2.4 Update TrustIndicators.tsx
+```typescript
+// Translations:
+"Happy Customers" → t.store.stats.happyCustomers
+"Orders Completed" → "Pesanan Selesai"
+"Average Rating" → "Rata-rata Penilaian"
+"Success Rate" → "Tingkat Keberhasilan"
+```
+
+#### 2.5 Update FAQSection.tsx
+```typescript
+// Translations for default FAQs:
+"What is a Cloud Phone?" → "Apa itu Cloud Phone?"
+"How do I redeem my code?" → "Bagaimana cara menukarkan kode saya?"
+"What payment methods..." → "Metode pembayaran apa yang diterima?"
+(all default FAQ content translated to Indonesian)
+```
+
+#### 2.6 Update FloatingChatButton.tsx
+```typescript
+// Translations:
+"Chat with us" → t.chat.chatWithUs
+```
+
+#### 2.7 Update TicketDialog.tsx
+```typescript
+// Translations:
+"Create Support Ticket" → t.tickets.createTicket
+"Describe your issue..." → "Jelaskan masalah Anda dan kami akan membantu menyelesaikannya"
+"Subject" → t.tickets.subject
+"Brief description of the issue" → "Deskripsi singkat masalah"
+"characters" → "karakter"
+"Description" → t.tickets.description
+"Please provide detailed..." → "Mohon berikan informasi detail tentang masalah Anda"
+"Attachment (optional)" → `${t.tickets.attachment} (${t.ui.optional})`
+"Supported: JPG, PNG..." → "Didukung: JPG, PNG, MP4, WebM, MOV, PDF (maks 10MB)"
+"Choose file" → "Pilih file"
+"Cancel" → t.actions.cancel
+"Submitting..." → "Mengirim..."
+"Submit Ticket" → t.actions.submit
+"Ticket created" → t.tickets.ticketCreated
+"Your support ticket has been submitted..." → "Tiket dukungan Anda berhasil dikirim"
+"Rate Limit Exceeded" → "Batas Pengiriman Tercapai"
+"You can only create 5 tickets per hour..." → "Anda hanya dapat membuat 5 tiket per jam. Silakan coba lagi nanti."
+```
+
+#### 2.8 Update RatingDialog.tsx
+```typescript
+// Translations:
+"Your Rating" → t.ratings.yourRating
+"Rate {productName}" → `${t.ratings.rateProduct} ${productName}`
+"You have already rated..." → "Anda sudah memberikan penilaian untuk produk ini. Penilaian tidak dapat diubah."
+"Share your experience..." → "Bagikan pengalaman Anda dengan produk ini"
+"Review (optional)" → `${t.ratings.review} (${t.ui.optional})`
+"Tell us about your experience..." → "Ceritakan pengalaman Anda..."
+"characters" → "karakter"
+"Close" → t.actions.close
+"Submitting..." → "Mengirim..."
+"Submit Rating" → t.ratings.submitRating
+"Please select a rating" → "Silakan pilih penilaian"
+"You have already rated..." → "Anda sudah memberikan penilaian untuk produk ini."
+"You must be logged in..." → "Anda harus masuk untuk memberikan penilaian"
+"Thank you for your rating!" → t.ratings.thankYou
+"Failed to submit rating" → "Gagal mengirim penilaian"
+```
+
+#### 2.9 Update Navbar.tsx
+```typescript
+// Translations:
+"Store" → t.nav.store
+"My Orders" → t.nav.myOrders
+"Staff" → t.nav.staff
+"Admin" → t.nav.admin
+"Sign In" → t.nav.signIn
+"Sign Up" → t.nav.signUp
+"Sign Out" → t.nav.signOut
+```
+
+---
+
+### Phase 3: Additional Components
+
+#### 3.1 DataTableFilters.tsx
+- Search placeholder → t.table.search
+- Filter labels → t.table.filter
+- Reset → t.table.reset
+- Export → t.table.export
+- Active filters → t.table.activeFilters
+
+#### 3.2 DataTablePagination.tsx
+- "Showing X of Y entries" → `${t.table.showing} ${start}-${end} ${t.table.of} ${total} ${t.table.entries}`
+- First/Last/Previous/Next → t.table.first/last/previous/next
+
+#### 3.3 QRPaymentDialog.tsx
+- Payment instructions → Indonesian
+- "Scan QR code..." → "Pindai kode QR untuk membayar"
+- Payment deadline labels → Indonesian
+
+#### 3.4 BulkVoucherGeneratorDialog.tsx
+- All voucher generation labels → t.vouchers.bulk.*
+
+#### 3.5 VoucherManager.tsx
+- Management labels → t.vouchers.*
+- Form fields → Indonesian
+
+#### 3.6 VoucherAnalytics.tsx
+- Analytics labels → t.vouchers.analyticsLabels.*
+
+---
+
+### Phase 4: Update translations.ts with Missing Keys
+
+Add any missing translation keys discovered during implementation:
+
+```typescript
+// Add to auth section
+auth: {
+  ...existing,
+  authRequired: "Autentikasi diperlukan",
+  pleaseSignIn: "Silakan masuk untuk melanjutkan",
+}
+
+// Add to store section
+store: {
+  ...existing,
+  viewAllPlans: "Lihat Semua Paket",
+}
+
+// Add to transactions section
+transactions: {
+  ...existing,
+  myDashboard: "Dasbor Saya",
+  noOrdersMatch: "Tidak ada pesanan yang cocok dengan pencarian Anda.",
+  searchPlaceholder: "Cari berdasarkan produk atau status...",
+  show: "Tampilkan",
+  page: "Halaman",
+  first: "Pertama",
+  last: "Terakhir",
+}
+
+// Add to checkout section
+checkout: {
+  ...existing,
+  reviewDetails: "Tinjau detail pesanan Anda sebelum melanjutkan ke pembayaran",
+  nextSteps: "Langkah Selanjutnya",
+  recommended: "Disarankan",
+  payNow: "Bayar Sekarang",
+  confirmOrderAmount: "Konfirmasi Pesanan",
+}
+
+// Add to trust section
+trust: {
+  ...existing,
+  ordersCompleted: "Pesanan Selesai",
+  averageRating: "Rata-rata Penilaian",
+  successRate: "Tingkat Keberhasilan",
 }
 ```
 
-### Phase 2: Create StaffSidebar Component
-
-**New File: `src/components/StaffSidebar.tsx`**
-
-Simpler version with limited menu items:
-- Tiket (with open count badge)
-- Pesanan (with pending count badge)
-- Ulasan
-- Stok Produk
-
-Same pattern as AdminSidebar but fewer groups.
-
-### Phase 3: Refactor Admin.tsx Layout
-
-**File: `src/pages/Admin.tsx`**
-
-Changes:
-1. Replace `Tabs` with `SidebarProvider` layout
-2. Add state: `activeSection` to control which content shows
-3. Desktop: Fixed sidebar (256px) + scrollable content
-4. Mobile: Sheet drawer triggered by hamburger menu
-5. Remove TabsList/TabsTrigger - replace with sidebar navigation
-6. Convert TabsContent sections to conditional rendering based on activeSection
-
-Layout structure:
-```tsx
-<SidebarProvider>
-  <div className="flex min-h-screen w-full">
-    <AdminSidebar 
-      activeSection={activeSection}
-      onSectionChange={setActiveSection}
-      pendingOrdersCount={stats.pendingPayments}
-      openTicketsCount={openTicketsCount}
-    />
-    <main className="flex-1">
-      <header className="...">
-        <SidebarTrigger /> {/* Mobile toggle */}
-        <h1>{t.admin.title}</h1>
-      </header>
-      <div className="p-6">
-        {activeSection === 'dashboard' && <DashboardContent />}
-        {activeSection === 'orders' && <OrdersContent />}
-        {/* ... other sections */}
-      </div>
-    </main>
-  </div>
-</SidebarProvider>
-```
-
-### Phase 4: Refactor Staff.tsx Layout
-
-**File: `src/pages/Staff.tsx`**
-
-Apply same sidebar treatment:
-1. Replace Tabs with SidebarProvider
-2. Use StaffSidebar component
-3. Add descriptive empty states with icons
-4. Mobile sheet drawer navigation
-
-### Phase 5: Apply Indonesian Translations
-
-Both Admin.tsx and Staff.tsx will use labels from `t.admin.sections` and `t.staff`:
-- All sidebar labels in Indonesian
-- All content headings translated
-- Status badges translated
-- Toast messages translated
-
 ---
 
-## Component Structure
+## Files to Modify
 
-### AdminSidebar.tsx
-
-```tsx
-// Key sections with icons and badges
-const menuGroups = [
-  {
-    label: t.admin.groups.overview,
-    items: [
-      { id: 'dashboard', label: t.admin.sections.dashboard, icon: LayoutDashboard },
-      { id: 'analytics', label: t.admin.sections.analytics, icon: BarChart3, href: '/admin/analytics' },
-    ]
-  },
-  {
-    label: t.admin.groups.productManagement,
-    items: [
-      { id: 'products', label: t.admin.sections.products, icon: Package },
-      { id: 'categories', label: t.admin.sections.categories, icon: Layers },
-      { id: 'code-inventory', label: t.admin.sections.codeInventory, icon: Code },
-      { id: 'vouchers', label: t.admin.sections.vouchers, icon: Tag },
-    ]
-  },
-  {
-    label: t.admin.groups.operations,
-    items: [
-      { id: 'orders', label: t.admin.sections.orders, icon: ShoppingCart, badge: pendingOrdersCount },
-      { id: 'tickets', label: t.admin.sections.tickets, icon: Ticket, badge: openTicketsCount },
-      { id: 'ratings', label: t.admin.sections.ratings, icon: Star },
-    ]
-  },
-  {
-    label: t.admin.groups.system,
-    items: [
-      { id: 'users', label: t.admin.sections.users, icon: Users },
-      { id: 'settings', label: t.admin.sections.settings, icon: Cog },
-    ]
-  }
-];
-```
-
-### Visual Design
-
-- Neo-brutalism glassmorphism style matching app theme
-- Border-2 border-border on sidebar
-- Glass effect background: bg-background/70 backdrop-blur
-- Active item: bg-primary text-primary-foreground with left border accent
-- Hover: bg-accent transition-colors
-- Badge: animate-pulse for urgent items
-
----
-
-## Files to Create/Modify
-
-| File | Action | Description |
-|------|--------|-------------|
-| `src/components/AdminSidebar.tsx` | Create | New grouped sidebar navigation for Admin |
-| `src/components/StaffSidebar.tsx` | Create | Simplified sidebar for Staff |
-| `src/pages/Admin.tsx` | Modify | Replace Tabs with SidebarProvider layout, use AdminSidebar, translate all text |
-| `src/pages/Staff.tsx` | Modify | Replace Tabs with SidebarProvider layout, use StaffSidebar, translate all text |
-
----
-
-## Mobile Experience
-
-### Mobile Navigation Flow
-1. User sees hamburger icon (SidebarTrigger) in header
-2. Tap opens Sheet from left side
-3. Same grouped menu structure
-4. Tap menu item → closes sheet + navigates to section
-5. Content area takes full width
-
-### Touch Optimizations
-- Menu items: min-height 44px for touch targets
-- Adequate padding (p-3) for finger taps
-- Visual feedback on touch (active state)
-
----
-
-## Accessibility Considerations
-
-1. Keyboard navigation support via sidebar primitives
-2. Screen reader labels for all menu items
-3. Proper focus management when sidebar opens/closes
-4. ARIA attributes for active state indication
-5. High contrast notification badges
+| File | Action | Priority |
+|------|--------|----------|
+| `src/lib/translations.ts` | Add missing keys | High |
+| `src/pages/Index.tsx` | Apply translations | High |
+| `src/pages/Store.tsx` | Apply translations | High |
+| `src/pages/Transactions.tsx` | Apply translations | High |
+| `src/components/ProductCard.tsx` | Apply translations | High |
+| `src/components/OrderCard.tsx` | Apply translations | High |
+| `src/components/OrderConfirmationDialog.tsx` | Apply translations | High |
+| `src/components/TrustIndicators.tsx` | Apply translations | Medium |
+| `src/components/FAQSection.tsx` | Apply translations (defaults) | Medium |
+| `src/components/FloatingChatButton.tsx` | Apply translations | Medium |
+| `src/components/TicketDialog.tsx` | Apply translations | Medium |
+| `src/components/RatingDialog.tsx` | Apply translations | Medium |
+| `src/components/Navbar.tsx` | Apply translations | High |
+| `src/components/DataTableFilters.tsx` | Apply translations | Medium |
+| `src/components/DataTablePagination.tsx` | Apply translations | Medium |
+| `src/components/QRPaymentDialog.tsx` | Apply translations | Medium |
+| `src/components/VoucherManager.tsx` | Apply translations | Low |
+| `src/components/VoucherAnalytics.tsx` | Apply translations | Low |
+| `src/components/BulkVoucherGeneratorDialog.tsx` | Apply translations | Low |
 
 ---
 
 ## Implementation Order
 
-1. **Create AdminSidebar.tsx** - Build the sidebar component with all groups and menu items
-2. **Refactor Admin.tsx** - Integrate sidebar, replace tabs with state-based rendering, translate UI
-3. **Create StaffSidebar.tsx** - Build simplified staff version
-4. **Refactor Staff.tsx** - Same treatment as Admin
-5. **Test mobile responsiveness** - Verify sheet behavior and touch targets
+1. **First**: Update `translations.ts` with all missing keys
+2. **Second**: Translate core pages (Index, Store, Transactions)
+3. **Third**: Translate key components (ProductCard, OrderCard, OrderConfirmationDialog, Navbar)
+4. **Fourth**: Translate secondary components (TrustIndicators, FAQSection, dialogs)
+5. **Fifth**: Translate admin/staff components (VoucherManager, analytics)
 
 ---
 
-## Technical Notes
+## Estimated Changes
 
-### State Management
-- `activeSection` state replaces tabs' internal state
-- Sidebar state (expanded/collapsed) managed by SidebarProvider
-- Mobile state (openMobile) handled automatically by Sidebar component
-
-### Performance
-- Content sections can be lazy-loaded with React.lazy if needed
-- Badge counts already fetched via existing realtime subscriptions
-- No additional API calls required
-
-### Backward Compatibility
-- URL paths remain unchanged
-- Analytics link still navigates to `/admin/analytics`
-- All existing functionality preserved
-
+- **translations.ts**: ~50 new translation keys
+- **Pages**: 3 files (~300 string replacements)
+- **Components**: 15+ files (~400 string replacements)
+- **Total**: ~700 hardcoded English strings → Indonesian
