@@ -3,7 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { t } from "@/lib/translations";
 import Navbar from "@/components/Navbar";
+import { AdminSidebar } from "@/components/AdminSidebar";
 import StockManagement from "@/components/StockManagement";
 import CopyButton from "@/components/CopyButton";
 import { StockActivityLog } from "@/components/StockActivityLog";
@@ -23,6 +25,7 @@ import { exportToCSV } from "@/lib/exportUtils";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,8 +37,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { MotionStatCard, MotionContainer, MotionItem, MotionPage, motion } from "@/components/ui/motion";
 import { PaymentProofLink } from "@/components/PaymentProofLink";
 import { 
-  ShoppingCart, Users, Package, LayoutDashboard, CheckCircle, XCircle, Clock, Search, 
-  ExternalLink, AlertTriangle, Ticket, Star, Settings, History, Eye, MessageSquare, BarChart3, Layers, ListChecks, Code, Cog, Tag
+  ShoppingCart, Users, Package, CheckCircle, Clock, LayoutDashboard,
+  AlertTriangle, Star, MessageSquare, BarChart3, ListChecks, Code, Ticket, Layers, Tag, Cog
 } from "lucide-react";
 import { 
   useReactTable, 
@@ -147,6 +150,7 @@ const Admin = () => {
   
   // Bulk verification
   const [bulkVerifyOpen, setBulkVerifyOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("dashboard");
   // Filters
   const [orderSearch, setOrderSearch] = useState("");
   const [orderStatusFilter, setOrderStatusFilter] = useState("all");
@@ -170,6 +174,11 @@ const Admin = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { settings: siteSettings } = useSiteSettings();
+
+  // Calculate open tickets count for badge
+  const openTicketsCount = useMemo(() => {
+    return tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length;
+  }, [tickets]);
 
   useEffect(() => {
     checkAdminAccess();
