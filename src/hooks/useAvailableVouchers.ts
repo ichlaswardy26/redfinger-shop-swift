@@ -1,4 +1,4 @@
- import { useState, useEffect, useCallback } from "react";
+ import { useState, useEffect, useCallback, useRef } from "react";
  import { supabase } from "@/integrations/supabase/client";
  
  export interface AvailableVoucher {
@@ -31,11 +31,39 @@
    const [vouchers, setVouchers] = useState<AvailableVoucher[]>([]);
    const [isLoading, setIsLoading] = useState(false);
    const [error, setError] = useState<string | null>(null);
+   
+   // Caching refs
+   const cacheRef = useRef<{
+     data: AvailableVoucher[];
+     timestamp: number;
+     params: { orderAmount: number; productId: string; categoryId?: string };
+   } | null>(null);
+   
+   const CACHE_TTL = 30000; // 30 seconds
+   const AMOUNT_THRESHOLD = 0.05; // 5% change threshold
  
    const fetchVouchers = useCallback(async () => {
      if (!enabled || orderAmount <= 0 || !productId) {
        setVouchers([]);
        return;
+     }
+     
+     // Check cache validity
+     if (cacheRef.current) {
+       const { data, timestamp, params } = cacheRef.current;
+       const cacheAge = Date.now() - timestamp;
+       const amountChange = Math.abs(orderAmount - params.orderAmount) / params.orderAmount;
+       
+       // Use cache if: within TTL, same product/category, and amount change < 5%
+       if (
+         cacheAge < CACHE_TTL &&
+         params.productId === productId &&
+         params.categoryId === categoryId &&
+         amountChange < AMOUNT_THRESHOLD
+       ) {
+         setVouchers(data);
+         return;
+       }
      }
  
      setIsLoading(true);
@@ -61,6 +89,13 @@
        }
  
        setVouchers(data?.vouchers || []);
+       
+       // Update cache
+       cacheRef.current = {
+         data: data?.vouchers || [],
+         timestamp: Date.now(),
+         params: { orderAmount, productId, categoryId },
+       };
      } catch (err) {
        console.error("Error fetching available vouchers:", err);
        setError("Failed to load available vouchers");
@@ -73,7 +108,7 @@
    useEffect(() => {
      const debounceTimer = setTimeout(() => {
        fetchVouchers();
-     }, 300);
+     }, 500);
  
      return () => clearTimeout(debounceTimer);
    }, [fetchVouchers]);
