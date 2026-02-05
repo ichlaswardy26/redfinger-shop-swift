@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Users, ShoppingCart, Star, TrendingUp } from "lucide-react";
+import { t } from "@/lib/translations";
 
 interface Stats {
   totalCustomers: number;
@@ -61,22 +62,22 @@ export const TrustIndicators = () => {
     {
       icon: <Users className="h-6 w-6" />,
       value: stats.totalCustomers.toLocaleString() + "+",
-      label: "Happy Customers",
+      label: t.store.stats.happyCustomers,
     },
     {
       icon: <ShoppingCart className="h-6 w-6" />,
       value: stats.totalOrders.toLocaleString() + "+",
-      label: "Orders Completed",
+      label: t.additional.ordersCompleted,
     },
     {
       icon: <Star className="h-6 w-6" />,
       value: stats.averageRating > 0 ? `${stats.averageRating}/5` : "N/A",
-      label: "Average Rating",
+      label: t.additional.averageRating,
     },
     {
       icon: <TrendingUp className="h-6 w-6" />,
       value: stats.successRate + "%",
-      label: "Success Rate",
+      label: t.additional.successRateLabel,
     },
   ];
 

@@ -1,5 +1,6 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { HelpCircle } from "lucide-react";
+import { t } from "@/lib/translations";
 
 interface FAQItem {
   question: string;
@@ -12,36 +13,11 @@ interface FAQSectionProps {
   items?: FAQItem[];
 }
 
-const defaultFAQs: FAQItem[] = [
-  {
-    question: "What is a Cloud Phone?",
-    answer: "A cloud phone is a virtual Android device that runs 24/7 on our servers. You can access it from any device, anywhere in the world, without draining your phone's battery or storage."
-  },
-  {
-    question: "How do I redeem my code?",
-    answer: "After your payment is verified, you'll receive a unique redeem code. Open the cloud phone app, go to Settings > Redeem Code, and enter your code to activate your subscription."
-  },
-  {
-    question: "What payment methods do you accept?",
-    answer: "We accept bank transfers and various e-wallet payments. Simply place your order, upload your payment proof, and our team will verify it within 24 hours."
-  },
-  {
-    question: "Can I use multiple cloud phones?",
-    answer: "Yes! You can purchase multiple codes to run multiple cloud phone instances simultaneously. Each code gives you access to one cloud phone device."
-  },
-  {
-    question: "What happens when my subscription expires?",
-    answer: "Your cloud phone data will be preserved for a grace period. You can renew your subscription to continue using the same device, or your data will be deleted after the grace period ends."
-  },
-  {
-    question: "How do I contact support?",
-    answer: "You can create a support ticket from your Transactions page after placing an order. Our team typically responds within 24 hours."
-  }
-];
+const defaultFAQs: FAQItem[] = t.defaultFaq as FAQItem[];
 
 export const FAQSection = ({ 
-  title = "Frequently Asked Questions",
-  subtitle = "Everything you need to know about our services",
+  title = t.faq.title,
+  subtitle = t.faq.subtitle,
   items = defaultFAQs 
 }: FAQSectionProps) => {
   return (

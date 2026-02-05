@@ -2,6 +2,7 @@ import { Table } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { t } from "@/lib/translations";
 
 interface DataTablePaginationProps<TData> {
   table: Table<TData>;
@@ -17,7 +18,7 @@ export function DataTablePagination<TData>({ table, showRowCount = true }: DataT
   if (totalRows === 0) {
     return (
       <div className="flex items-center justify-center px-2 py-4">
-        <p className="text-sm text-muted-foreground">No results found</p>
+        <p className="text-sm text-muted-foreground">{t.table.noResults}</p>
       </div>
     );
   }
@@ -32,7 +33,7 @@ export function DataTablePagination<TData>({ table, showRowCount = true }: DataT
         )}
         <div className="flex items-center gap-2">
           <p className="text-sm text-muted-foreground">
-            Rows per page
+            {t.additional.rowsPerPageLabel}
           </p>
           <Select
             value={`${table.getState().pagination.pageSize}`}
@@ -56,7 +57,7 @@ export function DataTablePagination<TData>({ table, showRowCount = true }: DataT
       
       <div className="flex items-center gap-2">
         <div className="text-sm text-muted-foreground">
-          Page {currentPage} of {pageCount || 1}
+          {t.ui.page} {currentPage} {t.ui.ofPages} {pageCount || 1}
         </div>
         <div className="flex items-center gap-1">
           <Button

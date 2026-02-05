@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { QrCode, ExternalLink, RefreshCw, Clock, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { QRPaymentData } from "@/hooks/usePaymentGateway";
+import { t } from "@/lib/translations";
 
 interface QRPaymentDialogProps {
   open: boolean;
@@ -100,10 +101,10 @@ export const QRPaymentDialog = ({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <QrCode className="h-5 w-5" />
-            QRIS Payment
+            {t.qrPayment.title}
           </DialogTitle>
           <DialogDescription>
-            Scan the QR code with your e-wallet to complete payment
+            {t.qrPayment.scanToComplete}
           </DialogDescription>
         </DialogHeader>
 
@@ -119,22 +120,22 @@ export const QRPaymentDialog = ({
           {isExpired && paymentStatus !== "verified" && (
             <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg">
               <XCircle className="h-5 w-5" />
-              <span className="font-medium">QR Code Expired</span>
+              <span className="font-medium">{t.qrPayment.expired}</span>
             </div>
           )}
 
           {/* Order Summary */}
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Product:</span>
+              <span className="text-muted-foreground">{t.checkout.product}:</span>
               <span className="font-medium">{productName}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Quantity:</span>
+              <span className="text-muted-foreground">{t.checkout.quantity}:</span>
               <span className="font-medium">{quantity}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Amount:</span>
+              <span className="text-muted-foreground">{t.qrPayment.amount}:</span>
               <span className="font-bold text-primary">
                 Rp {paymentData.nominal.toLocaleString()}
               </span>
@@ -157,7 +158,7 @@ export const QRPaymentDialog = ({
             {!isExpired && paymentStatus === "pending" && (
               <div className="flex items-center gap-2 text-sm">
                 <Clock className="h-4 w-4 text-muted-foreground" />
-                <span className="text-muted-foreground">Expires in:</span>
+                <span className="text-muted-foreground">{t.qrPayment.expiresIn}:</span>
                 <Badge variant={timeRemaining < 300 ? "destructive" : "secondary"}>
                   {formatTime(timeRemaining)}
                 </Badge>
@@ -173,7 +174,7 @@ export const QRPaymentDialog = ({
                 className="gap-2"
               >
                 <ExternalLink className="h-4 w-4" />
-                Open Payment Page
+                {t.qrPayment.openPaymentPage}
               </Button>
             )}
           </div>
@@ -191,12 +192,12 @@ export const QRPaymentDialog = ({
                 {isCheckingStatus ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Checking...
+                    {t.qrPayment.checking}
                   </>
                 ) : (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2" />
-                    I've Paid - Check Status
+                    {t.qrPayment.ivePaid}
                   </>
                 )}
               </Button>
@@ -211,13 +212,13 @@ export const QRPaymentDialog = ({
                 className="w-full"
               >
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                Continue
+                {t.qrPayment.continue}
               </Button>
             )}
 
             {isExpired && paymentStatus !== "verified" && (
               <p className="text-sm text-center text-muted-foreground">
-                Please close this dialog and try creating a new payment.
+                {t.qrPayment.closeAndRetry}
               </p>
             )}
           </div>
@@ -225,13 +226,13 @@ export const QRPaymentDialog = ({
           {/* Instructions */}
           {paymentStatus === "pending" && !isExpired && (
             <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
-              <p className="font-medium mb-2">How to pay:</p>
+              <p className="font-medium mb-2">{t.qrPayment.howToPay}</p>
               <ol className="list-decimal list-inside space-y-1">
-                <li>Open your e-wallet app (GoPay, OVO, DANA, etc.)</li>
-                <li>Select "Scan" or "Pay" option</li>
-                <li>Scan the QR code above</li>
-                <li>Confirm the payment</li>
-                <li>Click "I've Paid" to verify</li>
+                <li>{t.qrPayment.step1}</li>
+                <li>{t.qrPayment.step2}</li>
+                <li>{t.qrPayment.step3}</li>
+                <li>{t.qrPayment.step4}</li>
+                <li>{t.qrPayment.step5}</li>
               </ol>
             </div>
           )}

@@ -681,4 +681,108 @@
      activity: "Aktivitas",
      inStock: "tersedia",
    },
+ 
+   // Additional translations for remaining components
+   additional: {
+     // Auth
+     authRequired: "Autentikasi diperlukan",
+     pleaseSignIn: "Silakan masuk untuk melanjutkan",
+ 
+     // Checkout
+     reviewDetails: "Tinjau detail pesanan Anda sebelum melanjutkan ke pembayaran",
+     nextSteps: "Langkah Selanjutnya",
+     recommended: "Disarankan",
+     payNow: "Bayar Sekarang",
+     confirmOrderAmount: "Konfirmasi Pesanan",
+     bankTransfer: "Transfer Bank (Manual)",
+     bankTransferDesc: "Transfer dan unggah bukti pembayaran untuk verifikasi",
+     qrisInstant: "QRIS (Instan)",
+     qrisDesc: "Bayar dengan e-wallet apapun (GoPay, OVO, DANA, dll.)",
+ 
+     // Order card
+     orderQrisExpired: "QRIS Kedaluwarsa",
+     waitingQrisPayment: "Menunggu Pembayaran QRIS",
+     checkStatus: "Cek",
+     newQr: "QR Baru",
+     codesAvailable: "kode tersedia",
+ 
+     // Trust indicators
+     ordersCompleted: "Pesanan Selesai",
+     averageRating: "Rata-rata Penilaian",
+     successRateLabel: "Tingkat Keberhasilan",
+ 
+     // Rating dialog
+     ratingAlreadySubmitted: "Anda sudah memberikan penilaian untuk produk ini. Penilaian tidak dapat diubah.",
+     shareExperience: "Bagikan pengalaman Anda dengan produk ini",
+     tellExperience: "Ceritakan pengalaman Anda...",
+     characters: "karakter",
+     pleaseSelectRating: "Silakan pilih penilaian",
+     alreadyRated: "Anda sudah memberikan penilaian untuk produk ini.",
+     mustBeLoggedIn: "Anda harus masuk untuk memberikan penilaian",
+     failedSubmitRating: "Gagal mengirim penilaian",
+     submitting: "Mengirim...",
+ 
+     // Ticket dialog
+     describeIssue: "Jelaskan masalah Anda dan kami akan membantu menyelesaikannya",
+     briefDescription: "Deskripsi singkat masalah",
+     detailedInfo: "Mohon berikan informasi detail tentang masalah Anda",
+     supportedFormats: "Didukung: JPG, PNG, MP4, WebM, MOV, PDF (maks 10MB)",
+     chooseFile: "Pilih file",
+     ticketSubmitted: "Tiket dukungan Anda berhasil dikirim",
+     rateLimitExceeded: "Batas Pengiriman Tercapai",
+     rateLimitMessage: "Anda hanya dapat membuat 5 tiket per jam. Silakan coba lagi nanti.",
+ 
+     // Data table
+     rowsPerPageLabel: "Baris per halaman",
+     pickDateRange: "Pilih rentang tanggal",
+     clearFilters: "Hapus filter",
+   },
+ 
+   // QR Payment Dialog
+   qrPayment: {
+     title: "Pembayaran QRIS",
+     scanToComplete: "Pindai kode QR dengan e-wallet Anda untuk menyelesaikan pembayaran",
+     amount: "Jumlah",
+     expiresIn: "Berakhir dalam",
+     openPaymentPage: "Buka Halaman Pembayaran",
+     ivePaid: "Saya Sudah Bayar - Cek Status",
+     checking: "Memeriksa...",
+     continue: "Lanjutkan",
+     expired: "Kode QR Kedaluwarsa",
+     closeAndRetry: "Silakan tutup dialog ini dan coba buat pembayaran baru.",
+     howToPay: "Cara membayar:",
+     step1: "Buka aplikasi e-wallet Anda (GoPay, OVO, DANA, dll.)",
+     step2: "Pilih opsi \"Scan\" atau \"Bayar\"",
+     step3: "Pindai kode QR di atas",
+     step4: "Konfirmasi pembayaran",
+     step5: "Klik \"Saya Sudah Bayar\" untuk verifikasi",
+   },
+ 
+   // Default FAQ in Indonesian
+   defaultFaq: [
+     {
+       question: "Apa itu Cloud Phone?",
+       answer: "Cloud phone adalah perangkat Android virtual yang berjalan 24/7 di server kami. Anda dapat mengaksesnya dari perangkat mana pun, di mana pun, tanpa menguras baterai atau penyimpanan ponsel Anda."
+     },
+     {
+       question: "Bagaimana cara menukarkan kode saya?",
+       answer: "Setelah pembayaran Anda diverifikasi, Anda akan menerima kode redeem unik. Buka aplikasi cloud phone, masuk ke Pengaturan > Kode Redeem, dan masukkan kode Anda untuk mengaktifkan langganan."
+     },
+     {
+       question: "Metode pembayaran apa yang diterima?",
+       answer: "Kami menerima transfer bank dan berbagai pembayaran e-wallet. Cukup buat pesanan, unggah bukti pembayaran, dan tim kami akan memverifikasi dalam 24 jam."
+     },
+     {
+       question: "Bisakah saya menggunakan beberapa cloud phone?",
+       answer: "Ya! Anda dapat membeli beberapa kode untuk menjalankan beberapa instance cloud phone secara bersamaan. Setiap kode memberi Anda akses ke satu perangkat cloud phone."
+     },
+     {
+       question: "Apa yang terjadi jika langganan saya berakhir?",
+       answer: "Data cloud phone Anda akan disimpan selama masa tenggang. Anda dapat memperbarui langganan untuk terus menggunakan perangkat yang sama, atau data Anda akan dihapus setelah masa tenggang berakhir."
+     },
+     {
+       question: "Bagaimana cara menghubungi dukungan?",
+       answer: "Anda dapat membuat tiket dukungan dari halaman Transaksi Anda setelah melakukan pemesanan. Tim kami biasanya merespons dalam 24 jam."
+     }
+   ],
  };

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { MessageCircle, X } from "lucide-react";
+import { t } from "@/lib/translations";
 
 interface ContactOption {
   name: string;
@@ -79,7 +80,7 @@ export const FloatingChatButton = ({ whatsapp, telegram, email }: FloatingChatBu
           className="w-auto p-2 border-2 border-border shadow-brutal"
         >
           <div className="flex flex-col gap-2">
-            <p className="text-sm font-bold px-2 py-1">Chat with us</p>
+            <p className="text-sm font-bold px-2 py-1">{t.chat.chatWithUs}</p>
             {options.map((option) => (
               <a
                 key={option.name}
