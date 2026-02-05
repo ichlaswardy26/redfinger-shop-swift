@@ -1,316 +1,415 @@
 
-
-# Redesign Shop Page: Elegant & Interactive
+# Implementasi Sistem Voucher/Diskon - Canggih & Lengkap
 
 ## Overview
 
-A complete visual overhaul of the Shop page focusing on elegance, micro-interactions, and a premium feel while maintaining the Neo-Brutalism Glassmorphism design system.
+Membangun sistem voucher dan potongan harga yang canggih dengan fitur-fitur modern seperti:
+- Multiple discount types (percentage, fixed, free shipping)
+- Usage limits & validity periods
+- Product/category targeting
+- Stacking rules
+- Real-time analytics & tracking
+- Full admin control panel
 
 ---
 
-## Design Philosophy
+## 1. Database Schema
 
-The new design will introduce:
-- **Floating elements** with subtle parallax effects
-- **Gradient mesh backgrounds** for depth and luxury
-- **Micro-interactions** on every touchpoint
-- **Card hover reveals** with additional product info
-- **Animated category pills** with pulse effects
-- **Premium typography hierarchy**
+### Tabel: `vouchers`
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│  VOUCHERS TABLE                                                         │
+├─────────────────────┬───────────────────────┬──────────────────────────┤
+│ Column              │ Type                  │ Description              │
+├─────────────────────┼───────────────────────┼──────────────────────────┤
+│ id                  │ uuid (PK)             │ Primary key              │
+│ code                │ text (unique)         │ Voucher code (SAVE20)    │
+│ name                │ text                  │ Display name             │
+│ description         │ text                  │ Admin notes              │
+│ discount_type       │ text                  │ 'percentage' / 'fixed'   │
+│ discount_value      │ numeric               │ Amount (20 = 20% or Rp)  │
+│ min_order_amount    │ numeric               │ Minimum order to apply   │
+│ max_discount_amount │ numeric               │ Cap for % discounts      │
+│ usage_limit         │ integer               │ Total uses allowed       │
+│ usage_count         │ integer (default 0)   │ Current usage count      │
+│ per_user_limit      │ integer               │ Uses per user (default 1)│
+│ valid_from          │ timestamptz           │ Start validity           │
+│ valid_until         │ timestamptz           │ End validity             │
+│ is_active           │ boolean               │ Enable/disable toggle    │
+│ applies_to          │ text                  │ 'all'/'products'/'cats'  │
+│ product_ids         │ uuid[]                │ Target product IDs       │
+│ category_ids        │ uuid[]                │ Target category IDs      │
+│ stackable           │ boolean               │ Can combine with others  │
+│ first_order_only    │ boolean               │ New customer exclusive   │
+│ created_at          │ timestamptz           │ Creation timestamp       │
+│ created_by          │ uuid                  │ Admin who created        │
+│ updated_at          │ timestamptz           │ Last update              │
+└─────────────────────┴───────────────────────┴──────────────────────────┘
+```
+
+### Tabel: `voucher_usage`
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│  VOUCHER_USAGE TABLE (Tracking)                                         │
+├─────────────────────┬───────────────────────┬──────────────────────────┤
+│ Column              │ Type                  │ Description              │
+├─────────────────────┼───────────────────────┼──────────────────────────┤
+│ id                  │ uuid (PK)             │ Primary key              │
+│ voucher_id          │ uuid (FK)             │ Reference to voucher     │
+│ order_id            │ uuid (FK)             │ Reference to order       │
+│ user_id             │ uuid                  │ User who used it         │
+│ discount_applied    │ numeric               │ Actual discount amount   │
+│ original_amount     │ numeric               │ Order total before       │
+│ created_at          │ timestamptz           │ Usage timestamp          │
+└─────────────────────┴───────────────────────┴──────────────────────────┘
+```
+
+### Update Tabel: `orders`
+
+Tambah kolom:
+- `voucher_id` (uuid, nullable) - FK ke vouchers
+- `voucher_code` (text, nullable) - Snapshot kode voucher
+- `discount_amount` (numeric, default 0) - Potongan yang diberikan
+- `original_amount` (numeric) - Total sebelum diskon
+- `final_amount` (numeric) - Total setelah diskon
 
 ---
 
-## 1. Hero Section Redesign
+## 2. Business Rules Integration
 
-### Current State
-Basic header with stats cards and decorative blurs
+### Update `useBusinessRules.ts`
 
-### New Design
+Tambah section baru:
+
+```typescript
+voucher: {
+  enabled: boolean;           // Master toggle
+  max_stackable: number;      // Max vouchers per order (1-3)
+  min_order_for_voucher: number; // Global minimum
+  allow_first_order_discount: boolean;
+  show_available_vouchers: boolean; // Show applicable vouchers in checkout
+}
+```
+
+### Update `BusinessRulesEditor.tsx`
+
+Tambah tab baru "Vouchers" dengan kontrol:
+- Enable/disable voucher system
+- Max stackable vouchers
+- Minimum order amount
+- First order discount toggle
+- Show available vouchers toggle
+
+---
+
+## 3. Edge Function: `validate-voucher`
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                         HERO SECTION                                     │
+│  VALIDATE-VOUCHER EDGE FUNCTION                                          │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │                                                                     │ │
-│  │   ┌─────────────────────────────────────────────────────────────┐  │ │
-│  │   │  ◆ Floating geometric shapes with parallax                   │  │ │
-│  │   │  ◆ Animated gradient orbs (primary/accent colors)            │  │ │
-│  │   │  ◆ Subtle grid pattern overlay                               │  │ │
-│  │   └─────────────────────────────────────────────────────────────┘  │ │
-│  │                                                                     │ │
-│  │         ╔══════════════════════════════════════════╗               │ │
-│  │         ║           🛒                              ║               │ │
-│  │         ║    ┌─────────────────────────────────┐   ║               │ │
-│  │         ║    │  Discover Our                   │   ║               │ │
-│  │         ║    │  Premium Collection             │   ║  ◄── Animated │ │
-│  │         ║    │                                 │   ║      gradient │ │
-│  │         ║    │  Curated cloud phone services   │   ║      text     │ │
-│  │         ║    └─────────────────────────────────┘   ║               │ │
-│  │         ╚══════════════════════════════════════════╝               │ │
-│  │                                                                     │ │
-│  │    ┌──────────┐   ┌──────────┐   ┌──────────┐                     │ │
-│  │    │  ◯ 24    │   │  ◯ 5     │   │  ◯ 22    │  ◄── Animated       │ │
-│  │    │ Products │   │ Categories│   │ In Stock │      count-up       │ │
-│  │    │    ↑     │   │    ↑     │   │    ↑     │      on scroll      │ │
-│  │    └──────────┘   └──────────┘   └──────────┘                     │ │
-│  │                                                                     │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
+│  Input:                                                                  │
+│  {                                                                       │
+│    code: string,                                                         │
+│    order_amount: number,                                                 │
+│    product_id: string,                                                   │
+│    category_id?: string,                                                 │
+│    user_id: string                                                       │
+│  }                                                                       │
+│                                                                          │
+│  Validations:                                                            │
+│  1. Check voucher exists & is_active                                     │
+│  2. Check validity period (valid_from <= now <= valid_until)            │
+│  3. Check usage_limit not exceeded                                       │
+│  4. Check per_user_limit for this user                                  │
+│  5. Check min_order_amount                                               │
+│  6. Check product/category targeting                                     │
+│  7. Check first_order_only if applicable                                │
+│                                                                          │
+│  Output (Success):                                                       │
+│  {                                                                       │
+│    valid: true,                                                          │
+│    voucher: { id, name, discount_type, discount_value, ... },           │
+│    discount_amount: number,                                              │
+│    final_amount: number                                                  │
+│  }                                                                       │
+│                                                                          │
+│  Output (Error):                                                         │
+│  {                                                                       │
+│    valid: false,                                                         │
+│    error: "Voucher expired" | "Usage limit reached" | ...               │
+│  }                                                                       │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Technical Changes
-
-**Background Elements:**
-- Animated gradient mesh using CSS with `animate-pulse` at different delays
-- Floating geometric shapes with `motion` parallax on scroll
-- Subtle dot grid pattern overlay (`bg-[radial-gradient(...)]`)
-
-**Stats Cards:**
-- Glass morphism cards with gradient borders
-- Animated icon rings with `ring-primary/30 animate-pulse`
-- Count-up animation using `motion.span` with spring physics
-- Hover: lift + glow effect
-
 ---
 
-## 2. Category Navigation Redesign
+## 4. Frontend Components
 
-### New Interactive Category Bar
+### A. VoucherInput Component
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                     STICKY CATEGORY BAR                                  │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │                                                                     │ │
-│  │   ┌───────────────────────────────────────────────────────────┐    │ │
-│  │   │                                                            │    │ │
-│  │   │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐   │    │ │
-│  │   │  │  All   │ │ Cloud  │ │ Redmi  │ │ Gaming │ │  Pro   │   │    │ │
-│  │   │  │  ●●●   │ │        │ │        │ │        │ │        │   │    │ │
-│  │   │  │  24    │ │   12   │ │   8    │ │   4    │ │   6    │   │    │ │
-│  │   │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘   │    │ │
-│  │   │      ▲                                                     │    │ │
-│  │   │      │                                                     │    │ │
-│  │   │  Active state: gradient bg + floating indicator + glow     │    │ │
-│  │   │                                                            │    │ │
-│  │   └───────────────────────────────────────────────────────────┘    │ │
-│  │                                                                     │ │
-│  │   Subcategories (animated slide-in)                                │ │
-│  │   ┌───────────────────────────────────────────────────────────┐    │ │
-│  │   │  ↳ [All Cloud] [1 Day] [7 Days] [30 Days]                 │    │ │
-│  │   │              ◄── Pills with hover scale + underline       │    │ │
-│  │   └───────────────────────────────────────────────────────────┘    │ │
-│  │                                                                     │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### Technical Changes
-
-**Category Pills:**
-- Gradient background on active: `bg-gradient-to-r from-primary to-primary/80`
-- Floating dot indicator above active pill
-- Animated underline on hover using `after:` pseudo-element
-- Count badge with glass effect
-- Scale animation on tap: `whileTap={{ scale: 0.95 }}`
-
-**Subcategory Bar:**
-- Slide-in from left animation on parent select
-- Pill buttons with subtle border glow on hover
-- Clear filter button with animated X icon rotation
-
----
-
-## 3. Product Card Redesign
-
-### New Elegant Card Design
-
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│                       PRODUCT CARD                                       │
+│  VOUCHER INPUT (Checkout Dialog)                                         │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
 │  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │  🏷️ Have a voucher code?                                        │    │
 │  │                                                                  │    │
-│  │  ┌─────────────────────────────────────────────────────────┐    │    │
-│  │  │  ★ Best Seller      ✨ New        -20% Save            │    │    │
-│  │  │  ◄── Floating badges with micro-bounce animation        │    │    │
-│  │  └─────────────────────────────────────────────────────────┘    │    │
+│  │  ┌──────────────────────────────────┐  ┌─────────────┐          │    │
+│  │  │  Enter voucher code...           │  │   Apply     │          │    │
+│  │  └──────────────────────────────────┘  └─────────────┘          │    │
 │  │                                                                  │    │
-│  │  ┌─────────────────────────────────────────────────────────┐    │    │
-│  │  │                                                          │    │    │
-│  │  │      ┌──────────────────────────────────────────┐       │    │    │
-│  │  │      │                                           │       │    │    │
-│  │  │      │   ┌───────────────────────────────────┐  │       │    │    │
-│  │  │      │   │        PRODUCT NAME               │  │       │    │    │
-│  │  │      │   │   ──────────────────────────────  │  │       │    │    │
-│  │  │      │   │                                   │  │       │    │    │
-│  │  │      │   │   ● 30 days validity              │  │       │    │    │
-│  │  │      │   │   ● Digital redeem code           │  │       │    │    │
-│  │  │      │   │   ● Instant delivery              │  │  ◄── Reveal  │    │
-│  │  │      │   │                                   │  │      on hover │    │
-│  │  │      │   └───────────────────────────────────┘  │       │    │    │
-│  │  │      │                                           │       │    │    │
-│  │  │      └──────────────────────────────────────────┘       │    │    │
-│  │  │                                                          │    │    │
-│  │  │  ╔═══════════════════════════════════════════════════╗  │    │    │
-│  │  │  ║                                                    ║  │    │    │
-│  │  │  ║    Rp 150,000                     [−] 1 [+]       ║  │    │    │
-│  │  │  ║    ~~~~~~~~~~~~                                    ║  │    │    │
-│  │  │  ║    Rp 5,000/day                                   ║  │    │    │
-│  │  │  ║                                                    ║  │    │    │
-│  │  │  ║    ┌──────────────────────────────────────────┐   ║  │    │    │
-│  │  │  ║    │        🛒 Purchase Now                   │   ║  │    │    │
-│  │  │  ║    │        ◄── Gradient animated button      │   ║  │    │    │
-│  │  │  ║    └──────────────────────────────────────────┘   ║  │    │    │
-│  │  │  ║                                                    ║  │    │    │
-│  │  │  ╚═══════════════════════════════════════════════════╝  │    │    │
-│  │  │                                                          │    │    │
-│  │  └─────────────────────────────────────────────────────────┘    │    │
+│  │  ✓ SAVE20 applied! -Rp 30,000                                   │    │
+│  │    [Remove]                                                      │    │
+│  │                                                                  │    │
+│  │  ─────────────────────────────────────────────────────────────  │    │
+│  │                                                                  │    │
+│  │  Available vouchers for you:          ◄── Optional feature      │    │
+│  │  ┌───────────────┐  ┌───────────────┐                           │    │
+│  │  │  WELCOME10    │  │  BULKBUY15    │                           │    │
+│  │  │  10% off      │  │  15% off      │                           │    │
+│  │  │  [Apply]      │  │  Min Rp 500k  │                           │    │
+│  │  └───────────────┘  └───────────────┘                           │    │
 │  │                                                                  │    │
 │  └─────────────────────────────────────────────────────────────────┘    │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Technical Changes
-
-**Card Container:**
-- `group` class for hover interactions
-- Gradient border on hover: `hover:border-primary/50`
-- Background shimmer effect on hover
-- 3D tilt effect using `rotateX/Y` on mouse position (optional)
-
-**Content Area:**
-- Product icon with animated ring pulse
-- Title with gradient text on hover
-- Feature list reveal on hover with staggered animation
-- Stock indicator with animated progress bar
-
-**Footer/CTA Area:**
-- Price with animated gradient background
-- Per-day calculation with fade-in
-- Quantity selector with haptic-style feedback
-- CTA button with animated gradient + arrow slide
-
----
-
-## 4. Grid & Layout Enhancements
-
-### Masonry-Inspired Layout
+### B. VoucherManager (Admin)
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                      PRODUCT GRID                                        │
+│  VOUCHER MANAGER (Admin Panel)                                           │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │                                                                   │   │
-│  │   Showing 10 of 24 products                                      │   │
-│  │   ═════════════════════════════════════════════════════════════  │   │
-│  │                                                                   │   │
-│  │   ┌───────────┐  ┌───────────┐  ┌───────────┐                   │   │
-│  │   │           │  │           │  │           │                   │   │
-│  │   │  Product  │  │  Product  │  │  Product  │                   │   │
-│  │   │    #1     │  │    #2     │  │    #3     │  ◄── Staggered    │   │
-│  │   │           │  │    ★      │  │           │      entry        │   │
-│  │   │           │  │           │  │           │                   │   │
-│  │   └───────────┘  └───────────┘  └───────────┘                   │   │
-│  │                                                                   │   │
-│  │   ┌───────────┐  ┌───────────┐  ┌───────────┐                   │   │
-│  │   │           │  │           │  │           │                   │   │
-│  │   │  Product  │  │  Product  │  │  Product  │                   │   │
-│  │   │    #4     │  │    #5     │  │    #6     │                   │   │
-│  │   │           │  │    ✨     │  │           │                   │   │
-│  │   │           │  │           │  │           │                   │   │
-│  │   └───────────┘  └───────────┘  └───────────┘                   │   │
-│  │                                                                   │   │
-│  │               ┌─────────────────────────────┐                    │   │
-│  │               │                              │                    │   │
-│  │               │   Load More (14 remaining)  │  ◄── Animated      │   │
-│  │               │        ↓↓↓                  │      button        │   │
-│  │               │                              │                    │   │
-│  │               └─────────────────────────────┘                    │   │
-│  │                                                                   │   │
-│  │   ═══════════════ All products loaded ═══════════════════════   │   │
-│  │                                                                   │   │
-│  └──────────────────────────────────────────────────────────────────┘   │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │  Vouchers                               [+ Create Voucher]        │  │
+│  │                                                                    │  │
+│  │  Stats:                                                            │  │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐              │  │
+│  │  │  12     │  │  5      │  │  156    │  │ Rp 4.2M │              │  │
+│  │  │ Active  │  │ Expired │  │ Total   │  │ Savings │              │  │
+│  │  │         │  │         │  │ Used    │  │  Given  │              │  │
+│  │  └─────────┘  └─────────┘  └─────────┘  └─────────┘              │  │
+│  │                                                                    │  │
+│  │  ┌─────────────────────────────────────────────────────────────┐  │  │
+│  │  │ Code    │ Name      │ Type │ Value│ Used│ Limit│ Status │Act │  │  │
+│  │  ├─────────┼───────────┼──────┼──────┼─────┼──────┼────────┼────┤  │  │
+│  │  │ SAVE20  │ 20% Off   │  %   │ 20%  │ 45  │ 100  │ Active │ ⚙️ │  │  │
+│  │  │ WELCOME │ New User  │  %   │ 10%  │ 12  │ ∞    │ Active │ ⚙️ │  │  │
+│  │  │ FLASH50K│ Flash Sale│Fixed │ 50K  │ 100 │ 100  │ Ended  │ ⚙️ │  │  │
+│  │  └─────────┴───────────┴──────┴──────┴─────┴──────┴────────┴────┘  │  │
+│  │                                                                    │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Technical Changes
-
-**Grid Animation:**
-- Staggered entry with increasing delay per item
-- Scale + fade + Y-translate on enter
-- Layout animation for reordering
-- Exit animation on filter change
-
-**Load More Button:**
-- Pulsing arrow animation
-- Progress ring showing load percentage
-- Skeleton cards animate in on click
-
-**Empty State:**
-- Animated illustration (floating phone icon)
-- Typewriter text effect for message
-- Bounce-in CTA button
-
----
-
-## 5. Micro-Interactions Summary
-
-| Element | Interaction | Animation |
-|---------|-------------|-----------|
-| Stats Card | Hover | Lift -4px + glow + scale 1.02 |
-| Category Pill | Click | Scale 0.95 + ripple effect |
-| Category Pill | Active | Gradient bg + floating dot |
-| Product Card | Hover | Border glow + content reveal |
-| Product Card | Enter | Spring physics y: 20 to 0 |
-| Quantity Button | Click | Scale pulse + haptic bounce |
-| Purchase Button | Hover | Gradient shift + arrow slide |
-| Load More | Click | Expand + skeleton spawn |
-| Badge | Mount | Bounce-in from top |
-
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/pages/Store.tsx` | Complete visual overhaul - header, category bar, grid layout, animations |
-| `src/components/ProductCard.tsx` | Enhanced hover effects, content reveal, animated badges, gradient CTA |
-| `tailwind.config.ts` | Add new animation keyframes for shimmer, pulse-ring, gradient-shift |
-| `src/index.css` | Add CSS for gradient text, shimmer effect, animated backgrounds |
-
----
-
-## New Animation Keyframes
+### C. VoucherFormDialog
 
 ```text
-// To be added to tailwind.config.ts
-
-shimmer: Gradient sweep effect for cards
-pulse-ring: Expanding ring animation for icons
-gradient-shift: Moving gradient for buttons
-float: Gentle up-down floating for badges
-glow-pulse: Pulsing glow effect for active states
+┌─────────────────────────────────────────────────────────────────────────┐
+│  CREATE/EDIT VOUCHER DIALOG                                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │  Voucher Details                                                   │  │
+│  │                                                                    │  │
+│  │  Code *                        Name *                              │  │
+│  │  ┌────────────────────┐       ┌────────────────────────┐          │  │
+│  │  │ SAVE20             │       │ Save 20% on orders     │          │  │
+│  │  └────────────────────┘       └────────────────────────┘          │  │
+│  │                                                                    │  │
+│  │  Discount Type                 Discount Value                      │  │
+│  │  ┌────────────────────┐       ┌────────────────────────┐          │  │
+│  │  │ ◉ Percentage       │       │ 20                     │ %        │  │
+│  │  │ ○ Fixed Amount     │       └────────────────────────┘          │  │
+│  │  └────────────────────┘                                            │  │
+│  │                                                                    │  │
+│  │  Min. Order Amount             Max Discount (for %)                │  │
+│  │  ┌────────────────────┐       ┌────────────────────────┐          │  │
+│  │  │ 100000             │       │ 50000                  │          │  │
+│  │  └────────────────────┘       └────────────────────────┘          │  │
+│  │                                                                    │  │
+│  │  ─────────────────── Usage Limits ─────────────────────           │  │
+│  │                                                                    │  │
+│  │  Total Usage Limit             Per User Limit                      │  │
+│  │  ┌────────────────────┐       ┌────────────────────────┐          │  │
+│  │  │ 100                │       │ 1                      │          │  │
+│  │  └────────────────────┘       └────────────────────────┘          │  │
+│  │                                                                    │  │
+│  │  ─────────────────── Validity Period ─────────────────            │  │
+│  │                                                                    │  │
+│  │  Valid From                    Valid Until                         │  │
+│  │  ┌────────────────────┐       ┌────────────────────────┐          │  │
+│  │  │ 📅 2024-02-01      │       │ 📅 2024-02-28          │          │  │
+│  │  └────────────────────┘       └────────────────────────┘          │  │
+│  │                                                                    │  │
+│  │  ─────────────────── Targeting ───────────────────────            │  │
+│  │                                                                    │  │
+│  │  Applies To:                                                       │  │
+│  │  ◉ All Products                                                    │  │
+│  │  ○ Specific Products  [Select products...]                        │  │
+│  │  ○ Specific Categories [Select categories...]                     │  │
+│  │                                                                    │  │
+│  │  ─────────────────── Options ─────────────────────────            │  │
+│  │                                                                    │  │
+│  │  [✓] Active                                                        │  │
+│  │  [ ] First Order Only (new customers)                              │  │
+│  │  [ ] Stackable (can combine with other vouchers)                   │  │
+│  │                                                                    │  │
+│  │                           [Cancel]  [Save Voucher]                 │  │
+│  │                                                                    │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Accessibility Considerations
+## 5. Update Order Flow
 
-- All animations respect `prefers-reduced-motion`
-- Focus states remain visible and enhanced
-- Color contrast maintained throughout
-- Keyboard navigation fully supported
-- Screen reader announcements for loading states
+### OrderConfirmationDialog Updates
 
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  UPDATED ORDER CONFIRMATION                                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Product: Cloud Phone 30 Days                                            │
+│  Duration: 30 days                                                       │
+│  Quantity: 2                                                             │
+│  Price per item: Rp 150,000                                              │
+│  ─────────────────────────────────────────────────────────────────────  │
+│  Subtotal: Rp 300,000                                                    │
+│                                                                          │
+│  🏷️ Voucher Code                                                        │
+│  ┌──────────────────────────────┐  ┌─────────┐                          │
+│  │ SAVE20                       │  │  Apply  │                          │
+│  └──────────────────────────────┘  └─────────┘                          │
+│                                                                          │
+│  ✓ Voucher Applied: SAVE20 (-20%)                                       │
+│  Discount: -Rp 50,000 (max Rp 50,000)                                   │
+│  ─────────────────────────────────────────────────────────────────────  │
+│  Total: Rp 250,000  ◄── Updated with discount                           │
+│  ─────────────────────────────────────────────────────────────────────  │
+│                                                                          │
+│  Payment Method                                                          │
+│  ○ Bank Transfer (Manual)                                                │
+│  ◉ QRIS (Instant) [Recommended]                                         │
+│                                                                          │
+│                            [Cancel]  [Confirm Order]                     │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 6. RLS Policies
+
+### Vouchers Table
+
+```sql
+-- Anyone can view active vouchers (for suggestions)
+CREATE POLICY "Anyone can view active vouchers"
+ON vouchers FOR SELECT
+USING (is_active = true AND valid_until >= now());
+
+-- Admins can manage all vouchers
+CREATE POLICY "Admins can manage vouchers"
+ON vouchers FOR ALL
+USING (has_role(auth.uid(), 'admin'));
+```
+
+### Voucher Usage Table
+
+```sql
+-- Users can view own voucher usage
+CREATE POLICY "Users can view own voucher usage"
+ON voucher_usage FOR SELECT
+USING (user_id = auth.uid());
+
+-- System inserts usage (via edge function with service role)
+-- No direct user INSERT policy - handled server-side
+```
+
+---
+
+## 7. Files to Create/Modify
+
+| File | Action | Description |
+|------|--------|-------------|
+| `supabase/migrations/xxx_create_vouchers.sql` | Create | Database tables & policies |
+| `supabase/functions/validate-voucher/index.ts` | Create | Voucher validation logic |
+| `src/hooks/useVoucher.ts` | Create | Voucher validation hook |
+| `src/hooks/useBusinessRules.ts` | Modify | Add voucher section |
+| `src/components/VoucherInput.tsx` | Create | Voucher input for checkout |
+| `src/components/VoucherManager.tsx` | Create | Admin voucher management |
+| `src/components/VoucherFormDialog.tsx` | Create | Create/edit voucher form |
+| `src/components/BusinessRulesEditor.tsx` | Modify | Add Vouchers tab |
+| `src/components/OrderConfirmationDialog.tsx` | Modify | Integrate voucher input |
+| `src/pages/Admin.tsx` | Modify | Add Vouchers tab |
+| `src/pages/Store.tsx` | Modify | Pass voucher to order flow |
+
+---
+
+## 8. Voucher Analytics (Admin Dashboard)
+
+Dashboard menampilkan:
+- Total vouchers aktif/expired/disabled
+- Total penggunaan hari ini/minggu/bulan
+- Total discount yang diberikan
+- Top performing vouchers
+- Conversion rate (voucher applied vs completed orders)
+- Usage trend chart
+
+---
+
+## 9. Advanced Features
+
+### Auto-suggest Vouchers
+Saat checkout, sistem akan menampilkan voucher yang applicable untuk order tersebut berdasarkan:
+- Product/category match
+- Order amount threshold
+- User eligibility (first order, usage limit)
+
+### Voucher Status Badges
+- 🟢 Active - Currently usable
+- 🟡 Scheduled - Will be active in future
+- 🔴 Expired - Past valid_until date
+- ⚫ Disabled - Manually disabled
+- 🟠 Depleted - Usage limit reached
+
+### Copy to Clipboard
+Setiap voucher code memiliki button copy untuk easy sharing.
+
+---
+
+## 10. Security Considerations
+
+1. **Server-side validation** - Semua validasi dilakukan di edge function, bukan client
+2. **Race condition prevention** - Usage count increment atomic dengan transaction
+3. **Rate limiting** - Limit voucher validation attempts per user
+4. **Audit trail** - Semua usage tercatat di voucher_usage table
+5. **Input sanitization** - Voucher codes di-uppercase dan trimmed
+
+---
+
+## Technical Implementation Order
+
+1. Database migration (tables + RLS)
+2. Edge function validate-voucher
+3. useVoucher hook
+4. Business rules update
+5. VoucherInput component
+6. OrderConfirmationDialog update
+7. VoucherManager admin component
+8. VoucherFormDialog
+9. Admin.tsx integration
+10. Analytics dashboard
