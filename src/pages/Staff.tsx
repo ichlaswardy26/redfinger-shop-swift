@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { useNavigate } from "react-router-dom";
+import { t } from "@/lib/translations";
+import { StaffSidebar } from "@/components/StaffSidebar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Ticket, Package, Star, CheckCircle, History, MessageSquare, ExternalLink } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { SEOHead } from "@/components/SEOHead";
@@ -93,10 +96,15 @@ const Staff = () => {
   const [ticketSorting, setTicketSorting] = useState<SortingState>([]);
   const [orderSorting, setOrderSorting] = useState<SortingState>([]);
   const [ratingSorting, setRatingSorting] = useState<SortingState>([]);
+  const [activeSection, setActiveSection] = useState("tickets");
 
   const { toast } = useToast();
   const navigate = useNavigate();
   const { settings: siteSettings } = useSiteSettings();
+
+  // Calculate counts for badges
+  const pendingOrdersCount = useMemo(() => orders.filter(o => o.payment_status === 'pending').length, [orders]);
+  const openTicketsCount = useMemo(() => tickets.filter(t => t.status === 'open' || t.status === 'in_progress').length, [tickets]);
 
   useEffect(() => {
     checkStaffAccess();
@@ -357,153 +365,167 @@ const Staff = () => {
   const orderTable = useReactTable({ data: filteredOrders, columns: orderColumns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), getSortedRowModel: getSortedRowModel(), state: { sorting: orderSorting }, onSortingChange: setOrderSorting, initialState: { pagination: { pageSize: 10 } } });
   const ratingTable = useReactTable({ data: filteredRatings, columns: ratingColumns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), getSortedRowModel: getSortedRowModel(), state: { sorting: ratingSorting }, onSortingChange: setRatingSorting, initialState: { pagination: { pageSize: 10 } } });
 
-  if (loading) return <div className="min-h-screen bg-background"><Navbar /><div className="container mx-auto p-4">Loading...</div></div>;
+  if (loading) return <div className="min-h-screen bg-background"><Navbar /><div className="container mx-auto p-4">{t.actions.loading}</div></div>;
 
   return (
     <MotionPage className="min-h-screen bg-background">
-      <SEOHead title={`Staff Dashboard - ${siteSettings.name}`} siteName={siteSettings.name} noIndex />
+      <SEOHead title={`${t.staff.title} - ${siteSettings.name}`} siteName={siteSettings.name} noIndex />
       <Navbar />
-      <div className="container mx-auto p-4 space-y-6">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-        >
-          <div>
-            <h1 className="text-3xl font-bold">Staff Dashboard</h1>
-            <p className="text-muted-foreground">Manage tickets, orders, and inventory</p>
-          </div>
-          <Badge variant="secondary" className="text-sm px-4 py-2 w-fit">Staff Access</Badge>
-        </motion.div>
-        
-        <Tabs defaultValue="tickets" className="space-y-4">
-          <div className="w-full overflow-x-auto pb-2">
-            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-5">
-              <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-2" />Tickets</TabsTrigger>
-              <TabsTrigger value="orders"><CheckCircle className="h-4 w-4 mr-2" />Orders</TabsTrigger>
-              <TabsTrigger value="ratings"><Star className="h-4 w-4 mr-2" />Ratings</TabsTrigger>
-              <TabsTrigger value="stock"><Package className="h-4 w-4 mr-2" />Stock</TabsTrigger>
-              <TabsTrigger value="activity"><History className="h-4 w-4 mr-2" />Activity</TabsTrigger>
-            </TabsList>
-          </div>
-
-          <TabsContent value="tickets">
-            <Card>
-              <CardHeader>
-                <CardTitle>Support Tickets</CardTitle>
-                <CardDescription>Manage tickets assigned to you or unassigned tickets</CardDescription>
-                <DataTableFilters searchValue={ticketSearch} onSearchChange={setTicketSearch} searchPlaceholder="Search tickets..."
-                  filters={[{ key: 'status', label: 'Status', value: ticketStatusFilter, options: [{ label: 'Open', value: 'open' }, { label: 'In Progress', value: 'in_progress' }, { label: 'Resolved', value: 'resolved' }, { label: 'Closed', value: 'closed' }], onChange: setTicketStatusFilter }]}
-                  showDateFilter dateRange={ticketDateRange} onDateRangeChange={setTicketDateRange}
-                  onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); setTicketDateRange({ from: undefined, to: undefined }); }}
-                  onExport={exportTickets} />
-              </CardHeader>
-              <CardContent>
-                {filteredTickets.length === 0 && tickets.length === 0 ? (
-                  <div className="text-center py-12 space-y-3">
-                    <Ticket className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                    <p className="text-muted-foreground">No tickets assigned to you yet</p>
-                    <p className="text-sm text-muted-foreground/70">Unassigned tickets will appear here when customers create them</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>{ticketTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
-                        <TableBody>{ticketTable.getRowModel().rows.length ? ticketTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={ticketColumns.length} className="text-center py-8 text-muted-foreground">No tickets match your filters</TableCell></TableRow>}</TableBody>
-                      </Table>
-                    </div>
-                    <DataTablePagination table={ticketTable} />
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="orders">
-            <Card>
-              <CardHeader>
-                <CardTitle>Order Verification</CardTitle>
-                <CardDescription>
-                  Verify payments and issue redeem codes for orders linked to your assigned tickets
-                </CardDescription>
-                <DataTableFilters searchValue={orderSearch} onSearchChange={setOrderSearch} searchPlaceholder="Search orders..."
-                  filters={[{ key: 'status', label: 'Status', value: orderStatusFilter, options: [{ label: 'Pending', value: 'pending' }, { label: 'Verified', value: 'verified' }, { label: 'Rejected', value: 'rejected' }], onChange: setOrderStatusFilter }]}
-                  showDateFilter dateRange={orderDateRange} onDateRangeChange={setOrderDateRange}
-                  onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); setOrderDateRange({ from: undefined, to: undefined }); }}
-                  onExport={exportOrders} />
-              </CardHeader>
-              <CardContent>
-                {filteredOrders.length === 0 && orders.length === 0 ? (
-                  <div className="text-center py-12 space-y-3">
-                    <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                    <p className="text-muted-foreground">No orders linked to your assigned tickets</p>
-                    <p className="text-sm text-muted-foreground/70">Orders appear here when customers create support tickets for their orders</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>{orderTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
-                        <TableBody>{orderTable.getRowModel().rows.length ? orderTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={orderColumns.length} className="text-center py-8 text-muted-foreground">No orders match your filters</TableCell></TableRow>}</TableBody>
-                      </Table>
-                    </div>
-                    <DataTablePagination table={orderTable} />
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="ratings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Product Ratings</CardTitle>
-                <CardDescription>Manage product reviews visibility</CardDescription>
-                <DataTableFilters searchValue={ratingSearch} onSearchChange={setRatingSearch} searchPlaceholder="Search ratings..."
-                  filters={[{ key: 'visible', label: 'Visibility', value: ratingVisibleFilter, options: [{ label: 'Visible', value: 'visible' }, { label: 'Hidden', value: 'hidden' }], onChange: setRatingVisibleFilter }]}
-                  onReset={() => { setRatingSearch(""); setRatingVisibleFilter("all"); }}
-                  onExport={exportRatings} />
-              </CardHeader>
-              <CardContent>
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>{ratingTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
-                    <TableBody>{ratingTable.getRowModel().rows.length ? ratingTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={ratingColumns.length} className="text-center">No ratings found</TableCell></TableRow>}</TableBody>
-                  </Table>
+      <SidebarProvider>
+        <div className="flex min-h-[calc(100vh-4rem)] w-full">
+          <StaffSidebar
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+            pendingOrdersCount={pendingOrdersCount}
+            openTicketsCount={openTicketsCount}
+            siteName={siteSettings.name}
+          />
+          <main className="flex-1 overflow-auto">
+            {/* Mobile header with sidebar trigger */}
+            <div className="sticky top-0 z-10 flex items-center gap-4 border-b-2 border-border bg-background/95 backdrop-blur p-4 md:hidden">
+              <SidebarTrigger />
+              <h1 className="font-bold">{t.staff.title}</h1>
+              <Badge variant="secondary" className="ml-auto">{t.staff.staffAccess}</Badge>
+            </div>
+            
+            <div className="p-4 md:p-6 space-y-6">
+              {/* Desktop header */}
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              >
+                <div>
+                  <h1 className="text-3xl font-bold">{t.staff.title}</h1>
+                  <p className="text-muted-foreground">{t.staff.manageInventory}</p>
                 </div>
-                <DataTablePagination table={ratingTable} />
-              </CardContent>
-            </Card>
-          </TabsContent>
+                <Badge variant="secondary" className="text-sm px-4 py-2 w-fit">{t.staff.staffAccess}</Badge>
+              </motion.div>
 
-          <TabsContent value="stock">
-            <Card>
-              <CardHeader><CardTitle>Stock Management</CardTitle><CardDescription>Manage product inventory</CardDescription></CardHeader>
-              <CardContent>
-                <MotionContainer className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {products.map((p, index) => (
-                    <MotionCard 
-                      key={p.id} 
-                      className="cursor-pointer p-4"
-                      onClick={() => { setSelectedProduct(p); setStockDialogOpen(true); }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <p className="font-bold">{p.name}</p>
-                        <Badge variant={p.stock > 10 ? 'default' : p.stock > 0 ? 'secondary' : 'destructive'}>
-                          {p.stock} in stock
-                        </Badge>
+              {/* Tickets Section */}
+              {activeSection === "tickets" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t.tickets.title}</CardTitle>
+                    <CardDescription>{t.tickets.manageAssigned}</CardDescription>
+                    <DataTableFilters searchValue={ticketSearch} onSearchChange={setTicketSearch} searchPlaceholder={t.actions.search + " " + t.tickets.title.toLowerCase() + "..."}
+                      filters={[{ key: 'status', label: t.tickets.status, value: ticketStatusFilter, options: [{ label: t.tickets.statuses.open, value: 'open' }, { label: t.tickets.statuses.in_progress, value: 'in_progress' }, { label: t.tickets.statuses.resolved, value: 'resolved' }, { label: t.tickets.statuses.closed, value: 'closed' }], onChange: setTicketStatusFilter }]}
+                      showDateFilter dateRange={ticketDateRange} onDateRangeChange={setTicketDateRange}
+                      onReset={() => { setTicketSearch(""); setTicketStatusFilter("all"); setTicketDateRange({ from: undefined, to: undefined }); }}
+                      onExport={exportTickets} />
+                  </CardHeader>
+                  <CardContent>
+                    {filteredTickets.length === 0 && tickets.length === 0 ? (
+                      <div className="text-center py-12 space-y-3">
+                        <Ticket className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                        <p className="text-muted-foreground">{t.tickets.noAssignedTickets}</p>
+                        <p className="text-sm text-muted-foreground/70">{t.tickets.unassignedAppear}</p>
                       </div>
-                    </MotionCard>
-                  ))}
-                </MotionContainer>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                    ) : (
+                      <>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>{ticketTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                            <TableBody>{ticketTable.getRowModel().rows.length ? ticketTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={ticketColumns.length} className="text-center py-8 text-muted-foreground">{t.table.noResults}</TableCell></TableRow>}</TableBody>
+                          </Table>
+                        </div>
+                        <DataTablePagination table={ticketTable} />
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
-          <TabsContent value="activity"><StockActivityLog /></TabsContent>
-        </Tabs>
-      </div>
+              {/* Orders Section */}
+              {activeSection === "orders" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t.orders.orderVerification}</CardTitle>
+                    <CardDescription>{t.orders.linkedToTickets}</CardDescription>
+                    <DataTableFilters searchValue={orderSearch} onSearchChange={setOrderSearch} searchPlaceholder={t.orders.searchPlaceholder}
+                      filters={[{ key: 'status', label: t.tickets.status, value: orderStatusFilter, options: [{ label: t.status.pending, value: 'pending' }, { label: t.status.verified, value: 'verified' }, { label: t.status.rejected, value: 'rejected' }], onChange: setOrderStatusFilter }]}
+                      showDateFilter dateRange={orderDateRange} onDateRangeChange={setOrderDateRange}
+                      onReset={() => { setOrderSearch(""); setOrderStatusFilter("all"); setOrderDateRange({ from: undefined, to: undefined }); }}
+                      onExport={exportOrders} />
+                  </CardHeader>
+                  <CardContent>
+                    {filteredOrders.length === 0 && orders.length === 0 ? (
+                      <div className="text-center py-12 space-y-3">
+                        <CheckCircle className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                        <p className="text-muted-foreground">{t.orders.noLinkedOrders}</p>
+                        <p className="text-sm text-muted-foreground/70">{t.orders.ordersAppearHere}</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="overflow-x-auto">
+                          <Table>
+                            <TableHeader>{orderTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                            <TableBody>{orderTable.getRowModel().rows.length ? orderTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={orderColumns.length} className="text-center py-8 text-muted-foreground">{t.table.noResults}</TableCell></TableRow>}</TableBody>
+                          </Table>
+                        </div>
+                        <DataTablePagination table={orderTable} />
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Ratings Section */}
+              {activeSection === "ratings" && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>{t.ratings.title}</CardTitle>
+                    <CardDescription>{t.ratings.manageVisibility}</CardDescription>
+                    <DataTableFilters searchValue={ratingSearch} onSearchChange={setRatingSearch} searchPlaceholder={t.actions.search + " " + t.ratings.title.toLowerCase() + "..."}
+                      filters={[{ key: 'visible', label: t.ratings.toggleVisibility, value: ratingVisibleFilter, options: [{ label: t.ratings.visible, value: 'visible' }, { label: t.ratings.hidden, value: 'hidden' }], onChange: setRatingVisibleFilter }]}
+                      onReset={() => { setRatingSearch(""); setRatingVisibleFilter("all"); }}
+                      onExport={exportRatings} />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>{ratingTable.getHeaderGroups().map(hg => <TableRow key={hg.id}>{hg.headers.map(h => <TableHead key={h.id}>{flexRender(h.column.columnDef.header, h.getContext())}</TableHead>)}</TableRow>)}</TableHeader>
+                        <TableBody>{ratingTable.getRowModel().rows.length ? ratingTable.getRowModel().rows.map(row => <TableRow key={row.id}>{row.getVisibleCells().map(cell => <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>)}</TableRow>) : <TableRow><TableCell colSpan={ratingColumns.length} className="text-center">{t.table.noResults}</TableCell></TableRow>}</TableBody>
+                      </Table>
+                    </div>
+                    <DataTablePagination table={ratingTable} />
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Stock Section */}
+              {activeSection === "stock" && (
+                <Card>
+                  <CardHeader><CardTitle>{t.stockManagement.title}</CardTitle><CardDescription>{t.stockManagement.subtitle}</CardDescription></CardHeader>
+                  <CardContent>
+                    <MotionContainer className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {products.map((p, index) => (
+                        <MotionCard 
+                          key={p.id} 
+                          className="cursor-pointer p-4"
+                          onClick={() => { setSelectedProduct(p); setStockDialogOpen(true); }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="font-bold">{p.name}</p>
+                            <Badge variant={p.stock > 10 ? 'default' : p.stock > 0 ? 'secondary' : 'destructive'}>
+                              {p.stock} {t.stockManagement.inStock}
+                            </Badge>
+          </div>
+                        </MotionCard>
+                      ))}
+                    </MotionContainer>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Activity Section */}
+              {activeSection === "activity" && (
+                <StockActivityLog />
+              )}
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
 
       {selectedProduct && <StockManagement product={selectedProduct} open={stockDialogOpen} onOpenChange={setStockDialogOpen} onSuccess={fetchData} />}
       

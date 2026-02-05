@@ -25,7 +25,7 @@ import { exportToCSV } from "@/lib/exportUtils";
 import { format } from "date-fns";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -751,52 +751,55 @@ const Admin = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
-        <div className="container mx-auto px-4 py-8 text-center"><p className="text-muted-foreground">Loading...</p></div>
+        <div className="container mx-auto px-4 py-8 text-center"><p className="text-muted-foreground">{t.ui.loading}...</p></div>
       </div>
     );
   }
 
   return (
     <MotionPage className="min-h-screen bg-background">
-      <SEOHead title={`Admin Panel - ${siteSettings.name}`} siteName={siteSettings.name} noIndex noFollow />
+      <SEOHead title={`${t.admin.title} - ${siteSettings.name}`} siteName={siteSettings.name} noIndex noFollow />
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
-        >
-          <div>
-            <h1 className="text-3xl font-bold">Admin Panel</h1>
-            <p className="text-muted-foreground">Manage your store and users</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="brutal" onClick={() => navigate("/admin/analytics")}>
-              <BarChart3 className="h-4 w-4 mr-2" />Analytics
-            </Button>
-            <Button variant="outline" onClick={() => setBulkVerifyOpen(true)}>
-              <ListChecks className="h-4 w-4 mr-2" />Bulk Verify
-            </Button>
-          </div>
-        </motion.div>
-        
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <div className="w-full overflow-x-auto pb-2">
-            <TabsList className="inline-flex w-auto min-w-full lg:grid lg:grid-cols-10">
-            <TabsTrigger value="dashboard"><LayoutDashboard className="h-4 w-4 mr-2" /><span>Dashboard</span></TabsTrigger>
-            <TabsTrigger value="orders"><ShoppingCart className="h-4 w-4 mr-2" /><span>Orders</span></TabsTrigger>
-            <TabsTrigger value="products"><Package className="h-4 w-4 mr-2" /><span>Products</span></TabsTrigger>
-            <TabsTrigger value="categories"><Layers className="h-4 w-4 mr-2" /><span>Categories</span></TabsTrigger>
-            <TabsTrigger value="code-inventory"><Code className="h-4 w-4 mr-2" /><span>Codes</span></TabsTrigger>
-            <TabsTrigger value="vouchers"><Tag className="h-4 w-4 mr-2" /><span>Vouchers</span></TabsTrigger>
-            <TabsTrigger value="users"><Users className="h-4 w-4 mr-2" /><span>Users</span></TabsTrigger>
-            <TabsTrigger value="tickets"><Ticket className="h-4 w-4 mr-2" /><span>Tickets</span></TabsTrigger>
-            <TabsTrigger value="ratings"><Star className="h-4 w-4 mr-2" /><span>Ratings</span></TabsTrigger>
-            <TabsTrigger value="settings"><Cog className="h-4 w-4 mr-2" /><span>Settings</span></TabsTrigger>
-          </TabsList>
-          </div>
+      <SidebarProvider>
+        <div className="flex min-h-[calc(100vh-4rem)] w-full">
+          <AdminSidebar
+            activeSection={activeSection}
+            onSectionChange={setActiveSection}
+            pendingOrdersCount={stats.pendingPayments}
+            openTicketsCount={openTicketsCount}
+            siteName={siteSettings.name}
+          />
+          <main className="flex-1 overflow-auto">
+            {/* Mobile header with sidebar trigger */}
+            <div className="sticky top-0 z-10 flex items-center gap-4 border-b-2 border-border bg-background/95 backdrop-blur p-4 md:hidden">
+              <SidebarTrigger />
+              <h1 className="font-bold">{t.admin.title}</h1>
+            </div>
+            
+            <div className="p-4 md:p-6 space-y-6">
+              {/* Desktop header */}
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              >
+                <div>
+                  <h1 className="text-3xl font-bold">{t.admin.title}</h1>
+                  <p className="text-muted-foreground">{t.admin.subtitle}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="brutal" onClick={() => navigate("/admin/analytics")}>
+                    <BarChart3 className="h-4 w-4 mr-2" />{t.admin.sections.analytics}
+                  </Button>
+                  <Button variant="outline" onClick={() => setBulkVerifyOpen(true)}>
+                    <ListChecks className="h-4 w-4 mr-2" />{t.admin.bulkVerify}
+                  </Button>
+                </div>
+              </motion.div>
 
-          <TabsContent value="dashboard" className="space-y-6">
+              {/* Dashboard Section */}
+              {activeSection === "dashboard" && (
+                <div className="space-y-6">
             <MotionContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <MotionStatCard>
                 <div className="flex items-center justify-between">
@@ -863,25 +866,27 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+                </div>
+              )}
 
-          <TabsContent value="orders">
+              {/* Orders Section */}
+              {activeSection === "orders" && (
             <Card>
               <CardHeader>
-                <CardTitle>Order Management</CardTitle>
-                <CardDescription>Verify payments and issue redeem codes</CardDescription>
+                <CardTitle>{t.admin.sections.orders}</CardTitle>
+                <CardDescription>{t.orders.subtitle}</CardDescription>
                 <DataTableFilters
                   searchValue={orderSearch}
                   onSearchChange={setOrderSearch}
-                  searchPlaceholder="Search by customer, product..."
+                  searchPlaceholder={t.orders.searchPlaceholder}
                   filters={[{
                     key: "status",
-                    label: "Status",
+                    label: t.tickets.status,
                     value: orderStatusFilter,
                     options: [
-                      { value: "pending", label: "Pending" },
-                      { value: "verified", label: "Verified" },
-                      { value: "rejected", label: "Rejected" },
+                      { value: "pending", label: t.status.pending },
+                      { value: "verified", label: t.status.verified },
+                      { value: "rejected", label: t.status.rejected },
                     ],
                     onChange: setOrderStatusFilter
                   }]}
@@ -904,29 +909,25 @@ const Admin = () => {
                 <DataTablePagination table={orderTable} />
               </CardContent>
             </Card>
-          </TabsContent>
+              )}
 
-          <TabsContent value="products">
+              {/* Products Section */}
+              {activeSection === "products" && (
             <Card>
-              <CardHeader><CardTitle>Product Management</CardTitle></CardHeader>
+              <CardHeader><CardTitle>{t.admin.sections.products}</CardTitle></CardHeader>
               <CardContent>
                 <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
                   <DialogTrigger asChild>
-                    <Button className="mb-4" onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", price: "", duration_days: "", category_id: "" }); }}>Add Product</Button>
+                    <Button className="mb-4" onClick={() => { setEditingProduct(null); setProductForm({ name: "", description: "", price: "", duration_days: "", category_id: "" }); }}>{t.products.addProduct}</Button>
                   </DialogTrigger>
                   <DialogContent>
-                    <DialogHeader><DialogTitle>{editingProduct ? "Edit" : "Add"} Product</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{editingProduct ? t.products.editProduct : t.products.addProduct}</DialogTitle></DialogHeader>
                     <form onSubmit={handleProductSubmit} className="space-y-4">
-                      <div className="space-y-2"><Label>Name</Label><Input value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required /></div>
-                      <div className="space-y-2"><Label>Description</Label><Textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></div>
+                      <div className="space-y-2"><Label>{t.products.productName}</Label><Input value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required /></div>
+                      <div className="space-y-2"><Label>{t.products.description}</Label><Textarea value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} /></div>
                       <div className="space-y-2">
-                        <Label>Category</Label>
-                        <Select value={productForm.category_id || "none"} onValueChange={(value) => setProductForm({ ...productForm, category_id: value === "none" ? "" : value })}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select category (optional)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No Category</SelectItem>
+                        <Label>{t.products.category}</Label>
+                        <Select value={productForm.category_id || "none"} onValueChange={(value) => setProductForm({ ...productForm, category_id: value === "none" ? "" : value })}><SelectTrigger><SelectValue placeholder={t.categories.noParent} /></SelectTrigger><SelectContent><SelectItem value="none">{t.categories.noParent}</SelectItem>
                             {categories.filter(c => !c.parent_id).map((parentCat) => (
                               <React.Fragment key={parentCat.id}>
                                 <SelectItem value={parentCat.id} className="font-semibold">{parentCat.name}</SelectItem>
@@ -938,21 +939,21 @@ const Admin = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="space-y-2"><Label>Price (IDR)</Label><Input type="number" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} required /></div>
-                      <div className="space-y-2"><Label>Duration (days)</Label><Input type="number" value={productForm.duration_days} onChange={(e) => setProductForm({ ...productForm, duration_days: e.target.value })} required /></div>
-                      <Button type="submit" className="w-full">{editingProduct ? "Update" : "Create"}</Button>
+                      <div className="space-y-2"><Label>{t.products.price} (IDR)</Label><Input type="number" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} required /></div>
+                      <div className="space-y-2"><Label>{t.products.duration}</Label><Input type="number" value={productForm.duration_days} onChange={(e) => setProductForm({ ...productForm, duration_days: e.target.value })} required /></div>
+                      <Button type="submit" className="w-full">{editingProduct ? t.actions.save : t.actions.create}</Button>
                     </form>
                   </DialogContent>
                 </Dialog>
                 <DataTableFilters
                   searchValue={productSearch}
                   onSearchChange={setProductSearch}
-                  searchPlaceholder="Search products..."
+                  searchPlaceholder={t.actions.search + " " + t.products.title.toLowerCase() + "..."}
                   onExport={exportProducts}
                 />
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader><TableRow><TableHead>Name</TableHead><TableHead>Category</TableHead><TableHead>Price</TableHead><TableHead>Duration</TableHead><TableHead>Stock</TableHead><TableHead>Status</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>{t.products.productName}</TableHead><TableHead>{t.products.category}</TableHead><TableHead>{t.products.price}</TableHead><TableHead>{t.products.duration}</TableHead><TableHead>{t.products.stock}</TableHead><TableHead>{t.tickets.status}</TableHead><TableHead>{t.table.actions}</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).map((product) => {
                         const productCategory = categories.find(c => c.id === product.category_id);
@@ -970,19 +971,19 @@ const Admin = () => {
                               )}
                             </TableCell>
                             <TableCell>Rp {product.price.toLocaleString('id-ID')}</TableCell>
-                            <TableCell>{product.duration_days} days</TableCell>
+                            <TableCell>{product.duration_days} {t.products.daysValidity}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <span className={product.stock < 10 ? "text-destructive font-semibold" : ""}>{product.stock}</span>
                                 {product.stock < 10 && <AlertTriangle className="h-4 w-4 text-destructive" />}
                               </div>
                             </TableCell>
-                            <TableCell><Badge variant={product.is_active ? "default" : "secondary"}>{product.is_active ? "Active" : "Inactive"}</Badge></TableCell>
+                            <TableCell><Badge variant={product.is_active ? "default" : "secondary"}>{product.is_active ? t.status.active : t.status.inactive}</Badge></TableCell>
                             <TableCell>
                               <div className="flex gap-2 flex-wrap">
-                                <Button variant="outline" size="sm" onClick={() => { setSelectedProductForStock(product); setStockManagementOpen(true); }}>Manage Stock</Button>
-                                <Button variant="outline" size="sm" onClick={() => { setEditingProduct(product); setProductForm({ name: product.name, description: product.description || "", price: product.price.toString(), duration_days: product.duration_days.toString(), category_id: product.category_id || "" }); setShowProductDialog(true); }}>Edit</Button>
-                                <Button variant={product.is_active ? "outline" : "default"} size="sm" onClick={async () => { await supabase.from("products").update({ is_active: !product.is_active }).eq("id", product.id); fetchProducts(); }}>{product.is_active ? "Deactivate" : "Activate"}</Button>
+                                <Button variant="outline" size="sm" onClick={() => { setSelectedProductForStock(product); setStockManagementOpen(true); }}>{t.stockManagement.title}</Button>
+                                <Button variant="outline" size="sm" onClick={() => { setEditingProduct(product); setProductForm({ name: product.name, description: product.description || "", price: product.price.toString(), duration_days: product.duration_days.toString(), category_id: product.category_id || "" }); setShowProductDialog(true); }}>{t.actions.edit}</Button>
+                                <Button variant={product.is_active ? "outline" : "default"} size="sm" onClick={async () => { await supabase.from("products").update({ is_active: !product.is_active }).eq("id", product.id); fetchProducts(); }}>{product.is_active ? t.actions.deactivate : t.actions.activate}</Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -993,17 +994,18 @@ const Admin = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
+              )}
 
-          <TabsContent value="users">
+              {/* Users Section */}
+              {activeSection === "users" && (
             <Card>
               <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage user accounts and roles</CardDescription>
+                <CardTitle>{t.admin.sections.users}</CardTitle>
+                <CardDescription>{t.users.subtitle}</CardDescription>
                 <DataTableFilters
                   searchValue={userSearch}
                   onSearchChange={setUserSearch}
-                  searchPlaceholder="Search by name or email..."
+                  searchPlaceholder={t.actions.search + " " + t.users.title.toLowerCase() + "..."}
                   onExport={exportUsers}
                 />
               </CardHeader>
@@ -1011,32 +1013,33 @@ const Admin = () => {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>{userTable.getHeaderGroups().map(headerGroup => (<TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>))}</TableHeader>
-                    <TableBody>{userTable.getRowModel().rows.length ? userTable.getRowModel().rows.map(row => (<TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>)) : (<TableRow><TableCell colSpan={userColumns.length} className="text-center">No users found</TableCell></TableRow>)}</TableBody>
+                    <TableBody>{userTable.getRowModel().rows.length ? userTable.getRowModel().rows.map(row => (<TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>)) : (<TableRow><TableCell colSpan={userColumns.length} className="text-center">{t.table.noResults}</TableCell></TableRow>)}</TableBody>
                   </Table>
                 </div>
                 <DataTablePagination table={userTable} />
               </CardContent>
             </Card>
-          </TabsContent>
+              )}
 
-          <TabsContent value="tickets">
+              {/* Tickets Section */}
+              {activeSection === "tickets" && (
             <Card>
               <CardHeader>
-                <CardTitle>Support Tickets</CardTitle>
-                <CardDescription>Manage customer support requests</CardDescription>
+                <CardTitle>{t.admin.sections.tickets}</CardTitle>
+                <CardDescription>{t.tickets.subtitle}</CardDescription>
                 <DataTableFilters
                   searchValue={ticketSearch}
                   onSearchChange={setTicketSearch}
-                  searchPlaceholder="Search tickets..."
+                  searchPlaceholder={t.actions.search + " " + t.tickets.title.toLowerCase() + "..."}
                   filters={[{
                     key: "status",
-                    label: "Status",
+                    label: t.tickets.status,
                     value: ticketStatusFilter,
                     options: [
-                      { value: "open", label: "Open" },
-                      { value: "in_progress", label: "In Progress" },
-                      { value: "resolved", label: "Resolved" },
-                      { value: "closed", label: "Closed" },
+                      { value: "open", label: t.tickets.statuses.open },
+                      { value: "in_progress", label: t.tickets.statuses.in_progress },
+                      { value: "resolved", label: t.tickets.statuses.resolved },
+                      { value: "closed", label: t.tickets.statuses.closed },
                     ],
                     onChange: setTicketStatusFilter
                   }]}
@@ -1051,30 +1054,31 @@ const Admin = () => {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>{ticketTable.getHeaderGroups().map(headerGroup => (<TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>))}</TableHeader>
-                    <TableBody>{ticketTable.getRowModel().rows.length ? ticketTable.getRowModel().rows.map(row => (<TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>)) : (<TableRow><TableCell colSpan={ticketColumns.length} className="text-center">No tickets found</TableCell></TableRow>)}</TableBody>
+                    <TableBody>{ticketTable.getRowModel().rows.length ? ticketTable.getRowModel().rows.map(row => (<TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>)) : (<TableRow><TableCell colSpan={ticketColumns.length} className="text-center">{t.table.noResults}</TableCell></TableRow>)}</TableBody>
                   </Table>
                 </div>
                 <DataTablePagination table={ticketTable} />
               </CardContent>
             </Card>
-          </TabsContent>
+              )}
 
-          <TabsContent value="ratings">
+              {/* Ratings Section */}
+              {activeSection === "ratings" && (
             <Card>
               <CardHeader>
-                <CardTitle>Product Ratings & Reviews</CardTitle>
-                <CardDescription>Manage customer ratings and reviews</CardDescription>
+                <CardTitle>{t.admin.sections.ratings}</CardTitle>
+                <CardDescription>{t.ratings.subtitle}</CardDescription>
                 <DataTableFilters
                   searchValue={ratingSearch}
                   onSearchChange={setRatingSearch}
-                  searchPlaceholder="Search by product or user..."
+                  searchPlaceholder={t.actions.search + " " + t.ratings.title.toLowerCase() + "..."}
                   filters={[{
                     key: "visibility",
-                    label: "Visibility",
+                    label: t.ratings.toggleVisibility,
                     value: ratingVisibleFilter,
                     options: [
-                      { value: "visible", label: "Visible" },
-                      { value: "hidden", label: "Hidden" },
+                      { value: "visible", label: t.ratings.visible },
+                      { value: "hidden", label: t.ratings.hidden },
                     ],
                     onChange: setRatingVisibleFilter
                   }]}
@@ -1086,52 +1090,54 @@ const Admin = () => {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>{ratingTable.getHeaderGroups().map(headerGroup => (<TableRow key={headerGroup.id}>{headerGroup.headers.map(header => (<TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>))}</TableRow>))}</TableHeader>
-                    <TableBody>{ratingTable.getRowModel().rows.length ? ratingTable.getRowModel().rows.map(row => (<TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>)) : (<TableRow><TableCell colSpan={ratingColumns.length} className="text-center">No ratings found</TableCell></TableRow>)}</TableBody>
+                    <TableBody>{ratingTable.getRowModel().rows.length ? ratingTable.getRowModel().rows.map(row => (<TableRow key={row.id}>{row.getVisibleCells().map(cell => (<TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>))}</TableRow>)) : (<TableRow><TableCell colSpan={ratingColumns.length} className="text-center">{t.table.noResults}</TableCell></TableRow>)}</TableBody>
                   </Table>
                 </div>
                 <DataTablePagination table={ratingTable} />
               </CardContent>
             </Card>
-          </TabsContent>
+              )}
 
-          <TabsContent value="categories">
+              {/* Categories Section */}
+              {activeSection === "categories" && (
             <Card>
               <CardHeader>
-                <CardTitle>Product Categories</CardTitle>
-                <CardDescription>Manage product categories and organization</CardDescription>
+                <CardTitle>{t.admin.sections.categories}</CardTitle>
+                <CardDescription>{t.categories.subtitle}</CardDescription>
               </CardHeader>
               <CardContent>
                 <CategoryManager />
               </CardContent>
             </Card>
-          </TabsContent>
+              )}
 
-          <TabsContent value="code-inventory">
+              {/* Code Inventory Section */}
+              {activeSection === "code-inventory" && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Code className="h-5 w-5" />
-                  Code Inventory
+                  {t.admin.sections.codeInventory}
                 </CardTitle>
-                <CardDescription>Manage pre-uploaded redeem codes for auto-delivery products</CardDescription>
+                <CardDescription>{t.codeInventory.subtitle}</CardDescription>
               </CardHeader>
               <CardContent>
                 <CodeInventoryManager />
               </CardContent>
             </Card>
-          </TabsContent>
+              )}
 
-          <TabsContent value="audit"><StockActivityLog /></TabsContent>
+              {/* Vouchers Section */}
+              {activeSection === "vouchers" && (
+                <VoucherManager />
+              )}
 
-        <TabsContent value="vouchers">
-          <VoucherManager />
-        </TabsContent>
-
-          <TabsContent value="settings">
+              {/* Settings Section */}
+              {activeSection === "settings" && (
             <Tabs defaultValue="web" className="space-y-4">
               <TabsList>
-                <TabsTrigger value="web">Web Settings</TabsTrigger>
-                <TabsTrigger value="business">Business Rules</TabsTrigger>
+                <TabsTrigger value="web">{t.settings.webSettings}</TabsTrigger>
+                <TabsTrigger value="business">{t.settings.businessRules}</TabsTrigger>
               </TabsList>
               <TabsContent value="web">
                 <WebSettingsEditor />
@@ -1140,9 +1146,11 @@ const Admin = () => {
                 <BusinessRulesEditor />
               </TabsContent>
             </Tabs>
-          </TabsContent>
-        </Tabs>
-      </div>
+              )}
+            </div>
+          </main>
+        </div>
+      </SidebarProvider>
 
       {/* Order Verification Dialog */}
       {verifyingOrder && (
