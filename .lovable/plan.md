@@ -1,342 +1,317 @@
 
-# Implementasi Sistem Voucher/Diskon - Canggih & Lengkap
+# Bulk Voucher Generation for Promotional Campaigns
 
 ## Overview
 
-Membangun sistem voucher dan potongan harga yang canggih dengan fitur-fitur modern seperti:
-- Multiple discount types (percentage, fixed, free shipping)
-- Usage limits & validity periods
-- Product/category targeting
-- Stacking rules
-- Real-time analytics & tracking
-- Full admin control panel
+Implementing a comprehensive bulk voucher generation system that allows admins to create multiple vouchers at once with auto-generated unique codes. This is essential for running promotional campaigns, influencer partnerships, and marketing initiatives.
 
 ---
 
-## 1. Database Schema
+## 1. Features
 
-### Tabel: `vouchers`
-
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│  VOUCHERS TABLE                                                         │
-├─────────────────────┬───────────────────────┬──────────────────────────┤
-│ Column              │ Type                  │ Description              │
-├─────────────────────┼───────────────────────┼──────────────────────────┤
-│ id                  │ uuid (PK)             │ Primary key              │
-│ code                │ text (unique)         │ Voucher code (SAVE20)    │
-│ name                │ text                  │ Display name             │
-│ description         │ text                  │ Admin notes              │
-│ discount_type       │ text                  │ 'percentage' / 'fixed'   │
-│ discount_value      │ numeric               │ Amount (20 = 20% or Rp)  │
-│ min_order_amount    │ numeric               │ Minimum order to apply   │
-│ max_discount_amount │ numeric               │ Cap for % discounts      │
-│ usage_limit         │ integer               │ Total uses allowed       │
-│ usage_count         │ integer (default 0)   │ Current usage count      │
-│ per_user_limit      │ integer               │ Uses per user (default 1)│
-│ valid_from          │ timestamptz           │ Start validity           │
-│ valid_until         │ timestamptz           │ End validity             │
-│ is_active           │ boolean               │ Enable/disable toggle    │
-│ applies_to          │ text                  │ 'all'/'products'/'cats'  │
-│ product_ids         │ uuid[]                │ Target product IDs       │
-│ category_ids        │ uuid[]                │ Target category IDs      │
-│ stackable           │ boolean               │ Can combine with others  │
-│ first_order_only    │ boolean               │ New customer exclusive   │
-│ created_at          │ timestamptz           │ Creation timestamp       │
-│ created_by          │ uuid                  │ Admin who created        │
-│ updated_at          │ timestamptz           │ Last update              │
-└─────────────────────┴───────────────────────┴──────────────────────────┘
-```
-
-### Tabel: `voucher_usage`
+### Code Generation Options
 
 ```text
-┌────────────────────────────────────────────────────────────────────────┐
-│  VOUCHER_USAGE TABLE (Tracking)                                         │
-├─────────────────────┬───────────────────────┬──────────────────────────┤
-│ Column              │ Type                  │ Description              │
-├─────────────────────┼───────────────────────┼──────────────────────────┤
-│ id                  │ uuid (PK)             │ Primary key              │
-│ voucher_id          │ uuid (FK)             │ Reference to voucher     │
-│ order_id            │ uuid (FK)             │ Reference to order       │
-│ user_id             │ uuid                  │ User who used it         │
-│ discount_applied    │ numeric               │ Actual discount amount   │
-│ original_amount     │ numeric               │ Order total before       │
-│ created_at          │ timestamptz           │ Usage timestamp          │
-└─────────────────────┴───────────────────────┴──────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│  BULK VOUCHER GENERATION                                                 │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  Code Format Options:                                                    │
+│                                                                          │
+│  1. PREFIX + RANDOM                                                      │
+│     Example: PROMO-X7K9M2, PROMO-A3B5C8                                 │
+│     Pattern: {PREFIX}-{RANDOM_ALPHANUMERIC}                             │
+│                                                                          │
+│  2. SEQUENTIAL                                                           │
+│     Example: CAMPAIGN001, CAMPAIGN002, CAMPAIGN003                      │
+│     Pattern: {PREFIX}{SEQUENCE_NUMBER}                                  │
+│                                                                          │
+│  3. FULL RANDOM                                                          │
+│     Example: K7X9M2P4, A3B5C8D1                                         │
+│     Pattern: {RANDOM_8_CHARS}                                           │
+│                                                                          │
+│  4. CUSTOM PATTERN                                                       │
+│     Example: 2024-FEB-XXXXX (X = random)                                │
+│     Pattern: User-defined with placeholders                             │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Update Tabel: `orders`
+### Generation Configuration
 
-Tambah kolom:
-- `voucher_id` (uuid, nullable) - FK ke vouchers
-- `voucher_code` (text, nullable) - Snapshot kode voucher
-- `discount_amount` (numeric, default 0) - Potongan yang diberikan
-- `original_amount` (numeric) - Total sebelum diskon
-- `final_amount` (numeric) - Total setelah diskon
+- **Quantity**: 1 to 1000 vouchers per batch
+- **Code Length**: 6-12 characters
+- **Character Set**: Alphanumeric (excluding confusing chars like 0/O, 1/I/L)
+- **Prefix**: Optional campaign identifier
+- **Campaign Name**: Group identifier for tracking
 
 ---
 
-## 2. Business Rules Integration
+## 2. Database Changes
 
-### Update `useBusinessRules.ts`
+### Add Campaign Tracking to Vouchers
 
-Tambah section baru:
+```sql
+ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS campaign_id text;
+ALTER TABLE vouchers ADD COLUMN IF NOT EXISTS batch_id uuid;
+```
+
+These columns allow:
+- **campaign_id**: Group vouchers by marketing campaign (e.g., "FEB2024_SALE")
+- **batch_id**: Track which vouchers were created together in a bulk operation
+
+---
+
+## 3. Component Structure
+
+### A. BulkVoucherGeneratorDialog
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  BULK VOUCHER GENERATOR DIALOG                                           │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │                                                                    │  │
+│  │  Campaign Settings                                                 │  │
+│  │  ─────────────────                                                 │  │
+│  │                                                                    │  │
+│  │  Campaign Name *               Number of Vouchers *                │  │
+│  │  ┌────────────────────────┐   ┌────────────────────────┐          │  │
+│  │  │ February Sale 2024     │   │ 100                    │          │  │
+│  │  └────────────────────────┘   └────────────────────────┘          │  │
+│  │                                                                    │  │
+│  │  ─────────────── Code Format ───────────────                      │  │
+│  │                                                                    │  │
+│  │  Code Pattern                  Code Length                         │  │
+│  │  ┌────────────────────────┐   ┌────────────────────────┐          │  │
+│  │  │ ◉ Prefix + Random      │   │ 8 characters           │          │  │
+│  │  │ ○ Sequential           │   └────────────────────────┘          │  │
+│  │  │ ○ Full Random          │                                       │  │
+│  │  └────────────────────────┘                                       │  │
+│  │                                                                    │  │
+│  │  Prefix (optional)             Preview:                            │  │
+│  │  ┌────────────────────────┐   ┌────────────────────────┐          │  │
+│  │  │ FEB24                  │   │ FEB24-K7X9M2           │ ◄──Live   │  │
+│  │  └────────────────────────┘   │ FEB24-A3B5C8           │    preview│  │
+│  │                               │ FEB24-P4Q2R7           │          │  │
+│  │                               └────────────────────────┘          │  │
+│  │                                                                    │  │
+│  │  ─────────────── Discount Settings ───────────────                │  │
+│  │                                                                    │  │
+│  │  Discount Type                 Discount Value                      │  │
+│  │  ┌────────────────────────┐   ┌────────────────────────┐          │  │
+│  │  │ ◉ Percentage           │   │ 20                     │ %        │  │
+│  │  │ ○ Fixed Amount         │   └────────────────────────┘          │  │
+│  │  └────────────────────────┘                                       │  │
+│  │                                                                    │  │
+│  │  Min. Order    │  Max Discount  │  Per User Limit                 │  │
+│  │  ┌───────────┐ │ ┌───────────┐  │ ┌───────────┐                   │  │
+│  │  │ 0         │ │ │ 50000     │  │ │ 1         │                   │  │
+│  │  └───────────┘ │ └───────────┘  │ └───────────┘                   │  │
+│  │                                                                    │  │
+│  │  ─────────────── Validity Period ───────────────                  │  │
+│  │                                                                    │  │
+│  │  Valid From                    Valid Until                         │  │
+│  │  ┌────────────────────────┐   ┌────────────────────────┐          │  │
+│  │  │ 📅 2024-02-01          │   │ 📅 2024-02-28          │          │  │
+│  │  └────────────────────────┘   └────────────────────────┘          │  │
+│  │                                                                    │  │
+│  │  ─────────────── Options ───────────────                          │  │
+│  │                                                                    │  │
+│  │  [✓] Active (start immediately)                                   │  │
+│  │  [ ] First Order Only                                              │  │
+│  │  [ ] Each code is single-use (usage_limit = 1)                    │  │
+│  │                                                                    │  │
+│  │                 [Cancel]  [Generate 100 Vouchers]                  │  │
+│  │                                                                    │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### B. Generation Progress UI
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  GENERATION PROGRESS                                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │                                                                    │  │
+│  │           🔄 Generating Vouchers...                               │  │
+│  │                                                                    │  │
+│  │           ████████████████████████░░░░░░░░ 75%                    │  │
+│  │                                                                    │  │
+│  │           75 of 100 vouchers created                              │  │
+│  │                                                                    │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### C. Generation Complete / Export
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  GENERATION COMPLETE                                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │                                                                    │  │
+│  │           ✅ Successfully Generated 100 Vouchers!                 │  │
+│  │                                                                    │  │
+│  │           Campaign: February Sale 2024                            │  │
+│  │           Discount: 20% off                                        │  │
+│  │           Valid: Feb 1 - Feb 28, 2024                             │  │
+│  │                                                                    │  │
+│  │           ┌────────────────────────────────────────────────────┐  │  │
+│  │           │  Download Options                                   │  │
+│  │           │                                                     │  │
+│  │           │  [📥 Download CSV]  [📋 Copy All Codes]            │  │
+│  │           │                                                     │  │
+│  │           └────────────────────────────────────────────────────┘  │  │
+│  │                                                                    │  │
+│  │           Preview (first 10):                                     │  │
+│  │           ┌────────────────────────────────────────────────────┐  │  │
+│  │           │  FEB24-K7X9M2   FEB24-A3B5C8   FEB24-P4Q2R7        │  │  │
+│  │           │  FEB24-B8C3D4   FEB24-E5F6G7   FEB24-H2J3K4        │  │  │
+│  │           │  FEB24-L5M6N7   FEB24-P8Q9R0   FEB24-S2T3U4        │  │  │
+│  │           │  FEB24-V5W6X7   ...and 90 more                     │  │  │
+│  │           └────────────────────────────────────────────────────┘  │  │
+│  │                                                                    │  │
+│  │                              [Close]                              │  │
+│  │                                                                    │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 4. Code Generation Algorithm
+
+### Unique Code Generator
 
 ```typescript
-voucher: {
-  enabled: boolean;           // Master toggle
-  max_stackable: number;      // Max vouchers per order (1-3)
-  min_order_for_voucher: number; // Global minimum
-  allow_first_order_discount: boolean;
-  show_available_vouchers: boolean; // Show applicable vouchers in checkout
+const CHAR_SET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // Excluded: 0/O, 1/I/L
+
+function generateRandomCode(length: number): string {
+  let code = "";
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  for (let i = 0; i < length; i++) {
+    code += CHAR_SET[array[i] % CHAR_SET.length];
+  }
+  return code;
+}
+
+function generateBulkCodes(
+  quantity: number,
+  pattern: "prefix-random" | "sequential" | "random",
+  options: {
+    prefix?: string;
+    codeLength: number;
+  }
+): string[] {
+  const codes = new Set<string>();
+  
+  while (codes.size < quantity) {
+    let code: string;
+    
+    switch (pattern) {
+      case "prefix-random":
+        code = `${options.prefix}-${generateRandomCode(options.codeLength)}`;
+        break;
+      case "sequential":
+        code = `${options.prefix}${String(codes.size + 1).padStart(4, "0")}`;
+        break;
+      case "random":
+        code = generateRandomCode(options.codeLength);
+        break;
+    }
+    
+    codes.add(code);
+  }
+  
+  return Array.from(codes);
 }
 ```
 
-### Update `BusinessRulesEditor.tsx`
+### Collision Prevention
 
-Tambah tab baru "Vouchers" dengan kontrol:
-- Enable/disable voucher system
-- Max stackable vouchers
-- Minimum order amount
-- First order discount toggle
-- Show available vouchers toggle
+- Use Set to ensure uniqueness within batch
+- Check against existing codes in database before insertion
+- Regenerate if collision detected
 
 ---
 
-## 3. Edge Function: `validate-voucher`
+## 5. Integration with VoucherManager
+
+### Updated VoucherManager Header
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  VALIDATE-VOUCHER EDGE FUNCTION                                          │
+│  VOUCHER MANAGER HEADER                                                  │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  Input:                                                                  │
-│  {                                                                       │
-│    code: string,                                                         │
-│    order_amount: number,                                                 │
-│    product_id: string,                                                   │
-│    category_id?: string,                                                 │
-│    user_id: string                                                       │
-│  }                                                                       │
+│  Voucher Management                                                      │
+│  Create and manage discount vouchers                                     │
 │                                                                          │
-│  Validations:                                                            │
-│  1. Check voucher exists & is_active                                     │
-│  2. Check validity period (valid_from <= now <= valid_until)            │
-│  3. Check usage_limit not exceeded                                       │
-│  4. Check per_user_limit for this user                                  │
-│  5. Check min_order_amount                                               │
-│  6. Check product/category targeting                                     │
-│  7. Check first_order_only if applicable                                │
-│                                                                          │
-│  Output (Success):                                                       │
-│  {                                                                       │
-│    valid: true,                                                          │
-│    voucher: { id, name, discount_type, discount_value, ... },           │
-│    discount_amount: number,                                              │
-│    final_amount: number                                                  │
-│  }                                                                       │
-│                                                                          │
-│  Output (Error):                                                         │
-│  {                                                                       │
-│    valid: false,                                                         │
-│    error: "Voucher expired" | "Usage limit reached" | ...               │
-│  }                                                                       │
+│  ┌────────────────────────────────┐  ┌────────────────────────────────┐ │
+│  │ [+ Create Voucher]             │  │ [📦 Bulk Generate]             │ │
+│  │    Create single voucher       │  │    Generate multiple for       │ │
+│  │    with custom code            │  │    promotional campaigns       │ │
+│  └────────────────────────────────┘  └────────────────────────────────┘ │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Campaign Filter
 
-## 4. Frontend Components
-
-### A. VoucherInput Component
+Add ability to filter vouchers by campaign:
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  VOUCHER INPUT (Checkout Dialog)                                         │
+│  CAMPAIGN FILTER                                                         │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │  🏷️ Have a voucher code?                                        │    │
-│  │                                                                  │    │
-│  │  ┌──────────────────────────────────┐  ┌─────────────┐          │    │
-│  │  │  Enter voucher code...           │  │   Apply     │          │    │
-│  │  └──────────────────────────────────┘  └─────────────┘          │    │
-│  │                                                                  │    │
-│  │  ✓ SAVE20 applied! -Rp 30,000                                   │    │
-│  │    [Remove]                                                      │    │
-│  │                                                                  │    │
-│  │  ─────────────────────────────────────────────────────────────  │    │
-│  │                                                                  │    │
-│  │  Available vouchers for you:          ◄── Optional feature      │    │
-│  │  ┌───────────────┐  ┌───────────────┐                           │    │
-│  │  │  WELCOME10    │  │  BULKBUY15    │                           │    │
-│  │  │  10% off      │  │  15% off      │                           │    │
-│  │  │  [Apply]      │  │  Min Rp 500k  │                           │    │
-│  │  └───────────────┘  └───────────────┘                           │    │
-│  │                                                                  │    │
-│  └─────────────────────────────────────────────────────────────────┘    │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### B. VoucherManager (Admin)
-
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│  VOUCHER MANAGER (Admin Panel)                                           │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  Vouchers                               [+ Create Voucher]        │  │
-│  │                                                                    │  │
-│  │  Stats:                                                            │  │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐              │  │
-│  │  │  12     │  │  5      │  │  156    │  │ Rp 4.2M │              │  │
-│  │  │ Active  │  │ Expired │  │ Total   │  │ Savings │              │  │
-│  │  │         │  │         │  │ Used    │  │  Given  │              │  │
-│  │  └─────────┘  └─────────┘  └─────────┘  └─────────┘              │  │
-│  │                                                                    │  │
-│  │  ┌─────────────────────────────────────────────────────────────┐  │  │
-│  │  │ Code    │ Name      │ Type │ Value│ Used│ Limit│ Status │Act │  │  │
-│  │  ├─────────┼───────────┼──────┼──────┼─────┼──────┼────────┼────┤  │  │
-│  │  │ SAVE20  │ 20% Off   │  %   │ 20%  │ 45  │ 100  │ Active │ ⚙️ │  │  │
-│  │  │ WELCOME │ New User  │  %   │ 10%  │ 12  │ ∞    │ Active │ ⚙️ │  │  │
-│  │  │ FLASH50K│ Flash Sale│Fixed │ 50K  │ 100 │ 100  │ Ended  │ ⚙️ │  │  │
-│  │  └─────────┴───────────┴──────┴──────┴─────┴──────┴────────┴────┘  │  │
-│  │                                                                    │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
-### C. VoucherFormDialog
-
-```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│  CREATE/EDIT VOUCHER DIALOG                                              │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  ┌───────────────────────────────────────────────────────────────────┐  │
-│  │  Voucher Details                                                   │  │
-│  │                                                                    │  │
-│  │  Code *                        Name *                              │  │
-│  │  ┌────────────────────┐       ┌────────────────────────┐          │  │
-│  │  │ SAVE20             │       │ Save 20% on orders     │          │  │
-│  │  └────────────────────┘       └────────────────────────┘          │  │
-│  │                                                                    │  │
-│  │  Discount Type                 Discount Value                      │  │
-│  │  ┌────────────────────┐       ┌────────────────────────┐          │  │
-│  │  │ ◉ Percentage       │       │ 20                     │ %        │  │
-│  │  │ ○ Fixed Amount     │       └────────────────────────┘          │  │
-│  │  └────────────────────┘                                            │  │
-│  │                                                                    │  │
-│  │  Min. Order Amount             Max Discount (for %)                │  │
-│  │  ┌────────────────────┐       ┌────────────────────────┐          │  │
-│  │  │ 100000             │       │ 50000                  │          │  │
-│  │  └────────────────────┘       └────────────────────────┘          │  │
-│  │                                                                    │  │
-│  │  ─────────────────── Usage Limits ─────────────────────           │  │
-│  │                                                                    │  │
-│  │  Total Usage Limit             Per User Limit                      │  │
-│  │  ┌────────────────────┐       ┌────────────────────────┐          │  │
-│  │  │ 100                │       │ 1                      │          │  │
-│  │  └────────────────────┘       └────────────────────────┘          │  │
-│  │                                                                    │  │
-│  │  ─────────────────── Validity Period ─────────────────            │  │
-│  │                                                                    │  │
-│  │  Valid From                    Valid Until                         │  │
-│  │  ┌────────────────────┐       ┌────────────────────────┐          │  │
-│  │  │ 📅 2024-02-01      │       │ 📅 2024-02-28          │          │  │
-│  │  └────────────────────┘       └────────────────────────┘          │  │
-│  │                                                                    │  │
-│  │  ─────────────────── Targeting ───────────────────────            │  │
-│  │                                                                    │  │
-│  │  Applies To:                                                       │  │
-│  │  ◉ All Products                                                    │  │
-│  │  ○ Specific Products  [Select products...]                        │  │
-│  │  ○ Specific Categories [Select categories...]                     │  │
-│  │                                                                    │  │
-│  │  ─────────────────── Options ─────────────────────────            │  │
-│  │                                                                    │  │
-│  │  [✓] Active                                                        │  │
-│  │  [ ] First Order Only (new customers)                              │  │
-│  │  [ ] Stackable (can combine with other vouchers)                   │  │
-│  │                                                                    │  │
-│  │                           [Cancel]  [Save Voucher]                 │  │
-│  │                                                                    │  │
-│  └───────────────────────────────────────────────────────────────────┘  │
+│  Filter by Campaign:                                                     │
+│  ┌────────────────────────────────────────────────────────────┐         │
+│  │  All Campaigns ▼                                           │         │
+│  │  ────────────────────────────────────────────────────────  │         │
+│  │  All Campaigns                                             │         │
+│  │  February Sale 2024 (100 vouchers)                         │         │
+│  │  Influencer Codes (50 vouchers)                            │         │
+│  │  Valentine Special (25 vouchers)                           │         │
+│  │  (Single vouchers)                                         │         │
+│  └────────────────────────────────────────────────────────────┘         │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 5. Update Order Flow
+## 6. Export Features
 
-### OrderConfirmationDialog Updates
+### CSV Export Format
+
+```csv
+code,name,discount_type,discount_value,valid_from,valid_until,campaign
+FEB24-K7X9M2,February Sale 20%,percentage,20,2024-02-01,2024-02-28,February Sale 2024
+FEB24-A3B5C8,February Sale 20%,percentage,20,2024-02-01,2024-02-28,February Sale 2024
+...
+```
+
+### Copy All Codes
+
+Copy as newline-separated list for easy distribution:
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│  UPDATED ORDER CONFIRMATION                                              │
-├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│  Product: Cloud Phone 30 Days                                            │
-│  Duration: 30 days                                                       │
-│  Quantity: 2                                                             │
-│  Price per item: Rp 150,000                                              │
-│  ─────────────────────────────────────────────────────────────────────  │
-│  Subtotal: Rp 300,000                                                    │
-│                                                                          │
-│  🏷️ Voucher Code                                                        │
-│  ┌──────────────────────────────┐  ┌─────────┐                          │
-│  │ SAVE20                       │  │  Apply  │                          │
-│  └──────────────────────────────┘  └─────────┘                          │
-│                                                                          │
-│  ✓ Voucher Applied: SAVE20 (-20%)                                       │
-│  Discount: -Rp 50,000 (max Rp 50,000)                                   │
-│  ─────────────────────────────────────────────────────────────────────  │
-│  Total: Rp 250,000  ◄── Updated with discount                           │
-│  ─────────────────────────────────────────────────────────────────────  │
-│                                                                          │
-│  Payment Method                                                          │
-│  ○ Bank Transfer (Manual)                                                │
-│  ◉ QRIS (Instant) [Recommended]                                         │
-│                                                                          │
-│                            [Cancel]  [Confirm Order]                     │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 6. RLS Policies
-
-### Vouchers Table
-
-```sql
--- Anyone can view active vouchers (for suggestions)
-CREATE POLICY "Anyone can view active vouchers"
-ON vouchers FOR SELECT
-USING (is_active = true AND valid_until >= now());
-
--- Admins can manage all vouchers
-CREATE POLICY "Admins can manage vouchers"
-ON vouchers FOR ALL
-USING (has_role(auth.uid(), 'admin'));
-```
-
-### Voucher Usage Table
-
-```sql
--- Users can view own voucher usage
-CREATE POLICY "Users can view own voucher usage"
-ON voucher_usage FOR SELECT
-USING (user_id = auth.uid());
-
--- System inserts usage (via edge function with service role)
--- No direct user INSERT policy - handled server-side
+FEB24-K7X9M2
+FEB24-A3B5C8
+FEB24-P4Q2R7
+...
 ```
 
 ---
@@ -345,71 +320,45 @@ USING (user_id = auth.uid());
 
 | File | Action | Description |
 |------|--------|-------------|
-| `supabase/migrations/xxx_create_vouchers.sql` | Create | Database tables & policies |
-| `supabase/functions/validate-voucher/index.ts` | Create | Voucher validation logic |
-| `src/hooks/useVoucher.ts` | Create | Voucher validation hook |
-| `src/hooks/useBusinessRules.ts` | Modify | Add voucher section |
-| `src/components/VoucherInput.tsx` | Create | Voucher input for checkout |
-| `src/components/VoucherManager.tsx` | Create | Admin voucher management |
-| `src/components/VoucherFormDialog.tsx` | Create | Create/edit voucher form |
-| `src/components/BusinessRulesEditor.tsx` | Modify | Add Vouchers tab |
-| `src/components/OrderConfirmationDialog.tsx` | Modify | Integrate voucher input |
-| `src/pages/Admin.tsx` | Modify | Add Vouchers tab |
-| `src/pages/Store.tsx` | Modify | Pass voucher to order flow |
+| `supabase/migrations/xxx_add_voucher_campaign.sql` | Create | Add campaign_id and batch_id columns |
+| `src/components/BulkVoucherGeneratorDialog.tsx` | Create | Main bulk generation dialog |
+| `src/components/VoucherManager.tsx` | Modify | Add bulk generate button and campaign filter |
+| `src/lib/voucherCodeGenerator.ts` | Create | Code generation utilities |
 
 ---
 
-## 8. Voucher Analytics (Admin Dashboard)
+## 8. Implementation Flow
 
-Dashboard menampilkan:
-- Total vouchers aktif/expired/disabled
-- Total penggunaan hari ini/minggu/bulan
-- Total discount yang diberikan
-- Top performing vouchers
-- Conversion rate (voucher applied vs completed orders)
-- Usage trend chart
+1. **Database Migration**: Add campaign tracking columns
+2. **Code Generator Utility**: Create secure random code generation functions
+3. **BulkVoucherGeneratorDialog**: Build the complete dialog with all configuration options
+4. **VoucherManager Update**: Integrate bulk generate button and campaign filtering
+5. **Export Functions**: CSV download and copy-all functionality
+6. **Progress Tracking**: Real-time progress for large batch generations
 
 ---
 
 ## 9. Advanced Features
 
-### Auto-suggest Vouchers
-Saat checkout, sistem akan menampilkan voucher yang applicable untuk order tersebut berdasarkan:
-- Product/category match
-- Order amount threshold
-- User eligibility (first order, usage limit)
+### Batch Size Optimization
 
-### Voucher Status Badges
-- 🟢 Active - Currently usable
-- 🟡 Scheduled - Will be active in future
-- 🔴 Expired - Past valid_until date
-- ⚫ Disabled - Manually disabled
-- 🟠 Depleted - Usage limit reached
+For large batches (100+ vouchers):
+- Insert in chunks of 50 to prevent timeouts
+- Show progress bar during generation
+- Allow cancellation mid-process
 
-### Copy to Clipboard
-Setiap voucher code memiliki button copy untuk easy sharing.
+### Duplicate Detection
 
----
+Before inserting:
+```sql
+SELECT code FROM vouchers WHERE code = ANY($1)
+```
 
-## 10. Security Considerations
+If duplicates found, regenerate those codes and retry.
 
-1. **Server-side validation** - Semua validasi dilakukan di edge function, bukan client
-2. **Race condition prevention** - Usage count increment atomic dengan transaction
-3. **Rate limiting** - Limit voucher validation attempts per user
-4. **Audit trail** - Semua usage tercatat di voucher_usage table
-5. **Input sanitization** - Voucher codes di-uppercase dan trimmed
+### Campaign Analytics
 
----
-
-## Technical Implementation Order
-
-1. Database migration (tables + RLS)
-2. Edge function validate-voucher
-3. useVoucher hook
-4. Business rules update
-5. VoucherInput component
-6. OrderConfirmationDialog update
-7. VoucherManager admin component
-8. VoucherFormDialog
-9. Admin.tsx integration
-10. Analytics dashboard
+After implementation, admins can:
+- View usage stats by campaign
+- See which campaigns perform best
+- Track redemption rates per campaign
