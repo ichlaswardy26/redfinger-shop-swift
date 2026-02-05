@@ -96,6 +96,78 @@ export default {
             height: "0",
           },
         },
+        "shimmer": {
+          "0%": {
+            backgroundPosition: "-200% 0",
+          },
+          "100%": {
+            backgroundPosition: "200% 0",
+          },
+        },
+        "pulse-ring": {
+          "0%": {
+            transform: "scale(0.8)",
+            opacity: "0.8",
+          },
+          "50%": {
+            transform: "scale(1)",
+            opacity: "0.4",
+          },
+          "100%": {
+            transform: "scale(1.2)",
+            opacity: "0",
+          },
+        },
+        "gradient-shift": {
+          "0%": {
+            backgroundPosition: "0% 50%",
+          },
+          "50%": {
+            backgroundPosition: "100% 50%",
+          },
+          "100%": {
+            backgroundPosition: "0% 50%",
+          },
+        },
+        "float": {
+          "0%, 100%": {
+            transform: "translateY(0px)",
+          },
+          "50%": {
+            transform: "translateY(-6px)",
+          },
+        },
+        "glow-pulse": {
+          "0%, 100%": {
+            boxShadow: "0 0 5px hsl(var(--primary) / 0.5)",
+          },
+          "50%": {
+            boxShadow: "0 0 20px hsl(var(--primary) / 0.8), 0 0 30px hsl(var(--primary) / 0.4)",
+          },
+        },
+        "bounce-in": {
+          "0%": {
+            transform: "scale(0) translateY(-10px)",
+            opacity: "0",
+          },
+          "50%": {
+            transform: "scale(1.1) translateY(0)",
+          },
+          "100%": {
+            transform: "scale(1) translateY(0)",
+            opacity: "1",
+          },
+        },
+        "slide-up-fade": {
+          "0%": {
+            transform: "translateY(10px)",
+            opacity: "0",
+          },
+          "100%": {
+            transform: "translateY(0)",
+            opacity: "1",
+          },
+        },
         "brutal-bounce": {
           "0%, 100%": {
             transform: "translate(0, 0)",
@@ -132,6 +204,13 @@ export default {
         "brutal-bounce": "brutal-bounce 0.5s ease-in-out",
         "brutal-shake": "brutal-shake 0.3s ease-in-out",
         "brutal-press": "brutal-press 0.1s ease-out forwards",
+        "shimmer": "shimmer 2s linear infinite",
+        "pulse-ring": "pulse-ring 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "gradient-shift": "gradient-shift 3s ease infinite",
+        "float": "float 3s ease-in-out infinite",
+        "glow-pulse": "glow-pulse 2s ease-in-out infinite",
+        "bounce-in": "bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+        "slide-up-fade": "slide-up-fade 0.3s ease-out",
       },
       backdropBlur: {
         glass: "12px",

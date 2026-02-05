@@ -16,6 +16,8 @@ import { X, Layers, ShoppingBag, Package, Sparkles, TrendingUp, CheckCircle } fr
 import { OrderConfirmationDialog } from "@/components/OrderConfirmationDialog";
 import { QRPaymentDialog } from "@/components/QRPaymentDialog";
 import { motion, AnimatePresence } from "framer-motion";
+import { useInView } from "framer-motion";
+import { useRef } from "react";
 
 interface Category {
   id: string;
@@ -46,7 +48,7 @@ interface ProductQuantity {
   [key: string]: number;
 }
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 12;
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -64,6 +66,32 @@ const itemVariants = {
     scale: 1,
     transition: { type: "spring" as const, stiffness: 300, damping: 24 }
   }
+};
+
+// Animated counter component
+const AnimatedCounter = ({ value, duration = 1 }: { value: number; duration?: number }) => {
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true });
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    if (isInView) {
+      let start = 0;
+      const increment = value / (duration * 60);
+      const timer = setInterval(() => {
+        start += increment;
+        if (start >= value) {
+          setDisplayValue(value);
+          clearInterval(timer);
+        } else {
+          setDisplayValue(Math.floor(start));
+        }
+      }, 1000 / 60);
+      return () => clearInterval(timer);
+    }
+  }, [isInView, value, duration]);
+
+  return <span ref={ref}>{displayValue}</span>;
 };
 
 const Store = () => {
@@ -464,69 +492,162 @@ const Store = () => {
       <Navbar />
       
       {/* Enhanced Header */}
-      <div className="relative overflow-hidden border-b-2 border-border bg-gradient-to-br from-background via-muted/30 to-background">
-        {/* Decorative elements */}
+      <div className="relative overflow-hidden border-b-2 border-border mesh-gradient">
+        {/* Animated gradient orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-accent/20 rounded-full blur-2xl" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.2, 1],
+              opacity: [0.3, 0.5, 0.3],
+            }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-20 -right-20 w-64 h-64 bg-gradient-to-br from-primary/30 to-primary/20 rounded-full blur-3xl"
+          />
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.3, 1],
+              opacity: [0.2, 0.4, 0.2],
+            }}
+            transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            className="absolute -bottom-20 -left-20 w-56 h-56 bg-gradient-to-tr from-accent/30 to-accent/10 rounded-full blur-3xl"
+          />
+          <motion.div 
+            animate={{ 
+              scale: [1, 1.15, 1],
+              x: [0, 20, 0],
+              y: [0, -20, 0],
+            }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+            className="absolute top-1/3 left-1/4 w-40 h-40 bg-primary/10 rounded-full blur-3xl"
+          />
+          {/* Dot pattern overlay */}
+          <div className="absolute inset-0 dot-pattern opacity-30" />
+          {/* Floating geometric shapes */}
+          <motion.div
+            animate={{ y: [-10, 10, -10], rotate: [0, 90, 0] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute top-20 right-1/4 w-8 h-8 border-2 border-primary/30 rotate-45"
+          />
+          <motion.div
+            animate={{ y: [10, -10, 10], rotate: [0, -180, 0] }}
+            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute bottom-16 left-1/3 w-6 h-6 bg-accent/20 rounded-full"
+          />
         </div>
         
-        <div className="relative container mx-auto px-4 py-8 sm:py-12">
+        <div className="relative container mx-auto px-4 py-10 sm:py-14 md:py-16">
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-between gap-6"
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="flex flex-col items-center text-center gap-8"
           >
-            <div className="flex items-center gap-4">
+            {/* Hero Icon with pulse ring */}
+            <div className="relative">
+              <motion.div
+                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0, 0.5] }}
+                transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                className="absolute inset-0 w-20 h-20 sm:w-24 sm:h-24 bg-primary/30 rounded-2xl"
+              />
               <motion.div 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="w-14 h-14 sm:w-16 sm:h-16 bg-primary border-2 border-border shadow-brutal flex items-center justify-center"
+                transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+                className="relative w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-primary to-primary/80 border-2 border-border shadow-brutal-lg rounded-2xl flex items-center justify-center"
               >
-                <ShoppingBag className="h-7 w-7 sm:h-8 sm:w-8 text-primary-foreground" />
+                <ShoppingBag className="h-9 w-9 sm:h-11 sm:w-11 text-primary-foreground" />
               </motion.div>
-              <div>
-                <h1 className="text-2xl sm:text-3xl md:text-4xl font-black flex items-center gap-2">
-                  Our Products
-                  <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 text-accent" />
-                </h1>
-                <p className="text-sm sm:text-base text-muted-foreground">
-                  Premium cloud phone services
-                </p>
-              </div>
             </div>
             
-            {/* Quick Stats */}
-            <motion.div 
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.3 }}
-              className="flex gap-2 sm:gap-3"
+            {/* Title Section */}
+            <div className="space-y-3">
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight"
+              >
+                Discover Our{" "}
+                <span className="gradient-text">Premium</span>
+                <br className="sm:hidden" />
+                {" "}Collection
+              </motion.h1>
+              <motion.p 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.5 }}
+                className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto"
+              >
+                Curated cloud phone services with instant delivery
+              </motion.p>
+            </div>
+
+            {/* Animated Stats Cards */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+              className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-2"
             >
-              <div className="text-center px-3 sm:px-4 py-2 bg-background/80 backdrop-blur border-2 border-border rounded-lg shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal transition-all">
-                <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                  <Package className="h-3.5 w-3.5 text-primary" />
-                  <p className="text-lg sm:text-xl font-black text-primary">{products.length}</p>
+              {/* Products Stat */}
+              <motion.div
+                whileHover={{ y: -4, boxShadow: "6px 6px 0px hsl(var(--border))" }}
+                className="group relative text-center px-5 sm:px-6 py-3 sm:py-4 bg-card/90 backdrop-blur-md border-2 border-border rounded-xl shadow-brutal transition-all cursor-default"
+              >
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse-ring" />
+                      <Package className="h-5 w-5 text-primary relative" />
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-black text-primary">
+                      <AnimatedCounter value={products.length} />
+                    </p>
+                  </div>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">Products</p>
                 </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Products</p>
-              </div>
-              <div className="text-center px-3 sm:px-4 py-2 bg-background/80 backdrop-blur border-2 border-border rounded-lg shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal transition-all">
-                <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                  <Layers className="h-3.5 w-3.5 text-primary" />
-                  <p className="text-lg sm:text-xl font-black text-primary">{parentCategories.length}</p>
+              </motion.div>
+
+              {/* Categories Stat */}
+              <motion.div
+                whileHover={{ y: -4, boxShadow: "6px 6px 0px hsl(var(--border))" }}
+                className="group relative text-center px-5 sm:px-6 py-3 sm:py-4 bg-card/90 backdrop-blur-md border-2 border-border rounded-xl shadow-brutal transition-all cursor-default"
+              >
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-accent/20 rounded-full animate-pulse-ring stagger-1" />
+                      <Layers className="h-5 w-5 text-accent relative" />
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-black text-accent">
+                      <AnimatedCounter value={parentCategories.length} />
+                    </p>
+                  </div>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">Categories</p>
                 </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">Categories</p>
-              </div>
-              <div className="text-center px-3 sm:px-4 py-2 bg-background/80 backdrop-blur border-2 border-border rounded-lg shadow-brutal-sm hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-brutal transition-all">
-                <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                  <CheckCircle className="h-3.5 w-3.5 text-primary" />
-                  <p className="text-lg sm:text-xl font-black text-primary">{products.filter(p => p.stock > 0).length}</p>
+              </motion.div>
+
+              {/* In Stock Stat */}
+              <motion.div
+                whileHover={{ y: -4, boxShadow: "6px 6px 0px hsl(var(--border))" }}
+                className="group relative text-center px-5 sm:px-6 py-3 sm:py-4 bg-card/90 backdrop-blur-md border-2 border-border rounded-xl shadow-brutal transition-all cursor-default"
+              >
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-green-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="relative">
+                  <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-green-500/20 rounded-full animate-pulse-ring stagger-2" />
+                      <CheckCircle className="h-5 w-5 text-green-500 relative" />
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-black text-green-500">
+                      <AnimatedCounter value={products.filter(p => p.stock > 0).length} />
+                    </p>
+                  </div>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">In Stock</p>
                 </div>
-                <p className="text-[10px] sm:text-xs text-muted-foreground">In Stock</p>
-              </div>
+              </motion.div>
             </motion.div>
           </motion.div>
         </div>
@@ -534,109 +655,161 @@ const Store = () => {
 
       {/* Sticky Category Filter */}
       {categories.length > 0 && (
-        <div className="sticky top-16 z-20 bg-background/90 backdrop-blur-md border-b-2 border-border/50 shadow-sm">
-          <div className="container mx-auto px-4 py-4 sm:py-5 space-y-3">
+        <div className="sticky top-16 z-20 bg-background/95 backdrop-blur-lg border-b-2 border-border/30 shadow-lg">
+          <div className="container mx-auto px-4 py-4 sm:py-5 space-y-4">
             {/* Parent Categories */}
             <div className="overflow-x-auto -mx-4 px-4 scrollbar-hide">
-              <div className="flex items-center gap-2 sm:gap-2.5 min-w-max">
-                <Button
-                  variant={selectedCategory === null ? "default" : "outline"}
-                  size="sm"
+              <div className="flex items-center gap-2.5 sm:gap-3 min-w-max">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setSelectedCategory(null)}
-                  className={`flex-shrink-0 text-sm h-9 sm:h-10 px-4 gap-2 transition-all duration-200 ${
+                  className={`relative flex-shrink-0 flex items-center gap-2 text-sm font-bold h-10 sm:h-11 px-4 sm:px-5 rounded-xl border-2 transition-all duration-300 ${
                     selectedCategory === null 
-                      ? "ring-2 ring-primary/50 ring-offset-2 ring-offset-background" 
-                      : "hover:border-primary/50"
+                      ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-primary shadow-brutal-sm" 
+                      : "bg-card border-border hover:border-primary/50 hover:shadow-brutal-sm"
                   }`}
                 >
+                  {selectedCategory === null && (
+                    <motion.span
+                      layoutId="categoryIndicator"
+                      className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-accent rounded-full shadow-lg"
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    />
+                  )}
                   All
-                  <Badge variant="secondary" className="ml-1 text-xs bg-primary/10 text-primary border-0">
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    selectedCategory === null 
+                      ? "bg-primary-foreground/20 text-primary-foreground" 
+                      : "bg-primary/10 text-primary"
+                  }`}>
                     {products.length}
-                  </Badge>
-                </Button>
+                  </span>
+                </motion.button>
+
                 {parentCategories.map((category) => (
-                  <Button
+                  <motion.button
                     key={category.id}
-                    variant={selectedParentId === category.id ? "default" : "outline"}
-                    size="sm"
+                    whileTap={{ scale: 0.95 }}
                     onClick={() => setSelectedCategory(category.id)}
-                    className={`gap-1.5 flex-shrink-0 text-sm h-9 sm:h-10 px-4 transition-all duration-200 ${
+                    className={`relative flex-shrink-0 flex items-center gap-2 text-sm font-bold h-10 sm:h-11 px-4 sm:px-5 rounded-xl border-2 transition-all duration-300 ${
                       selectedParentId === category.id 
-                        ? "ring-2 ring-primary/50 ring-offset-2 ring-offset-background" 
-                        : "hover:border-primary/50"
+                        ? "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground border-primary shadow-brutal-sm" 
+                        : "bg-card border-border hover:border-primary/50 hover:shadow-brutal-sm"
                     }`}
                   >
+                    {selectedParentId === category.id && (
+                      <motion.span
+                        layoutId="categoryIndicator"
+                        className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-accent rounded-full shadow-lg"
+                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      />
+                    )}
                     {getCategoryImage(category.image_url)}
                     {category.name}
-                    <Badge variant="secondary" className="ml-1 text-xs bg-primary/10 text-primary border-0">
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                      selectedParentId === category.id 
+                        ? "bg-primary-foreground/20 text-primary-foreground" 
+                        : "bg-primary/10 text-primary"
+                    }`}>
                       {getProductCount(category.id)}
-                    </Badge>
-                  </Button>
+                    </span>
+                  </motion.button>
                 ))}
               </div>
             </div>
             
             {/* Child Categories - Show when parent is selected */}
-            {selectedParentId && getChildCategories(selectedParentId).length > 0 && (
-              <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-x-auto -mx-4 px-4 scrollbar-hide pt-1"
-              >
-                <div className="flex items-center gap-1.5 sm:gap-2 min-w-max bg-muted/50 p-1.5 rounded-lg">
-                  <Button
-                    variant={selectedCategory === selectedParentId ? "secondary" : "ghost"}
-                    size="sm"
-                    onClick={() => setSelectedCategory(selectedParentId)}
-                    className={`text-[10px] sm:text-xs flex-shrink-0 h-7 sm:h-8 ${
-                      selectedCategory === selectedParentId ? "ring-1 ring-primary/30" : ""
-                    }`}
+            <AnimatePresence>
+              {selectedParentId && getChildCategories(selectedParentId).length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  animate={{ opacity: 1, height: "auto", y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -10 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="overflow-x-auto -mx-4 px-4 scrollbar-hide"
+                >
+                  <motion.div 
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                      hidden: {},
+                      visible: { transition: { staggerChildren: 0.05 } }
+                    }}
+                    className="flex items-center gap-2 sm:gap-2.5 min-w-max bg-muted/40 backdrop-blur-sm p-2 rounded-xl border border-border/30"
                   >
-                    All {categories.find(c => c.id === selectedParentId)?.name}
-                  </Button>
-                  {getChildCategories(selectedParentId).map((child) => (
-                    <Button
-                      key={child.id}
-                      variant={selectedCategory === child.id ? "secondary" : "ghost"}
-                      size="sm"
-                      onClick={() => setSelectedCategory(child.id)}
-                      className={`gap-1 text-[10px] sm:text-xs flex-shrink-0 h-7 sm:h-8 ${
-                        selectedCategory === child.id ? "ring-1 ring-primary/30" : ""
+                    <motion.button
+                      variants={{
+                        hidden: { opacity: 0, x: -10 },
+                        visible: { opacity: 1, x: 0 }
+                      }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setSelectedCategory(selectedParentId)}
+                      className={`text-xs sm:text-sm font-medium flex-shrink-0 h-8 sm:h-9 px-3 sm:px-4 rounded-lg transition-all duration-200 ${
+                        selectedCategory === selectedParentId 
+                          ? "bg-secondary text-secondary-foreground shadow-brutal-sm" 
+                          : "hover:bg-muted"
                       }`}
                     >
-                      {getCategoryImage(child.image_url)}
-                      {child.name}
-                    </Button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
+                      All {categories.find(c => c.id === selectedParentId)?.name}
+                    </motion.button>
+                    {getChildCategories(selectedParentId).map((child) => (
+                      <motion.button
+                        key={child.id}
+                        variants={{
+                          hidden: { opacity: 0, x: -10 },
+                          visible: { opacity: 1, x: 0 }
+                        }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setSelectedCategory(child.id)}
+                        className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium flex-shrink-0 h-8 sm:h-9 px-3 sm:px-4 rounded-lg transition-all duration-200 ${
+                          selectedCategory === child.id 
+                            ? "bg-secondary text-secondary-foreground shadow-brutal-sm" 
+                            : "hover:bg-muted"
+                        }`}
+                      >
+                        {getCategoryImage(child.image_url)}
+                        {child.name}
+                      </motion.button>
+                    ))}
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             {selectedCategory && (
-              <div className="flex justify-center pt-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex justify-center"
+              >
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setSelectedCategory(null)}
-                  className="text-muted-foreground text-[10px] sm:text-xs h-6 sm:h-7 hover:text-destructive hover:bg-destructive/10 transition-colors"
+                  className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium h-7 px-3 rounded-full hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
                 >
-                  <X className="h-3 w-3 mr-1" />
+                  <X className="h-3.5 w-3.5" />
                   Clear filter
-                </Button>
-              </div>
+                </motion.button>
+              </motion.div>
             )}
           </div>
         </div>
       )}
 
       {/* Product Grid */}
-      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 md:py-10">
+      <div className="container mx-auto px-3 sm:px-4 py-8 sm:py-10 md:py-12">
         {loading ? (
           // Skeleton Loading
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 max-w-7xl mx-auto">
             {Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i} className="overflow-hidden">
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+              >
+                <Card className="overflow-hidden shimmer">
                 <CardHeader className="p-4 space-y-3">
                   <Skeleton className="h-12 w-12 mx-auto rounded-lg" />
                   <Skeleton className="h-6 w-3/4 mx-auto" />
@@ -649,6 +822,7 @@ const Store = () => {
                   <Skeleton className="h-10 w-full mt-4" />
                 </CardContent>
               </Card>
+              </motion.div>
             ))}
           </div>
         ) : filteredProducts.length === 0 ? (
@@ -656,13 +830,17 @@ const Store = () => {
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center py-16 space-y-6"
+            className="text-center py-20 space-y-8"
           >
-            <div className="w-24 h-24 mx-auto bg-muted rounded-full flex items-center justify-center border-2 border-border">
-              <Package className="h-12 w-12 text-muted-foreground" />
-            </div>
+            <motion.div
+              animate={{ y: [0, -8, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+              className="w-28 h-28 mx-auto bg-gradient-to-br from-muted to-muted/50 rounded-2xl flex items-center justify-center border-2 border-border shadow-brutal"
+            >
+              <Package className="h-14 w-14 text-muted-foreground" />
+            </motion.div>
             <div>
-              <h3 className="text-xl font-bold mb-2">No Products Found</h3>
+              <h3 className="text-2xl font-black mb-3">No Products Found</h3>
               <p className="text-muted-foreground max-w-sm mx-auto">
                 {selectedCategory 
                   ? "No products in this category yet. Try selecting a different category."
@@ -670,10 +848,16 @@ const Store = () => {
               </p>
             </div>
             {selectedCategory && (
-              <Button variant="outline" onClick={() => setSelectedCategory(null)} className="gap-2">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Button variant="default" onClick={() => setSelectedCategory(null)} className="gap-2 shadow-brutal">
                 <Layers className="h-4 w-4" />
                 View All Products
               </Button>
+              </motion.div>
             )}
           </motion.div>
         ) : (
@@ -682,9 +866,10 @@ const Store = () => {
             <motion.p 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="text-sm text-muted-foreground mb-6 text-center"
+              className="text-sm text-muted-foreground mb-8 text-center font-medium"
             >
-              Showing {displayedProducts.length} of {filteredProducts.length} products
+              Showing <span className="text-foreground font-bold">{displayedProducts.length}</span> of{" "}
+              <span className="text-foreground font-bold">{filteredProducts.length}</span> products
             </motion.p>
 
             {/* Products Grid */}
@@ -692,7 +877,7 @@ const Store = () => {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 max-w-6xl mx-auto"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 lg:gap-7 max-w-7xl mx-auto"
             >
               <AnimatePresence mode="popLayout">
                 {(() => {
@@ -726,31 +911,48 @@ const Store = () => {
             {/* Load More Button */}
             {hasMore && (
               <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex flex-col items-center gap-4 mt-10"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center gap-4 mt-12"
               >
-                <Button 
-                  variant="outline" 
+                <motion.div
+                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Button 
+                  variant="default" 
                   size="lg"
                   onClick={() => setDisplayCount(prev => prev + ITEMS_PER_PAGE)}
-                  className="gap-2 px-8 shadow-brutal-sm hover:shadow-brutal hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all"
+                  className="gap-3 px-8 h-12 text-base shadow-brutal hover:shadow-brutal-lg transition-all bg-gradient-to-r from-primary to-primary/80"
                 >
-                  <TrendingUp className="h-4 w-4" />
-                  Load More ({remainingCount} remaining)
+                    <motion.span
+                      animate={{ y: [0, 3, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    >
+                      <TrendingUp className="h-5 w-5" />
+                    </motion.span>
+                    Load More
+                    <span className="px-2 py-0.5 bg-primary-foreground/20 rounded-full text-sm">
+                      {remainingCount}
+                    </span>
                 </Button>
+                </motion.div>
               </motion.div>
             )}
 
             {/* All Loaded Indicator */}
             {!hasMore && filteredProducts.length > ITEMS_PER_PAGE && (
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="text-center text-sm text-muted-foreground mt-10"
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center justify-center gap-2 mt-12"
               >
-                ✨ All {filteredProducts.length} products loaded
-              </motion.p>
+                <Sparkles className="h-4 w-4 text-accent" />
+                <p className="text-sm font-medium text-muted-foreground">
+                  All <span className="text-foreground font-bold">{filteredProducts.length}</span> products loaded
+                </p>
+                <Sparkles className="h-4 w-4 text-accent" />
+              </motion.div>
             )}
           </>
         )}
