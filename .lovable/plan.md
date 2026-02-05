@@ -1,274 +1,316 @@
 
-# Refactor Design Style: Shop Page & Ticket Conversation Modal
 
-## Ringkasan
+# Redesign Shop Page: Elegant & Interactive
 
-Melakukan refactoring design style pada dua komponen utama untuk meningkatkan visual appeal, interaktivitas, dan konsistensi dengan Neo-Brutalism Glassmorphism design system yang sudah ada.
+## Overview
 
----
-
-## 1. Shop Page Refactor
-
-### A. Header Section Enhancement
-
-**Current Issues:**
-- Header cukup bagus tapi bisa lebih impactful
-- Quick stats cards bisa lebih integrated dengan design
-
-**Refactoring:**
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  HEADER SECTION                                                 │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  🛒  Our Products                                         │  │
-│  │      Premium cloud phone services                         │  │
-│  │                                                           │  │
-│  │  ┌─────────┐  ┌─────────┐  ┌─────────┐                  │  │
-│  │  │  24     │  │  5      │  │  ⚡     │  ◄── Stat Cards   │  │
-│  │  │Products │  │ Categories│ │In Stock │      with icons   │  │
-│  │  └─────────┘  └─────────┘  └─────────┘                  │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Perubahan:**
-- Tambah stat ketiga: "In Stock" count
-- Stat cards dengan icon (Package, Layers, CheckCircle)
-- Gradient overlay yang lebih subtle
-- Responsive spacing improvements
-
-### B. Category Filter Bar
-
-**Current Issues:**
-- Category buttons standar
-- Child categories bisa lebih distinctive
-
-**Refactoring:**
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  STICKY CATEGORY BAR                                            │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  [All ●24]  [Cloud ●12]  [Redmi ●8]  [Gaming ●4]        │   │
-│  │                                                          │   │
-│  │  ↳ Sub: [All Cloud] [Daily] [Weekly] [Monthly]          │   │
-│  │                                                          │   │
-│  │                    ✕ Clear filter                        │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  Perubahan:                                                     │
-│  - Pills dengan backdrop-blur glass effect                      │
-│  - Active state dengan ring glow                                │
-│  - Smooth transition animations                                 │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Perubahan:**
-- Glass effect pada bar container
-- Active category dengan ring-2 ring-primary glow
-- Badge count dengan bg-primary/20 styling
-- Child categories dengan pills yang lebih kecil
-
-### C. Product Grid Improvements
-
-**Perubahan:**
-- Grid gap yang lebih consistent
-- Better empty state dengan ilustrasi
-- Product count text lebih prominent
-- Load more button dengan better styling
-
-### D. File Changes untuk Store.tsx
-
-**Line 466-520 (Header):**
-- Tambah stat ketiga
-- Icons untuk stats
-- Better responsive classes
-
-**Line 522-606 (Category Bar):**
-- Glass effect container
-- Ring glow untuk active state
-- Smoother animations
+A complete visual overhaul of the Shop page focusing on elegance, micro-interactions, and a premium feel while maintaining the Neo-Brutalism Glassmorphism design system.
 
 ---
 
-## 2. Ticket Conversation Chat Modal Refactor
+## Design Philosophy
 
-### A. Current Issues
-- Basic chat bubbles tanpa visual polish
-- Input area kurang engaging
-- Missing avatar/initials
-- Header bisa lebih informative
-
-### B. New Design
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  TICKET CONVERSATION MODAL                                      │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  ╔════════════════════════════════════════════════════╗ │   │
-│  │  ║  📎 Original Attachment (if any)                   ║ │   │
-│  │  ║  [Image Preview]                                   ║ │   │
-│  │  ╚════════════════════════════════════════════════════╝ │   │
-│  │                                                          │   │
-│  │  ┌──── Messages Container with Glass Effect ─────────┐  │   │
-│  │  │                                                    │  │   │
-│  │  │     ┌────────────────────┐                        │  │   │
-│  │  │     │  Staff Message     │ ◄── Left aligned       │  │   │
-│  │  │     │  with avatar       │     with border-l-4    │  │   │
-│  │  │     └────────────────────┘                        │  │   │
-│  │  │                                                    │  │   │
-│  │  │              ┌────────────────────┐               │  │   │
-│  │  │              │  Your Message      │ ◄── Right     │  │   │
-│  │  │              │  with gradient bg  │     aligned   │  │   │
-│  │  │              └────────────────────┘               │  │   │
-│  │  │                                                    │  │   │
-│  │  └────────────────────────────────────────────────────┘  │   │
-│  │                                                          │   │
-│  │  ┌────────────────────────────────────────────────────┐  │   │
-│  │  │  [Avatar] ┌──────────────────────────────┐ [Send] │  │   │
-│  │  │           │ Type your message...          │        │  │   │
-│  │  │           └──────────────────────────────┘        │  │   │
-│  │  │  Enter to send • Shift+Enter for new line         │  │   │
-│  │  └────────────────────────────────────────────────────┘  │   │
-│  │                                                          │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### C. Detailed Changes
-
-#### Message Bubbles
-```text
-BEFORE:
-- Basic rounded-xl
-- Simple bg-primary atau bg-card
-
-AFTER:
-- Left messages: border-l-4 border-primary dengan bg-card
-- Right messages: gradient bg-gradient-to-r from-primary to-primary/80
-- Shadow-brutal-sm untuk depth
-- Avatar circle dengan initials
-- Message tail untuk direction indicator
-```
-
-#### Messages Container
-```text
-BEFORE:
-- bg-muted/30 rounded-lg border
-
-AFTER:
-- bg-gradient-to-b from-muted/20 to-muted/40
-- backdrop-blur-sm untuk glass effect
-- border-2 border-border/30
-- shadow-inner untuk depth
-- Rounded-xl untuk softer look
-```
-
-#### Input Area
-```text
-BEFORE:
-- Basic textarea + button
-
-AFTER:
-- Avatar circle di kiri
-- Textarea dengan shadow-brutal-sm
-- Send button dengan gradient primary
-- Hover effects pada button
-- Better disabled state
-```
-
-#### Empty State
-```text
-BEFORE:
-- Plain text "No messages yet"
-
-AFTER:
-- Icon MessageSquare besar
-- Engaging copy
-- Subtle animation
-```
-
-### D. File Changes
-
-#### TicketConversation.tsx (Lines 143-248)
-
-**Attachment Preview (Lines 145-151):**
-- Better card styling dengan shadow-brutal-sm
-- Icon dengan background circle
-
-**Messages Container (Lines 153-208):**
-- Glass effect background
-- Better empty state dengan icon
-- Refined message bubble styling
-- Avatar initials
-- Border-l accent untuk left messages
-- Gradient untuk right messages
-
-**Input Area (Lines 210-247):**
-- Avatar dengan initials
-- Better textarea styling
-- Gradient send button
-- Improved disabled state for closed tickets
+The new design will introduce:
+- **Floating elements** with subtle parallax effects
+- **Gradient mesh backgrounds** for depth and luxury
+- **Micro-interactions** on every touchpoint
+- **Card hover reveals** with additional product info
+- **Animated category pills** with pulse effects
+- **Premium typography hierarchy**
 
 ---
 
-## 3. Transactions Page Dialog Update
+## 1. Hero Section Redesign
 
-### DialogContent untuk Ticket Conversation
+### Current State
+Basic header with stats cards and decorative blurs
 
-**Current (Line 422):**
-```tsx
-<DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+### New Design
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         HERO SECTION                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │                                                                     │ │
+│  │   ┌─────────────────────────────────────────────────────────────┐  │ │
+│  │   │  ◆ Floating geometric shapes with parallax                   │  │ │
+│  │   │  ◆ Animated gradient orbs (primary/accent colors)            │  │ │
+│  │   │  ◆ Subtle grid pattern overlay                               │  │ │
+│  │   └─────────────────────────────────────────────────────────────┘  │ │
+│  │                                                                     │ │
+│  │         ╔══════════════════════════════════════════╗               │ │
+│  │         ║           🛒                              ║               │ │
+│  │         ║    ┌─────────────────────────────────┐   ║               │ │
+│  │         ║    │  Discover Our                   │   ║               │ │
+│  │         ║    │  Premium Collection             │   ║  ◄── Animated │ │
+│  │         ║    │                                 │   ║      gradient │ │
+│  │         ║    │  Curated cloud phone services   │   ║      text     │ │
+│  │         ║    └─────────────────────────────────┘   ║               │ │
+│  │         ╚══════════════════════════════════════════╝               │ │
+│  │                                                                     │ │
+│  │    ┌──────────┐   ┌──────────┐   ┌──────────┐                     │ │
+│  │    │  ◯ 24    │   │  ◯ 5     │   │  ◯ 22    │  ◄── Animated       │ │
+│  │    │ Products │   │ Categories│   │ In Stock │      count-up       │ │
+│  │    │    ↑     │   │    ↑     │   │    ↑     │      on scroll      │ │
+│  │    └──────────┘   └──────────┘   └──────────┘                     │ │
+│  │                                                                     │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Updated:**
-```tsx
-<DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
-```
+### Technical Changes
 
-**Changes:**
-- Remove padding (`p-0`) untuk full-bleed design
-- Inner container akan handle padding
-- Better conversation area coverage
+**Background Elements:**
+- Animated gradient mesh using CSS with `animate-pulse` at different delays
+- Floating geometric shapes with `motion` parallax on scroll
+- Subtle dot grid pattern overlay (`bg-[radial-gradient(...)]`)
+
+**Stats Cards:**
+- Glass morphism cards with gradient borders
+- Animated icon rings with `ring-primary/30 animate-pulse`
+- Count-up animation using `motion.span` with spring physics
+- Hover: lift + glow effect
 
 ---
 
-## Files yang Akan Dimodifikasi
+## 2. Category Navigation Redesign
 
-| File | Aksi | Scope |
-|------|------|-------|
-| `src/pages/Store.tsx` | Modify | Lines 466-606 - Header & Category bar styling |
-| `src/components/TicketConversation.tsx` | Modify | Lines 143-248 - Complete chat UI overhaul |
-| `src/pages/Transactions.tsx` | Modify | Lines 419-446 - Dialog container styling |
+### New Interactive Category Bar
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     STICKY CATEGORY BAR                                  │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌────────────────────────────────────────────────────────────────────┐ │
+│  │                                                                     │ │
+│  │   ┌───────────────────────────────────────────────────────────┐    │ │
+│  │   │                                                            │    │ │
+│  │   │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐   │    │ │
+│  │   │  │  All   │ │ Cloud  │ │ Redmi  │ │ Gaming │ │  Pro   │   │    │ │
+│  │   │  │  ●●●   │ │        │ │        │ │        │ │        │   │    │ │
+│  │   │  │  24    │ │   12   │ │   8    │ │   4    │ │   6    │   │    │ │
+│  │   │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘   │    │ │
+│  │   │      ▲                                                     │    │ │
+│  │   │      │                                                     │    │ │
+│  │   │  Active state: gradient bg + floating indicator + glow     │    │ │
+│  │   │                                                            │    │ │
+│  │   └───────────────────────────────────────────────────────────┘    │ │
+│  │                                                                     │ │
+│  │   Subcategories (animated slide-in)                                │ │
+│  │   ┌───────────────────────────────────────────────────────────┐    │ │
+│  │   │  ↳ [All Cloud] [1 Day] [7 Days] [30 Days]                 │    │ │
+│  │   │              ◄── Pills with hover scale + underline       │    │ │
+│  │   └───────────────────────────────────────────────────────────┘    │ │
+│  │                                                                     │ │
+│  └────────────────────────────────────────────────────────────────────┘ │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Technical Changes
+
+**Category Pills:**
+- Gradient background on active: `bg-gradient-to-r from-primary to-primary/80`
+- Floating dot indicator above active pill
+- Animated underline on hover using `after:` pseudo-element
+- Count badge with glass effect
+- Scale animation on tap: `whileTap={{ scale: 0.95 }}`
+
+**Subcategory Bar:**
+- Slide-in from left animation on parent select
+- Pill buttons with subtle border glow on hover
+- Clear filter button with animated X icon rotation
 
 ---
 
-## Design Tokens Used
+## 3. Product Card Redesign
 
-**Shadows:**
-- `shadow-brutal-sm` - Message bubbles, input
-- `shadow-brutal` - Cards, buttons
-- `shadow-inner` - Messages container
+### New Elegant Card Design
 
-**Colors:**
-- `bg-gradient-to-r from-primary to-primary/80` - Sent messages
-- `border-l-4 border-primary` - Received messages accent
-- `bg-muted/30 backdrop-blur-sm` - Glass containers
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       PRODUCT CARD                                       │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────────────────────────────────────────────────────────┐    │
+│  │                                                                  │    │
+│  │  ┌─────────────────────────────────────────────────────────┐    │    │
+│  │  │  ★ Best Seller      ✨ New        -20% Save            │    │    │
+│  │  │  ◄── Floating badges with micro-bounce animation        │    │    │
+│  │  └─────────────────────────────────────────────────────────┘    │    │
+│  │                                                                  │    │
+│  │  ┌─────────────────────────────────────────────────────────┐    │    │
+│  │  │                                                          │    │    │
+│  │  │      ┌──────────────────────────────────────────┐       │    │    │
+│  │  │      │                                           │       │    │    │
+│  │  │      │   ┌───────────────────────────────────┐  │       │    │    │
+│  │  │      │   │        PRODUCT NAME               │  │       │    │    │
+│  │  │      │   │   ──────────────────────────────  │  │       │    │    │
+│  │  │      │   │                                   │  │       │    │    │
+│  │  │      │   │   ● 30 days validity              │  │       │    │    │
+│  │  │      │   │   ● Digital redeem code           │  │       │    │    │
+│  │  │      │   │   ● Instant delivery              │  │  ◄── Reveal  │    │
+│  │  │      │   │                                   │  │      on hover │    │
+│  │  │      │   └───────────────────────────────────┘  │       │    │    │
+│  │  │      │                                           │       │    │    │
+│  │  │      └──────────────────────────────────────────┘       │    │    │
+│  │  │                                                          │    │    │
+│  │  │  ╔═══════════════════════════════════════════════════╗  │    │    │
+│  │  │  ║                                                    ║  │    │    │
+│  │  │  ║    Rp 150,000                     [−] 1 [+]       ║  │    │    │
+│  │  │  ║    ~~~~~~~~~~~~                                    ║  │    │    │
+│  │  │  ║    Rp 5,000/day                                   ║  │    │    │
+│  │  │  ║                                                    ║  │    │    │
+│  │  │  ║    ┌──────────────────────────────────────────┐   ║  │    │    │
+│  │  │  ║    │        🛒 Purchase Now                   │   ║  │    │    │
+│  │  │  ║    │        ◄── Gradient animated button      │   ║  │    │    │
+│  │  │  ║    └──────────────────────────────────────────┘   ║  │    │    │
+│  │  │  ║                                                    ║  │    │    │
+│  │  │  ╚═══════════════════════════════════════════════════╝  │    │    │
+│  │  │                                                          │    │    │
+│  │  └─────────────────────────────────────────────────────────┘    │    │
+│  │                                                                  │    │
+│  └─────────────────────────────────────────────────────────────────┘    │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-**Typography:**
-- `font-bold` - Names
-- `text-xs` - Timestamps, hints
-- `text-sm` - Message content
+### Technical Changes
 
-**Spacing:**
-- `gap-3` - Between messages
-- `p-4` - Container padding
-- `rounded-2xl` - Softer message bubbles
+**Card Container:**
+- `group` class for hover interactions
+- Gradient border on hover: `hover:border-primary/50`
+- Background shimmer effect on hover
+- 3D tilt effect using `rotateX/Y` on mouse position (optional)
+
+**Content Area:**
+- Product icon with animated ring pulse
+- Title with gradient text on hover
+- Feature list reveal on hover with staggered animation
+- Stock indicator with animated progress bar
+
+**Footer/CTA Area:**
+- Price with animated gradient background
+- Per-day calculation with fade-in
+- Quantity selector with haptic-style feedback
+- CTA button with animated gradient + arrow slide
+
+---
+
+## 4. Grid & Layout Enhancements
+
+### Masonry-Inspired Layout
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      PRODUCT GRID                                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────────────────────────────────────────────────────────────┐   │
+│  │                                                                   │   │
+│  │   Showing 10 of 24 products                                      │   │
+│  │   ═════════════════════════════════════════════════════════════  │   │
+│  │                                                                   │   │
+│  │   ┌───────────┐  ┌───────────┐  ┌───────────┐                   │   │
+│  │   │           │  │           │  │           │                   │   │
+│  │   │  Product  │  │  Product  │  │  Product  │                   │   │
+│  │   │    #1     │  │    #2     │  │    #3     │  ◄── Staggered    │   │
+│  │   │           │  │    ★      │  │           │      entry        │   │
+│  │   │           │  │           │  │           │                   │   │
+│  │   └───────────┘  └───────────┘  └───────────┘                   │   │
+│  │                                                                   │   │
+│  │   ┌───────────┐  ┌───────────┐  ┌───────────┐                   │   │
+│  │   │           │  │           │  │           │                   │   │
+│  │   │  Product  │  │  Product  │  │  Product  │                   │   │
+│  │   │    #4     │  │    #5     │  │    #6     │                   │   │
+│  │   │           │  │    ✨     │  │           │                   │   │
+│  │   │           │  │           │  │           │                   │   │
+│  │   └───────────┘  └───────────┘  └───────────┘                   │   │
+│  │                                                                   │   │
+│  │               ┌─────────────────────────────┐                    │   │
+│  │               │                              │                    │   │
+│  │               │   Load More (14 remaining)  │  ◄── Animated      │   │
+│  │               │        ↓↓↓                  │      button        │   │
+│  │               │                              │                    │   │
+│  │               └─────────────────────────────┘                    │   │
+│  │                                                                   │   │
+│  │   ═══════════════ All products loaded ═══════════════════════   │   │
+│  │                                                                   │   │
+│  └──────────────────────────────────────────────────────────────────┘   │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Technical Changes
+
+**Grid Animation:**
+- Staggered entry with increasing delay per item
+- Scale + fade + Y-translate on enter
+- Layout animation for reordering
+- Exit animation on filter change
+
+**Load More Button:**
+- Pulsing arrow animation
+- Progress ring showing load percentage
+- Skeleton cards animate in on click
+
+**Empty State:**
+- Animated illustration (floating phone icon)
+- Typewriter text effect for message
+- Bounce-in CTA button
+
+---
+
+## 5. Micro-Interactions Summary
+
+| Element | Interaction | Animation |
+|---------|-------------|-----------|
+| Stats Card | Hover | Lift -4px + glow + scale 1.02 |
+| Category Pill | Click | Scale 0.95 + ripple effect |
+| Category Pill | Active | Gradient bg + floating dot |
+| Product Card | Hover | Border glow + content reveal |
+| Product Card | Enter | Spring physics y: 20 to 0 |
+| Quantity Button | Click | Scale pulse + haptic bounce |
+| Purchase Button | Hover | Gradient shift + arrow slide |
+| Load More | Click | Expand + skeleton spawn |
+| Badge | Mount | Bounce-in from top |
+
+---
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/pages/Store.tsx` | Complete visual overhaul - header, category bar, grid layout, animations |
+| `src/components/ProductCard.tsx` | Enhanced hover effects, content reveal, animated badges, gradient CTA |
+| `tailwind.config.ts` | Add new animation keyframes for shimmer, pulse-ring, gradient-shift |
+| `src/index.css` | Add CSS for gradient text, shimmer effect, animated backgrounds |
+
+---
+
+## New Animation Keyframes
+
+```text
+// To be added to tailwind.config.ts
+
+shimmer: Gradient sweep effect for cards
+pulse-ring: Expanding ring animation for icons
+gradient-shift: Moving gradient for buttons
+float: Gentle up-down floating for badges
+glow-pulse: Pulsing glow effect for active states
+```
+
+---
+
+## Accessibility Considerations
+
+- All animations respect `prefers-reduced-motion`
+- Focus states remain visible and enhanced
+- Color contrast maintained throughout
+- Keyboard navigation fully supported
+- Screen reader announcements for loading states
+
