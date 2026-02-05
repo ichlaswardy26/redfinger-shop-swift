@@ -1,256 +1,891 @@
 
-# Add Available Voucher Suggestions in Checkout
 
-## Overview
+# Comprehensive Enhancement Plan
 
-Add a feature to display applicable vouchers that users can use during checkout. This enhances the user experience by showing available discounts they might not know about, encouraging voucher usage and improving conversion rates.
-
----
-
-## 1. Current State Analysis
-
-### Existing Components
-- **VoucherInput.tsx**: Manual voucher code entry with validation
-- **OrderConfirmationDialog.tsx**: Checkout dialog with VoucherInput integrated
-- **useVoucher.ts**: Hook for validating voucher codes via edge function
-- **useBusinessRules.ts**: Contains `voucher.show_available_vouchers` toggle (already exists!)
-
-### Business Rules Already Support This
-The `show_available_vouchers` setting already exists in business rules - we just need to implement the UI component that respects this setting.
+This plan implements three major improvements in a structured sequence: voucher feature refinements, admin/staff UI refactoring with modern sidebar navigation, and complete Indonesian language translation with enhanced UI/UX throughout.
 
 ---
 
-## 2. Feature Design
+## Phase 1: Voucher Suggestions Refinements
 
-### User Experience Flow
+### 1.1 Add Empty State to AvailableVouchersList
+
+**File: `src/components/AvailableVouchersList.tsx`**
+
+Current behavior returns `null` when no vouchers. Add a friendly empty state:
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  VOUCHER INPUT WITH SUGGESTIONS                                          │
+│  EMPTY STATE DESIGN                                                      │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                          │
-│  Voucher Code                                                            │
-│  ┌──────────────────────────────────┐  ┌─────────────┐                  │
-│  │  Enter voucher code...           │  │   Apply     │                  │
-│  └──────────────────────────────────┘  └─────────────┘                  │
-│                                                                          │
-│  Available vouchers for you:                                             │
-│  ┌─────────────────────────────────────────────────────────────────┐    │
-│  │  ┌───────────────────────────────────────────────────────────┐  │    │
-│  │  │  🏷️ WELCOME10                                    [Apply]   │  │    │
-│  │  │  Welcome discount - 10% off                               │  │    │
-│  │  │  Min order: Rp 50,000                                     │  │    │
-│  │  └───────────────────────────────────────────────────────────┘  │    │
-│  │                                                                  │    │
-│  │  ┌───────────────────────────────────────────────────────────┐  │    │
-│  │  │  🏷️ SAVE20                                       [Apply]   │  │    │
-│  │  │  Save 20% - Max Rp 50,000                                 │  │    │
-│  │  │  ✓ Applicable to this product                             │  │    │
-│  │  └───────────────────────────────────────────────────────────┘  │    │
-│  │                                                                  │    │
-│  └─────────────────────────────────────────────────────────────────┘    │
+│  ┌───────────────────────────────────────────────────────────────────┐  │
+│  │  🏷️ Voucher                                                       │  │
+│  │                                                                    │  │
+│  │      ┌─────────────────────────────────────────────────────────┐  │  │
+│  │      │      [ Tag Icon with dashed border ]                     │  │  │
+│  │      │                                                          │  │  │
+│  │      │   Belum ada voucher yang tersedia                        │  │  │
+│  │      │   untuk pesanan ini saat ini.                            │  │  │
+│  │      │                                                          │  │  │
+│  │      │   Cek promo kami secara berkala!                         │  │  │
+│  │      └─────────────────────────────────────────────────────────┘  │  │
+│  └───────────────────────────────────────────────────────────────────┘  │
 │                                                                          │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Voucher Eligibility Checks (Client-side Pre-filter)
+### 1.2 Add Caching to useAvailableVouchers
 
-Display vouchers that are:
-1. Active (`is_active = true`)
-2. Within validity period (`valid_from <= now <= valid_until`)
-3. Not at usage limit (`usage_count < usage_limit`)
-4. Applicable to current product/category (or applies_to = 'all')
-5. Order amount meets minimum (`order_amount >= min_order_amount`)
+**File: `src/hooks/useAvailableVouchers.ts`**
 
-Note: Per-user limits and first-order-only checks require authenticated queries or edge function validation.
+Add response caching with 30-second TTL and skip refetch if order amount change is less than 5%:
+
+- Add `lastFetchParams` ref to track previous fetch parameters
+- Add `cachedResponse` ref with timestamp
+- Skip API call if cache is valid (within 30 seconds) and parameters are similar
+- Only refetch when order amount changes by more than 5%
 
 ---
 
-## 3. Implementation Approach
+## Phase 2: Admin/Staff UI Refactoring
 
-### New Edge Function: `get-available-vouchers`
+### 2.1 New Sidebar Navigation Component
 
-Create a new edge function to fetch available vouchers for a specific order context. This handles:
-- User-specific eligibility (per-user limit, first-order-only)
-- Product/category targeting
-- Order amount filtering
-- Calculate potential discount for each voucher
+**New File: `src/components/AdminSidebar.tsx`**
 
-**Request:**
-```json
-{
-  "order_amount": 150000,
-  "product_id": "uuid",
-  "category_id": "uuid"
-}
+Create a grouped sidebar navigation replacing the horizontal tabs:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ADMIN SIDEBAR LAYOUT (Desktop)                                          │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌─────────────────┐  ┌───────────────────────────────────────────────┐ │
+│  │                 │  │                                                │ │
+│  │  ┌───────────┐  │  │  Main Content Area                            │ │
+│  │  │ Site Name │  │  │                                                │ │
+│  │  └───────────┘  │  │  Dashboard / Orders / Products / etc.         │ │
+│  │                 │  │                                                │ │
+│  │  IKHTISAR       │  │                                                │ │
+│  │  ────────────   │  │                                                │ │
+│  │  ◉ Dasbor       │  │                                                │ │
+│  │  ○ Analitik     │  │                                                │ │
+│  │                 │  │                                                │ │
+│  │  PRODUK         │  │                                                │ │
+│  │  ────────────   │  │                                                │ │
+│  │  ○ Produk       │  │                                                │ │
+│  │  ○ Kategori     │  │                                                │ │
+│  │  ○ Kode         │  │                                                │ │
+│  │  ○ Voucher      │  │                                                │ │
+│  │                 │  │                                                │ │
+│  │  OPERASIONAL    │  │                                                │ │
+│  │  ────────────   │  │                                                │ │
+│  │  ○ Pesanan (12) │  │                                                │ │
+│  │  ○ Tiket (5)    │  │                                                │ │
+│  │  ○ Ulasan       │  │                                                │ │
+│  │                 │  │                                                │ │
+│  │  SISTEM         │  │                                                │ │
+│  │  ────────────   │  │                                                │ │
+│  │  ○ Pengguna     │  │                                                │ │
+│  │  ○ Pengaturan   │  │                                                │ │
+│  │                 │  │                                                │ │
+│  └─────────────────┘  └───────────────────────────────────────────────┘ │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Response:**
-```json
-{
-  "vouchers": [
-    {
-      "id": "uuid",
-      "code": "SAVE20",
-      "name": "Save 20%",
-      "description": "Get 20% off your order",
-      "discount_type": "percentage",
-      "discount_value": 20,
-      "max_discount_amount": 50000,
-      "min_order_amount": 100000,
-      "potential_discount": 30000,
-      "first_order_only": false,
-      "valid_until": "2024-02-28T23:59:59Z"
-    }
-  ]
-}
-```
+Features:
+- Grouped navigation by category (Ikhtisar, Produk, Operasional, Sistem)
+- Active state highlighting with left border accent
+- Notification badges for pending items (orders, tickets)
+- Collapsible for mobile using Sheet component
+- Animated transitions using framer-motion
+- Sticky positioning with glass effect
 
-### New Hook: `useAvailableVouchers`
+### 2.2 Staff Sidebar Component
+
+**New File: `src/components/StaffSidebar.tsx`**
+
+Simpler version for staff with limited menu items:
+- Tiket (with open count badge)
+- Pesanan (with pending count badge)
+- Ulasan
+- Stok Produk
+
+### 2.3 Refactor Admin.tsx
+
+**File: `src/pages/Admin.tsx`**
+
+- Replace horizontal `Tabs` with `SidebarProvider` layout
+- Use new `AdminSidebar` component
+- Split into sidebar + main content area
+- State-based content rendering instead of TabsContent
+- Mobile: Sheet drawer for navigation
+- Add breadcrumb for current section
+
+### 2.4 Refactor Staff.tsx
+
+**File: `src/pages/Staff.tsx`**
+
+- Apply similar sidebar treatment
+- Add descriptive empty states with icons
+- Improve mobile navigation with Sheet drawer
+- Add role-based messaging in header
+
+---
+
+## Phase 3: Indonesian Language Translation
+
+### 3.1 Create Centralized Translation File
+
+**New File: `src/lib/translations.ts`**
+
+Comprehensive Indonesian translation object covering all UI text:
 
 ```typescript
-interface AvailableVoucher {
-  id: string;
-  code: string;
-  name: string;
-  description: string | null;
-  discount_type: "percentage" | "fixed";
-  discount_value: number;
-  max_discount_amount: number | null;
-  min_order_amount: number | null;
-  potential_discount: number;
-  first_order_only: boolean;
-  valid_until: string;
-}
-
-const useAvailableVouchers = (
-  orderAmount: number,
-  productId: string,
-  categoryId?: string
-) => {
-  // Fetch available vouchers from edge function
-  // Return loading, error, and vouchers array
-}
+export const t = {
+  // Navigation
+  nav: {
+    home: "Beranda",
+    store: "Toko",
+    myOrders: "Pesanan Saya",
+    admin: "Admin",
+    staff: "Staf",
+    signIn: "Masuk",
+    signUp: "Daftar",
+    signOut: "Keluar",
+  },
+  
+  // Common Actions
+  actions: {
+    apply: "Terapkan",
+    cancel: "Batal",
+    save: "Simpan",
+    delete: "Hapus",
+    edit: "Ubah",
+    create: "Buat",
+    add: "Tambah",
+    upload: "Unggah",
+    download: "Unduh",
+    search: "Cari",
+    filter: "Filter",
+    export: "Ekspor",
+    verify: "Verifikasi",
+    reject: "Tolak",
+    close: "Tutup",
+    confirm: "Konfirmasi",
+    back: "Kembali",
+    next: "Selanjutnya",
+    previous: "Sebelumnya",
+    loading: "Memuat...",
+    submit: "Kirim",
+    copy: "Salin",
+    copied: "Tersalin!",
+    toggle: "Ubah",
+    view: "Lihat",
+    preview: "Pratinjau",
+    refresh: "Segarkan",
+    reset: "Reset",
+    clear: "Hapus",
+    select: "Pilih",
+    selectAll: "Pilih Semua",
+    generate: "Buat",
+    activate: "Aktifkan",
+    deactivate: "Nonaktifkan",
+  },
+  
+  // Status Labels
+  status: {
+    pending: "Menunggu",
+    verified: "Terverifikasi",
+    rejected: "Ditolak",
+    active: "Aktif",
+    inactive: "Nonaktif",
+    open: "Buka",
+    inProgress: "Diproses",
+    resolved: "Selesai",
+    closed: "Ditutup",
+    cancelled: "Dibatalkan",
+    expired: "Kedaluwarsa",
+    used: "Terpakai",
+    available: "Tersedia",
+    outOfStock: "Habis",
+    lowStock: "Stok Rendah",
+  },
+  
+  // Auth pages
+  auth: {
+    signIn: "Masuk",
+    signUp: "Daftar",
+    signOut: "Keluar",
+    email: "Email",
+    password: "Kata Sandi",
+    confirmPassword: "Konfirmasi Kata Sandi",
+    fullName: "Nama Lengkap",
+    forgotPassword: "Lupa kata sandi?",
+    resetPassword: "Atur Ulang Kata Sandi",
+    welcomeBack: "Selamat datang kembali!",
+    createAccount: "Buat Akun",
+    signInSuccess: "Anda berhasil masuk.",
+    signOutSuccess: "Anda berhasil keluar.",
+    signInDescription: "Selamat datang kembali! Masuk ke akun Anda untuk melanjutkan.",
+    signUpDescription: "Buat akun baru untuk mulai berbelanja.",
+    noAccount: "Belum punya akun?",
+    hasAccount: "Sudah punya akun?",
+    backToStore: "Kembali ke toko",
+    termsAgree: "Saya setuju dengan",
+    termsOfService: "Syarat Layanan",
+    and: "dan",
+    privacyPolicy: "Kebijakan Privasi",
+    passwordRequirements: {
+      title: "Kata sandi harus memiliki:",
+      length: "Minimal 6 karakter",
+      uppercase: "Minimal 1 huruf besar",
+      lowercase: "Minimal 1 huruf kecil",
+      number: "Minimal 1 angka",
+    },
+    errors: {
+      invalidEmail: "Alamat email tidak valid",
+      passwordTooShort: "Kata sandi minimal 6 karakter",
+      passwordMismatch: "Kata sandi tidak cocok",
+      invalidCredentials: "Email atau kata sandi salah",
+      emailRequired: "Email diperlukan",
+      passwordRequired: "Kata sandi diperlukan",
+    },
+    resetPasswordSent: "Link reset kata sandi telah dikirim ke email Anda.",
+    newPassword: "Kata Sandi Baru",
+    updatePassword: "Perbarui Kata Sandi",
+    passwordUpdated: "Kata sandi berhasil diperbarui!",
+  },
+  
+  // Admin sections
+  admin: {
+    title: "Panel Admin",
+    subtitle: "Kelola toko dan pengguna Anda",
+    sections: {
+      dashboard: "Dasbor",
+      analytics: "Analitik",
+      orders: "Pesanan",
+      products: "Produk",
+      categories: "Kategori",
+      codeInventory: "Inventaris Kode",
+      vouchers: "Voucher",
+      users: "Pengguna",
+      tickets: "Tiket",
+      ratings: "Ulasan",
+      settings: "Pengaturan",
+    },
+    groups: {
+      overview: "Ikhtisar",
+      productManagement: "Manajemen Produk",
+      operations: "Operasional",
+      system: "Sistem",
+    },
+    stats: {
+      totalOrders: "Total Pesanan",
+      pendingPayments: "Menunggu Pembayaran",
+      verifiedOrders: "Pesanan Terverifikasi",
+      totalUsers: "Total Pengguna",
+      totalRevenue: "Total Pendapatan",
+    },
+    bulkVerify: "Verifikasi Massal",
+    recentActivity: "Aktivitas Terbaru",
+    latestOrders: "Pesanan terbaru",
+  },
+  
+  // Staff sections
+  staff: {
+    title: "Panel Staf",
+    subtitle: "Kelola tiket dan pesanan yang ditugaskan",
+    assignedTickets: "Tiket yang Ditugaskan",
+    assignedOrders: "Pesanan Terkait",
+    noAssignedTasks: "Belum ada tugas yang ditugaskan kepada Anda",
+    noAssignedTasksDesc: "Tugas akan muncul di sini saat Anda ditugaskan untuk menangani tiket atau pesanan.",
+  },
+  
+  // Orders
+  orders: {
+    title: "Manajemen Pesanan",
+    subtitle: "Verifikasi pembayaran dan terbitkan kode redeem",
+    orderDetails: "Detail Pesanan",
+    paymentProof: "Bukti Pembayaran",
+    redeemCodes: "Kode Redeem",
+    adminNotes: "Catatan Admin",
+    verifyPayment: "Verifikasi Pembayaran",
+    rejectPayment: "Tolak Pembayaran",
+    rejectionReason: "Alasan Penolakan",
+    orderCreated: "Pesanan Dibuat",
+    orderVerified: "Pesanan Diverifikasi",
+    quantity: "Jumlah",
+    totalAmount: "Total",
+    finalAmount: "Jumlah Akhir",
+    discountAmount: "Diskon",
+    noOrdersFound: "Tidak ada pesanan ditemukan",
+    searchPlaceholder: "Cari pesanan...",
+  },
+  
+  // Products
+  products: {
+    title: "Manajemen Produk",
+    subtitle: "Tambah, edit, atau hapus produk",
+    addProduct: "Tambah Produk",
+    editProduct: "Edit Produk",
+    productName: "Nama Produk",
+    description: "Deskripsi",
+    price: "Harga",
+    duration: "Durasi (Hari)",
+    stock: "Stok",
+    category: "Kategori",
+    manageStock: "Kelola Stok",
+    stockHistory: "Riwayat Stok",
+    noProductsFound: "Tidak ada produk ditemukan",
+    perDay: "per hari",
+    instantDelivery: "Pengiriman Digital Instan",
+    fullSupport: "Dukungan Pelanggan Penuh",
+    securePurchase: "Pembelian Aman",
+    bestSeller: "Terlaris",
+    new: "Baru",
+    popular: "Populer",
+    limitedStock: "Stok Terbatas",
+    onlyLeft: "Tersisa",
+    outOfStock: "Habis",
+    savePercent: "Hemat",
+  },
+  
+  // Categories
+  categories: {
+    title: "Manajemen Kategori",
+    subtitle: "Kelola kategori produk",
+    addCategory: "Tambah Kategori",
+    editCategory: "Edit Kategori",
+    categoryName: "Nama Kategori",
+    parentCategory: "Kategori Induk",
+    displayOrder: "Urutan Tampilan",
+    noParent: "Tanpa Induk",
+    noCategoriesFound: "Tidak ada kategori ditemukan",
+  },
+  
+  // Code Inventory
+  codeInventory: {
+    title: "Inventaris Kode",
+    subtitle: "Kelola kode redeem untuk produk",
+    addCodes: "Tambah Kode",
+    importCodes: "Impor Kode",
+    availableCodes: "Kode Tersedia",
+    usedCodes: "Kode Terpakai",
+    code: "Kode",
+    usedAt: "Digunakan Pada",
+    usedBy: "Digunakan Oleh",
+    noCodesFound: "Tidak ada kode ditemukan",
+  },
+  
+  // Vouchers
+  vouchers: {
+    title: "Manajemen Voucher",
+    subtitle: "Buat dan kelola voucher diskon",
+    management: "Manajemen",
+    analytics: "Analitik",
+    addVoucher: "Buat Voucher",
+    editVoucher: "Edit Voucher",
+    bulkGenerate: "Buat Massal",
+    voucherCode: "Kode Voucher",
+    voucherName: "Nama Voucher",
+    discountType: "Tipe Diskon",
+    discountValue: "Nilai Diskon",
+    percentage: "Persentase",
+    fixed: "Nominal Tetap",
+    minOrder: "Minimum Pesanan",
+    maxDiscount: "Maksimum Diskon",
+    usageLimit: "Batas Penggunaan",
+    perUserLimit: "Batas Per Pengguna",
+    validFrom: "Berlaku Dari",
+    validUntil: "Berlaku Hingga",
+    appliesTo: "Berlaku Untuk",
+    allProducts: "Semua Produk",
+    specificProduct: "Produk Tertentu",
+    specificCategory: "Kategori Tertentu",
+    firstOrderOnly: "Hanya Pesanan Pertama",
+    usageCount: "Penggunaan",
+    campaign: "Kampanye",
+    noVouchersFound: "Tidak ada voucher ditemukan",
+    suggestions: {
+      title: "Voucher tersedia untuk Anda",
+      loading: "Memuat voucher tersedia...",
+      empty: "Belum ada voucher yang tersedia untuk pesanan ini saat ini.",
+      emptyHint: "Cek promo kami secara berkala!",
+      bestValue: "Nilai Terbaik",
+      expiresIn: "berakhir dalam",
+      expiresInDays: "hari lagi",
+      expiresToday: "Berakhir hari ini",
+      save: "Hemat",
+      apply: "Terapkan",
+    },
+    bulk: {
+      title: "Buat Voucher Massal",
+      campaignName: "Nama Kampanye",
+      numberOfVouchers: "Jumlah Voucher",
+      codePattern: "Pola Kode",
+      prefixRandom: "Awalan + Acak",
+      sequential: "Berurutan",
+      fullRandom: "Acak Penuh",
+      codeLength: "Panjang Kode",
+      prefix: "Awalan",
+      preview: "Pratinjau",
+      singleUse: "Setiap kode sekali pakai",
+      generating: "Membuat Voucher...",
+      generated: "voucher dibuat",
+      downloadCSV: "Unduh CSV",
+      copyAllCodes: "Salin Semua Kode",
+      generationComplete: "Pembuatan Selesai!",
+    },
+    analyticsLabels: {
+      totalRedemptions: "Total Penukaran",
+      totalSavings: "Total Penghematan",
+      conversionRate: "Tingkat Konversi",
+      avgDiscount: "Rata-rata Diskon",
+      usageTrends: "Tren Penggunaan",
+      topPerforming: "Voucher Terbaik",
+      campaignPerformance: "Performa Kampanye",
+      discountDistribution: "Distribusi Diskon",
+      ordersComparison: "Perbandingan Pesanan",
+      withVoucher: "Dengan Voucher",
+      withoutVoucher: "Tanpa Voucher",
+      avgOrderValue: "Rata-rata Nilai Pesanan",
+      dateRange: "Rentang Tanggal",
+      last7Days: "7 Hari Terakhir",
+      last30Days: "30 Hari Terakhir",
+      last90Days: "90 Hari Terakhir",
+      allTime: "Semua Waktu",
+      noDataAvailable: "Belum ada data voucher",
+      noDataHint: "Mulai buat voucher dan promosikan untuk melihat analitik di sini.",
+    },
+  },
+  
+  // Users
+  users: {
+    title: "Manajemen Pengguna",
+    subtitle: "Kelola akun pengguna dan peran",
+    fullName: "Nama Lengkap",
+    email: "Email",
+    role: "Peran",
+    roles: {
+      admin: "Admin",
+      staff: "Staf",
+      customer: "Pelanggan",
+    },
+    toggleRole: "Ubah Peran",
+    toggleStatus: "Ubah Status",
+    deleteUser: "Hapus Pengguna",
+    confirmDelete: "Apakah Anda yakin ingin menghapus pengguna ini?",
+    noUsersFound: "Tidak ada pengguna ditemukan",
+  },
+  
+  // Tickets
+  tickets: {
+    title: "Tiket Dukungan",
+    subtitle: "Kelola tiket dukungan pelanggan",
+    createTicket: "Buat Tiket",
+    subject: "Subjek",
+    description: "Deskripsi",
+    status: "Status",
+    attachment: "Lampiran",
+    conversation: "Percakapan",
+    reply: "Balas",
+    sendReply: "Kirim Balasan",
+    noTicketsFound: "Tidak ada tiket ditemukan",
+    ticketCreated: "Tiket berhasil dibuat",
+    replyPlaceholder: "Tulis balasan Anda...",
+    statuses: {
+      open: "Buka",
+      in_progress: "Diproses",
+      resolved: "Selesai",
+      closed: "Ditutup",
+    },
+  },
+  
+  // Ratings
+  ratings: {
+    title: "Ulasan Produk",
+    subtitle: "Kelola ulasan pelanggan",
+    rating: "Penilaian",
+    review: "Ulasan",
+    visible: "Terlihat",
+    hidden: "Tersembunyi",
+    toggleVisibility: "Ubah Visibilitas",
+    noRatingsFound: "Tidak ada ulasan ditemukan",
+    rateProduct: "Beri Penilaian",
+    yourRating: "Penilaian Anda",
+    writeReview: "Tulis ulasan (opsional)",
+    submitRating: "Kirim Penilaian",
+    thankYou: "Terima kasih atas penilaian Anda!",
+  },
+  
+  // Settings
+  settings: {
+    title: "Pengaturan",
+    subtitle: "Konfigurasi pengaturan toko",
+    webSettings: "Pengaturan Web",
+    businessRules: "Aturan Bisnis",
+    siteIdentity: "Identitas Situs",
+    siteName: "Nama Situs",
+    siteTagline: "Tagline",
+    siteDescription: "Deskripsi",
+    headerSettings: "Pengaturan Header",
+    heroSection: "Bagian Hero",
+    featuresSection: "Bagian Fitur",
+    contactInfo: "Informasi Kontak",
+    socialMedia: "Media Sosial",
+    footerSettings: "Pengaturan Footer",
+    faqSettings: "Pengaturan FAQ",
+    saveSettings: "Simpan Pengaturan",
+    settingsSaved: "Pengaturan berhasil disimpan",
+  },
+  
+  // Store
+  store: {
+    title: "Toko",
+    allProducts: "Semua Produk",
+    filterByCategory: "Filter berdasarkan kategori",
+    noProductsFound: "Tidak ada produk ditemukan",
+    loadMore: "Muat Lebih Banyak",
+    showing: "Menampilkan",
+    of: "dari",
+    products: "produk",
+    sortBy: "Urutkan",
+    priceLowest: "Harga Terendah",
+    priceHighest: "Harga Tertinggi",
+    newest: "Terbaru",
+    popular: "Populer",
+    stats: {
+      totalProducts: "Total Produk",
+      categories: "Kategori",
+      happyCustomers: "Pelanggan Puas",
+    },
+  },
+  
+  // Checkout / Order Confirmation
+  checkout: {
+    title: "Konfirmasi Pesanan",
+    orderSummary: "Ringkasan Pesanan",
+    product: "Produk",
+    quantity: "Jumlah",
+    unitPrice: "Harga Satuan",
+    subtotal: "Subtotal",
+    discount: "Diskon",
+    total: "Total",
+    paymentMethod: "Metode Pembayaran",
+    qris: "QRIS",
+    manualTransfer: "Transfer Manual",
+    uploadPaymentProof: "Unggah Bukti Pembayaran",
+    proceedToPayment: "Lanjutkan ke Pembayaran",
+    placeOrder: "Buat Pesanan",
+    creatingOrder: "Membuat pesanan...",
+    orderCreated: "Pesanan berhasil dibuat!",
+    orderCreatedDesc: "Silakan selesaikan pembayaran Anda.",
+    scanQR: "Pindai kode QR untuk membayar",
+    paymentDeadline: "Batas waktu pembayaran",
+    checkPaymentStatus: "Cek Status Pembayaran",
+    paymentVerified: "Pembayaran Terverifikasi!",
+    waitingForPayment: "Menunggu Pembayaran",
+    uploadProof: "Unggah Bukti",
+    proofUploaded: "Bukti Diunggah",
+    waitingVerification: "Menunggu verifikasi dari admin",
+  },
+  
+  // Transactions / My Orders
+  transactions: {
+    title: "Pesanan Saya",
+    subtitle: "Lihat riwayat pesanan dan status Anda",
+    noOrders: "Belum ada pesanan",
+    noOrdersDesc: "Anda belum membuat pesanan apapun.",
+    browseStore: "Jelajahi Toko",
+    orderDetails: "Detail Pesanan",
+    viewRedeemCodes: "Lihat Kode Redeem",
+    goToRedeemSite: "Kunjungi Situs Redeem",
+    createSupportTicket: "Buat Tiket Dukungan",
+    ticketLinked: "Tiket Terhubung",
+    rateProduct: "Beri Penilaian",
+    cancelOrder: "Batalkan Pesanan",
+    confirmPayment: "Konfirmasi Pembayaran",
+    paymentStatuses: {
+      pending: "Menunggu Pembayaran",
+      verified: "Terverifikasi",
+      rejected: "Ditolak",
+    },
+    orderStatuses: {
+      active: "Aktif",
+      expired: "Kedaluwarsa",
+      cancelled: "Dibatalkan",
+      rejected: "Ditolak",
+    },
+  },
+  
+  // Common UI elements
+  ui: {
+    loading: "Memuat...",
+    error: "Terjadi kesalahan",
+    retry: "Coba Lagi",
+    noData: "Tidak ada data",
+    noResults: "Tidak ada hasil",
+    searchPlaceholder: "Cari...",
+    selectOption: "Pilih opsi",
+    optional: "opsional",
+    required: "wajib",
+    all: "Semua",
+    none: "Tidak Ada",
+    yes: "Ya",
+    no: "Tidak",
+    or: "atau",
+    and: "dan",
+    from: "dari",
+    to: "ke",
+    date: "Tanggal",
+    time: "Waktu",
+    dateRange: "Rentang Tanggal",
+    startDate: "Tanggal Mulai",
+    endDate: "Tanggal Akhir",
+    page: "Halaman",
+    ofPages: "dari",
+    rowsPerPage: "Baris per halaman",
+    showingResults: "Menampilkan",
+    results: "hasil",
+    items: "item",
+    accessDenied: "Akses Ditolak",
+    accessDeniedDesc: "Anda tidak memiliki izin untuk mengakses halaman ini",
+    pageNotFound: "Halaman Tidak Ditemukan",
+    pageNotFoundDesc: "Halaman yang Anda cari tidak ada.",
+    goHome: "Kembali ke Beranda",
+  },
+  
+  // Toast messages
+  toasts: {
+    success: "Berhasil",
+    error: "Kesalahan",
+    warning: "Peringatan",
+    info: "Informasi",
+    saved: "Tersimpan",
+    deleted: "Terhapus",
+    updated: "Diperbarui",
+    created: "Dibuat",
+    copied: "Tersalin ke clipboard",
+    uploadSuccess: "File berhasil diunggah",
+    uploadError: "Gagal mengunggah file",
+    networkError: "Kesalahan jaringan. Silakan coba lagi.",
+    sessionExpired: "Sesi Anda telah berakhir. Silakan masuk kembali.",
+  },
+  
+  // Data tables
+  table: {
+    search: "Cari",
+    filter: "Filter",
+    export: "Ekspor",
+    reset: "Reset Filter",
+    noResults: "Tidak ada hasil ditemukan",
+    actions: "Aksi",
+    status: "Status",
+    date: "Tanggal",
+    createdAt: "Dibuat",
+    updatedAt: "Diperbarui",
+    customer: "Pelanggan",
+    product: "Produk",
+    amount: "Jumlah",
+    showing: "Menampilkan",
+    of: "dari",
+    entries: "entri",
+    first: "Pertama",
+    last: "Terakhir",
+    next: "Berikutnya",
+    previous: "Sebelumnya",
+    activeFilters: "filter aktif",
+  },
+  
+  // FAQ Section
+  faq: {
+    title: "Pertanyaan yang Sering Diajukan",
+    subtitle: "Temukan jawaban untuk pertanyaan umum",
+  },
+  
+  // Trust indicators
+  trust: {
+    securePayment: "Pembayaran Aman",
+    securePaymentDesc: "Transaksi Anda dilindungi dengan enkripsi SSL",
+    instantDelivery: "Pengiriman Instan",
+    instantDeliveryDesc: "Kode redeem Anda akan langsung tersedia",
+    support24_7: "Dukungan 24/7",
+    support24_7Desc: "Tim kami siap membantu kapan saja",
+    moneyBack: "Garansi Uang Kembali",
+    moneyBackDesc: "Tidak puas? Kami kembalikan uang Anda",
+  },
+  
+  // Footer
+  footer: {
+    copyright: "Hak Cipta",
+    allRightsReserved: "Semua hak dilindungi.",
+    termsOfService: "Syarat Layanan",
+    privacyPolicy: "Kebijakan Privasi",
+    contact: "Kontak",
+  },
+  
+  // Floating chat
+  chat: {
+    needHelp: "Butuh bantuan?",
+    chatWithUs: "Chat dengan kami",
+  },
+};
 ```
 
-### New Component: `AvailableVouchersList`
+### 3.2 Files to Update with Indonesian Translation
 
-A collapsible/expandable component that:
-- Shows loading skeleton while fetching
-- Displays list of applicable vouchers
-- Each voucher shows: code, name, discount info, potential savings
-- "Apply" button that auto-fills the code and triggers validation
-- Respects `show_available_vouchers` business rule
+The following files will be updated to use the centralized translations:
 
-### Update VoucherInput Component
+**Pages:**
+1. `src/pages/Index.tsx` - Landing page content
+2. `src/pages/Store.tsx` - Store labels and messages
+3. `src/pages/SignIn.tsx` - Auth text
+4. `src/pages/SignUp.tsx` - Auth text
+5. `src/pages/ForgotPassword.tsx` - Password reset text
+6. `src/pages/ResetPassword.tsx` - Password reset text
+7. `src/pages/Transactions.tsx` - Order history labels
+8. `src/pages/Admin.tsx` - Admin panel text
+9. `src/pages/Staff.tsx` - Staff panel text
+10. `src/pages/Analytics.tsx` - Analytics labels
+11. `src/pages/NotFound.tsx` - 404 page text
 
-Integrate the suggestions below the manual input:
-- Fetch available vouchers when component mounts
-- Show suggestions if `show_available_vouchers` is enabled
-- Hide suggestions when a voucher is already applied
-- Allow one-click application from suggestions
+**Components:**
+1. `src/components/Navbar.tsx` - Navigation labels
+2. `src/components/ProductCard.tsx` - Product labels
+3. `src/components/OrderCard.tsx` - Order status labels
+4. `src/components/OrderConfirmationDialog.tsx` - Checkout text
+5. `src/components/VoucherInput.tsx` - Voucher labels
+6. `src/components/AvailableVouchersList.tsx` - Voucher suggestions
+7. `src/components/VoucherManager.tsx` - Voucher management
+8. `src/components/VoucherAnalytics.tsx` - Analytics labels
+9. `src/components/BulkVoucherGeneratorDialog.tsx` - Bulk generation
+10. `src/components/FAQSection.tsx` - FAQ section
+11. `src/components/TicketDialog.tsx` - Ticket creation
+12. `src/components/TicketConversation.tsx` - Ticket chat
+13. `src/components/RatingDialog.tsx` - Rating form
+14. `src/components/CategoryManager.tsx` - Category labels
+15. `src/components/CodeInventoryManager.tsx` - Code inventory
+16. `src/components/StockManagement.tsx` - Stock labels
+17. `src/components/BusinessRulesEditor.tsx` - Settings labels
+18. `src/components/WebSettingsEditor.tsx` - Web settings
+19. `src/components/DataTableFilters.tsx` - Filter labels
+20. `src/components/DataTablePagination.tsx` - Pagination labels
+21. `src/components/TrustIndicators.tsx` - Trust badges
+22. `src/components/CopyButton.tsx` - Copy labels
+23. `src/components/FloatingChatButton.tsx` - Chat prompt
 
 ---
 
-## 4. Component Structure
+## Phase 4: UI/UX Enhancements Throughout
+
+### 4.1 Enhanced Empty States
+
+Add illustrated empty states across all data tables and lists:
 
 ```text
-VoucherInput (updated)
-├── Manual Input Section
-│   ├── Input field
-│   └── Apply button
-│
-└── AvailableVouchersList (new - conditional)
-    ├── Loading skeleton
-    ├── Voucher cards (collapsible)
-    │   ├── Code badge
-    │   ├── Name & description
-    │   ├── Discount info
-    │   ├── Potential savings
-    │   └── Quick apply button
-    └── Empty state (no vouchers available)
+┌─────────────────────────────────────────────────────────────────────────┐
+│  ENHANCED EMPTY STATE PATTERN                                            │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│                   ┌─────────────────────────────┐                       │
+│                   │                              │                       │
+│                   │      [ Icon with           │                       │
+│                   │        subtle animation ]   │                       │
+│                   │                              │                       │
+│                   │   Tidak ada pesanan         │                       │
+│                   │   ditemukan                  │                       │
+│                   │                              │                       │
+│                   │   Pesanan akan muncul       │                       │
+│                   │   di sini setelah dibuat.   │                       │
+│                   │                              │                       │
+│                   │   [ Primary Action Button ] │                       │
+│                   │                              │                       │
+│                   └─────────────────────────────┘                       │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
----
+### 4.2 Improved Loading States
 
-## 5. Files to Create/Modify
+Add skeleton loaders matching content structure:
 
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/functions/get-available-vouchers/index.ts` | Create | New edge function to fetch eligible vouchers |
-| `src/hooks/useAvailableVouchers.ts` | Create | Hook to fetch and manage available vouchers |
-| `src/components/AvailableVouchersList.tsx` | Create | Component to display voucher suggestions |
-| `src/components/VoucherInput.tsx` | Modify | Integrate voucher suggestions below input |
+- Card skeletons for dashboard stats
+- Table row skeletons for data tables
+- Content area skeletons for sections
 
----
+### 4.3 Enhanced Mobile Responsiveness
 
-## 6. Edge Function Logic
+- Touch-optimized button sizes (min 44px)
+- Swipeable navigation on mobile
+- Sticky action buttons at bottom on mobile
+- Full-width dialogs on small screens
+- Improved table horizontal scroll indicators
 
-### `get-available-vouchers/index.ts`
+### 4.4 Visual Feedback Improvements
 
-```text
-1. Authenticate user
-2. Fetch all active vouchers where:
-   - is_active = true
-   - valid_from <= now <= valid_until
-   - usage_count < usage_limit (or usage_limit is null)
-   
-3. For each voucher, check:
-   - Product/category targeting matches
-   - Order amount >= min_order_amount
-   - User hasn't exceeded per_user_limit
-   - First order check if first_order_only = true
-   
-4. Calculate potential discount for each eligible voucher
+- Add micro-animations for state changes
+- Pulse effects on notification badges
+- Success/error state animations
+- Hover state transitions (0.2s ease)
+- Active state visual feedback
 
-5. Return sorted list (best discount first)
-```
+### 4.5 Accessibility Enhancements
+
+- Proper focus indicators
+- Screen reader labels
+- Keyboard navigation support
+- Color contrast compliance
+- Error message association
 
 ---
 
-## 7. UI/UX Considerations
+## Implementation Summary
 
-### Design Elements
-- Collapsible section to save space (expandable by default on first checkout)
-- Visual indicator for best deal (e.g., "Best Value" badge)
-- Clear savings display (e.g., "Save Rp 30,000")
-- Expiry warning for vouchers ending soon
-- Smooth animations when applying voucher from suggestions
+| Phase | Files | Description |
+|-------|-------|-------------|
+| 1 | 2 files | Voucher refinements (empty state, caching) |
+| 2 | 4 files | Admin/Staff sidebar navigation |
+| 3 | 1 new + 23 updates | Indonesian translations |
+| 4 | Integrated | UI/UX enhancements throughout |
 
-### Mobile Responsiveness
-- Stack voucher cards vertically on mobile
-- Full-width apply buttons for touch targets
-- Scrollable list if many vouchers available
+### Files to Create:
+- `src/lib/translations.ts`
+- `src/components/AdminSidebar.tsx`
+- `src/components/StaffSidebar.tsx`
 
-### Empty States
-- "No vouchers available" message with encouragement
-- Link to where users can find voucher codes (optional)
+### Files to Modify:
+- `src/components/AvailableVouchersList.tsx`
+- `src/hooks/useAvailableVouchers.ts`
+- `src/pages/Admin.tsx`
+- `src/pages/Staff.tsx`
+- `src/pages/Index.tsx`
+- `src/pages/Store.tsx`
+- `src/pages/SignIn.tsx`
+- `src/pages/SignUp.tsx`
+- `src/pages/ForgotPassword.tsx`
+- `src/pages/ResetPassword.tsx`
+- `src/pages/Transactions.tsx`
+- `src/pages/Analytics.tsx`
+- `src/pages/NotFound.tsx`
+- `src/components/Navbar.tsx`
+- `src/components/ProductCard.tsx`
+- `src/components/OrderCard.tsx`
+- `src/components/OrderConfirmationDialog.tsx`
+- `src/components/VoucherInput.tsx`
+- `src/components/VoucherManager.tsx`
+- `src/components/VoucherAnalytics.tsx`
+- `src/components/BulkVoucherGeneratorDialog.tsx`
+- `src/components/FAQSection.tsx`
+- `src/components/TicketDialog.tsx`
+- `src/components/RatingDialog.tsx`
+- `src/components/CategoryManager.tsx`
+- `src/components/CodeInventoryManager.tsx`
+- `src/components/DataTableFilters.tsx`
+- `src/components/DataTablePagination.tsx`
+- `src/components/TrustIndicators.tsx`
+- `src/components/CopyButton.tsx`
+- `src/components/FloatingChatButton.tsx`
 
----
-
-## 8. Security Considerations
-
-1. **Server-side validation remains required** - Suggestions are just hints; actual validation happens via `validate-voucher` edge function
-2. **Rate limiting** - Limit calls to `get-available-vouchers` to prevent abuse
-3. **No sensitive data exposed** - Only show necessary voucher info, not internal IDs or admin notes
-4. **User-specific data** - Voucher eligibility checked against authenticated user
-
----
-
-## 9. Performance Optimizations
-
-1. **Caching** - Cache voucher list for short period (30 seconds) to avoid repeated calls
-2. **Lazy loading** - Only fetch suggestions when checkout dialog opens
-3. **Debouncing** - If order amount changes, debounce the refresh
-4. **Limit results** - Show max 5 best vouchers to avoid overwhelming users
-
----
-
-## 10. Technical Implementation Order
-
-1. Create `get-available-vouchers` edge function
-2. Create `useAvailableVouchers` hook
-3. Create `AvailableVouchersList` component
-4. Update `VoucherInput` to integrate suggestions
-5. Add business rules check for `show_available_vouchers` toggle
-6. Test end-to-end with various voucher configurations
