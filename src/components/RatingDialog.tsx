@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Star } from "lucide-react";
 import { ratingSchema } from "@/lib/validations";
+import { t } from "@/lib/translations";
 
 interface RatingDialogProps {
   open: boolean;
@@ -69,12 +70,12 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
     e.preventDefault();
     
     if (rating === 0) {
-      toast.error("Please select a rating");
+      toast.error(t.additional.pleaseSelectRating);
       return;
     }
 
     if (existingRating) {
-      toast.info("You have already rated this product. Ratings are not editable.");
+      toast.info(t.additional.alreadyRated);
       return;
     }
 
@@ -95,7 +96,7 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("You must be logged in to submit a rating");
+        toast.error(t.additional.mustBeLoggedIn);
         return;
       }
 
@@ -109,14 +110,14 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
 
       if (error) throw error;
 
-      toast.success("Thank you for your rating!");
+      toast.success(t.ratings.thankYou);
       onOpenChange(false);
       onSuccess?.();
       setRating(0);
       setReview("");
     } catch (error) {
       console.error("Error submitting rating:", error);
-      toast.error("Failed to submit rating");
+      toast.error(t.additional.failedSubmitRating);
     } finally {
       setIsSubmitting(false);
     }
@@ -126,11 +127,11 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>{existingRating ? "Your Rating" : `Rate ${productName}`}</DialogTitle>
+          <DialogTitle>{existingRating ? t.ratings.yourRating : `${t.ratings.rateProduct} ${productName}`}</DialogTitle>
           <DialogDescription>
             {existingRating 
-              ? "You have already rated this product. Ratings cannot be edited."
-              : "Share your experience with this product"}
+              ? t.additional.ratingAlreadySubmitted
+              : t.additional.shareExperience}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -156,27 +157,27 @@ export const RatingDialog = ({ open, onOpenChange, orderId, productId, productNa
             ))}
           </div>
           <div>
-            <Label htmlFor="review">Review (optional)</Label>
+            <Label htmlFor="review">{t.ratings.review} ({t.ui.optional})</Label>
             <Textarea
               id="review"
               value={review}
               onChange={(e) => setReview(e.target.value)}
-              placeholder="Tell us about your experience..."
+              placeholder={t.additional.tellExperience}
               rows={4}
               maxLength={2000}
               disabled={!!existingRating}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              {review.length}/2000 characters
+              {review.length}/2000 {t.additional.characters}
             </p>
           </div>
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-              Close
+              {t.actions.close}
             </Button>
             {!existingRating && (
               <Button type="submit" disabled={rating === 0 || isSubmitting} className="flex-1">
-                {isSubmitting ? "Submitting..." : "Submit Rating"}
+                {isSubmitting ? t.additional.submitting : t.ratings.submitRating}
               </Button>
             )}
           </div>

@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { t } from "@/lib/translations";
 
 // Notification badge component with tooltip
 const NotificationBadge = ({ count, label, icon: Icon }: { count: number; label: string; icon: React.ElementType }) => {
@@ -186,10 +187,10 @@ const Navbar = () => {
             {!user ? (
               <>
                 <Link to="/auth/signin">
-                  <Button variant="ghost">Sign In</Button>
+                  <Button variant="ghost">{t.nav.signIn}</Button>
                 </Link>
                 <Link to="/auth/signup">
-                  <Button>Sign Up</Button>
+                  <Button>{t.nav.signUp}</Button>
                 </Link>
               </>
             ) : (
@@ -197,14 +198,14 @@ const Navbar = () => {
                 <Link to="/transactions">
                   <Button variant={isActive('/transactions') ? 'default' : 'outline'}>
                     <ShoppingBag className="mr-2 h-4 w-4" />
-                    My Orders
+                    {t.nav.myOrders}
                   </Button>
                 </Link>
                 {isAdmin && (
                   <Link to="/admin">
                     <Button variant={isActive('/admin') ? 'default' : 'outline'} className="gap-2">
                       <Shield className="h-4 w-4" />
-                      Admin
+                      {t.nav.admin}
                       {pendingCount > 0 && (
                         <NotificationBadge count={pendingCount} label="pending orders" icon={Clock} />
                       )}
@@ -218,7 +219,7 @@ const Navbar = () => {
                   <Link to="/staff">
                     <Button variant={isActive('/staff') ? 'default' : 'outline'} className="gap-2">
                       <Briefcase className="h-4 w-4" />
-                      Staff
+                      {t.nav.staff}
                       {pendingCount > 0 && (
                         <NotificationBadge count={pendingCount} label="pending orders" icon={Clock} />
                       )}
@@ -245,7 +246,7 @@ const Navbar = () => {
                     <DropdownMenuSeparator className="bg-border" />
                     <DropdownMenuItem onClick={handleSignOut} className="text-destructive font-bold">
                       <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
+                      {t.nav.signOut}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -264,7 +265,7 @@ const Navbar = () => {
               <DropdownMenuContent align="end" className="w-56 bg-popover border-2 border-border shadow-brutal">
                 <DropdownMenuItem onClick={() => navigate("/")} className="font-medium">
                   <Home className="mr-2 h-4 w-4" />
-                  Home
+                  {t.nav.home}
                 </DropdownMenuItem>
                 
                 {!user ? (
@@ -272,25 +273,25 @@ const Navbar = () => {
                     <DropdownMenuSeparator className="bg-border" />
                     <DropdownMenuItem onClick={() => navigate("/auth/signin")} className="font-medium">
                       <LogIn className="mr-2 h-4 w-4" />
-                      Sign In
+                      {t.nav.signIn}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate("/auth/signup")} className="font-medium">
                       <UserPlus className="mr-2 h-4 w-4" />
-                      Sign Up
+                      {t.nav.signUp}
                     </DropdownMenuItem>
                   </>
                 ) : (
                   <>
                     <DropdownMenuItem onClick={() => navigate("/transactions")} className="font-medium">
                       <ShoppingBag className="mr-2 h-4 w-4" />
-                      My Orders
+                      {t.nav.myOrders}
                     </DropdownMenuItem>
                     
                     {isAdmin && (
                       <DropdownMenuItem onClick={() => navigate("/admin")} className="font-medium justify-between">
                         <span className="flex items-center gap-2">
                           <Shield className="h-4 w-4" />
-                          Admin
+                          {t.nav.admin}
                         </span>
                         {(pendingCount > 0 || openTicketsCount > 0) && (
                           <span className="flex items-center gap-0.5 flex-shrink-0">
@@ -313,7 +314,7 @@ const Navbar = () => {
                       <DropdownMenuItem onClick={() => navigate("/staff")} className="font-medium justify-between">
                         <span className="flex items-center gap-2">
                           <Briefcase className="h-4 w-4" />
-                          Staff
+                          {t.nav.staff}
                         </span>
                         {(pendingCount > 0 || openTicketsCount > 0) && (
                           <span className="flex items-center gap-0.5 flex-shrink-0">
@@ -338,7 +339,7 @@ const Navbar = () => {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={handleSignOut} className="text-destructive font-bold">
                       <LogOut className="mr-2 h-4 w-4" />
-                      Sign Out
+                      {t.nav.signOut}
                     </DropdownMenuItem>
                   </>
                 )}

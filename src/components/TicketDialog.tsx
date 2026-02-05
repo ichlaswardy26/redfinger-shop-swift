@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Upload, X, FileImage, FileVideo, FileText } from "lucide-react";
 import { ticketSchema } from "@/lib/validations";
 import { useFileValidation } from "@/hooks/useFileValidation";
+import { t } from "@/lib/translations";
 
 interface TicketDialogProps {
   open: boolean;
@@ -108,8 +109,8 @@ export const TicketDialog = ({ open, onOpenChange, orderId, onSuccess }: TicketD
       if (error) throw error;
 
       toast({
-        title: "Ticket created",
-        description: "Your support ticket has been submitted successfully",
+        title: t.tickets.ticketCreated,
+        description: t.additional.ticketSubmitted,
       });
 
       setSubject("");
@@ -122,8 +123,8 @@ export const TicketDialog = ({ open, onOpenChange, orderId, onSuccess }: TicketD
       // Check for rate limit error
       if (errorMessage.includes("Rate limit exceeded")) {
         toast({
-          title: "Rate Limit Exceeded",
-          description: "You can only create 5 tickets per hour. Please try again later.",
+          title: t.additional.rateLimitExceeded,
+          description: t.additional.rateLimitMessage,
           variant: "destructive",
         });
       } else {
@@ -142,45 +143,45 @@ export const TicketDialog = ({ open, onOpenChange, orderId, onSuccess }: TicketD
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create Support Ticket</DialogTitle>
+          <DialogTitle>{t.tickets.createTicket}</DialogTitle>
           <DialogDescription>
-            Describe your issue and we'll help you resolve it
+            {t.additional.describeIssue}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="subject">Subject</Label>
+            <Label htmlFor="subject">{t.tickets.subject}</Label>
             <Input
               id="subject"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="Brief description of the issue"
+              placeholder={t.additional.briefDescription}
               maxLength={200}
               required
             />
             <p className="text-xs text-muted-foreground mt-1">
-              {subject.length}/200 characters
+              {subject.length}/200 {t.additional.characters}
             </p>
           </div>
           <div>
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t.tickets.description}</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Please provide detailed information about your issue"
+              placeholder={t.additional.detailedInfo}
               rows={5}
               maxLength={5000}
               required
             />
             <p className="text-xs text-muted-foreground mt-1">
-              {description.length}/5000 characters
+              {description.length}/5000 {t.additional.characters}
             </p>
           </div>
           <div>
-            <Label htmlFor="attachment">Attachment (optional)</Label>
+            <Label htmlFor="attachment">{t.tickets.attachment} ({t.ui.optional})</Label>
             <p className="text-xs text-muted-foreground mb-2">
-              Supported: JPG, PNG, MP4, WebM, MOV, PDF (max 10MB)
+              {t.additional.supportedFormats}
             </p>
             {attachedFile ? (
               <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50">
@@ -207,7 +208,7 @@ export const TicketDialog = ({ open, onOpenChange, orderId, onSuccess }: TicketD
                   className="w-full"
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  Choose file
+                  {t.additional.chooseFile}
                 </Button>
                 <input
                   id="ticket-attachment"
@@ -221,10 +222,10 @@ export const TicketDialog = ({ open, onOpenChange, orderId, onSuccess }: TicketD
           </div>
           <div className="flex gap-2 justify-end">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t.actions.cancel}
             </Button>
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Submitting..." : "Submit Ticket"}
+              {submitting ? t.additional.submitting : t.actions.submit}
             </Button>
           </div>
         </form>

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, X, Download, CalendarIcon, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/translations";
 
 interface FilterOption {
   label: string;
@@ -112,7 +113,7 @@ export const DataTableFilters = ({
                       format(dateRange.from, "LLL dd, y")
                     )
                   ) : (
-                    <span>Pick date range</span>
+                    <span>{t.additional.pickDateRange}</span>
                   )}
                 </Button>
               </PopoverTrigger>
@@ -136,7 +137,7 @@ export const DataTableFilters = ({
                 {activeFilterCount}
               </Badge>
               <X className="h-4 w-4" />
-              Clear
+              {t.additional.clearFilters}
             </Button>
           )}
         </div>
