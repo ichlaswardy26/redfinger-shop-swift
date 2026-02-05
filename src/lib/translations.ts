@@ -213,6 +213,9 @@
      linkedToTickets: "Verifikasi pembayaran dan terbitkan kode redeem untuk pesanan terkait tiket Anda",
      noLinkedOrders: "Tidak ada pesanan terkait tiket Anda",
      ordersAppearHere: "Pesanan akan muncul di sini saat pelanggan membuat tiket dukungan untuk pesanan mereka",
+    status: "Status",
+    bulkVerify: "Verifikasi Massal",
+    verifyPayments: "Verifikasi pembayaran dan terbitkan kode redeem",
    },
  
    // Products
@@ -252,6 +255,11 @@
      productsOutOfStock: "produk habis stok",
      productUpdated: "Produk berhasil diperbarui",
      productCreated: "Produk berhasil dibuat",
+    name: "Nama",
+    days: "hari",
+    selectCategory: "Pilih kategori (opsional)",
+    noCategory: "Tanpa Kategori",
+    searchPlaceholder: "Cari produk...",
    },
  
    // Categories
@@ -265,6 +273,7 @@
      displayOrder: "Urutan Tampilan",
      noParent: "Tanpa Induk",
      noCategoriesFound: "Tidak ada kategori ditemukan",
+    manageCategories: "Kelola kategori dan organisasi produk",
    },
  
    // Code Inventory
@@ -279,6 +288,7 @@
      usedAt: "Digunakan Pada",
      usedBy: "Digunakan Oleh",
      noCodesFound: "Tidak ada kode ditemukan",
+    manageDescription: "Kelola kode redeem yang di-upload untuk produk pengiriman otomatis",
    },
  
    // Vouchers
@@ -384,6 +394,8 @@
      deleteUser: "Hapus Pengguna",
      confirmDelete: "Apakah Anda yakin ingin menghapus pengguna ini?",
      noUsersFound: "Tidak ada pengguna ditemukan",
+    manageAccounts: "Kelola akun pengguna dan peran",
+    searchPlaceholder: "Cari berdasarkan nama atau email...",
      makeAdmin: "Jadikan Admin",
      removeAdmin: "Hapus Admin",
      makeStaff: "Jadikan Staf",
@@ -423,6 +435,12 @@
      viewTrack: "Lihat dan lacak permintaan dukungan Anda",
      created: "Dibuat",
      resolved: "Diselesaikan",
+    manageRequests: "Kelola permintaan dukungan pelanggan",
+    searchPlaceholder: "Cari tiket...",
+    statusOpen: "Buka",
+    statusInProgress: "Diproses",
+    statusResolved: "Selesai",
+    statusClosed: "Ditutup",
    },
  
    // Ratings
@@ -441,6 +459,9 @@
      submitRating: "Kirim Penilaian",
      thankYou: "Terima kasih atas penilaian Anda!",
      manageVisibility: "Kelola visibilitas ulasan produk",
+    manageReviews: "Kelola ulasan dan penilaian pelanggan",
+    searchPlaceholder: "Cari berdasarkan produk atau pengguna...",
+    visibility: "Visibilitas",
    },
  
    // Settings
