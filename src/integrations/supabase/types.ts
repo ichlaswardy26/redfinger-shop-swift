@@ -552,6 +552,8 @@ export type Database = {
       vouchers: {
         Row: {
           applies_to: string
+          batch_id: string | null
+          campaign_id: string | null
           category_ids: string[] | null
           code: string
           created_at: string
@@ -576,6 +578,8 @@ export type Database = {
         }
         Insert: {
           applies_to?: string
+          batch_id?: string | null
+          campaign_id?: string | null
           category_ids?: string[] | null
           code: string
           created_at?: string
@@ -600,6 +604,8 @@ export type Database = {
         }
         Update: {
           applies_to?: string
+          batch_id?: string | null
+          campaign_id?: string | null
           category_ids?: string[] | null
           code?: string
           created_at?: string

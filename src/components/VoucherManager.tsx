@@ -9,7 +9,7 @@
  import { MotionContainer, MotionStatCard } from "@/components/ui/motion";
  import { 
    Plus, Tag, Percent, Calendar, Users, TrendingUp, 
-   MoreHorizontal, Pencil, Trash2, Copy, Check, Loader2
+   MoreHorizontal, Pencil, Trash2, Copy, Check, Loader2, Package
  } from "lucide-react";
  import {
    DropdownMenu,
@@ -18,6 +18,14 @@
    DropdownMenuTrigger,
  } from "@/components/ui/dropdown-menu";
  import { VoucherFormDialog, VoucherFormData } from "@/components/VoucherFormDialog";
+ import { BulkVoucherGeneratorDialog } from "@/components/BulkVoucherGeneratorDialog";
+ import {
+   Select,
+   SelectContent,
+   SelectItem,
+   SelectTrigger,
+   SelectValue,
+ } from "@/components/ui/select";
  import { format } from "date-fns";
  
  interface Voucher {
@@ -41,6 +49,8 @@
    stackable: boolean;
    first_order_only: boolean;
    created_at: string;
+   campaign_id: string | null;
+   batch_id: string | null;
  }
  
  interface VoucherStats {
@@ -55,13 +65,17 @@
    const [stats, setStats] = useState<VoucherStats>({ totalActive: 0, totalExpired: 0, totalUsage: 0, totalSavings: 0 });
    const [loading, setLoading] = useState(true);
    const [dialogOpen, setDialogOpen] = useState(false);
+   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
    const [editingVoucher, setEditingVoucher] = useState<Voucher | null>(null);
    const [copiedCode, setCopiedCode] = useState<string | null>(null);
+   const [campaignFilter, setCampaignFilter] = useState<string>("all");
+   const [campaigns, setCampaigns] = useState<string[]>([]);
    const { toast } = useToast();
  
    useEffect(() => {
      fetchVouchers();
      fetchStats();
+     fetchCampaigns();
    }, []);
  
    const fetchVouchers = async () => {
@@ -78,6 +92,20 @@
        toast({ title: "Error", description: "Failed to load vouchers", variant: "destructive" });
      } finally {
        setLoading(false);
+     }
+   };
+ 
+   const fetchCampaigns = async () => {
+     try {
+       const { data } = await supabase
+         .from("vouchers")
+         .select("campaign_id")
+         .not("campaign_id", "is", null);
+       
+       const uniqueCampaigns = [...new Set(data?.map(v => v.campaign_id).filter(Boolean))] as string[];
+       setCampaigns(uniqueCampaigns);
+     } catch (error) {
+       console.error("Error fetching campaigns:", error);
      }
    };
  
@@ -215,6 +243,12 @@
      return { label: "Active", variant: "default" as const };
    };
  
+   const filteredVouchers = campaignFilter === "all" 
+     ? vouchers 
+     : campaignFilter === "single"
+       ? vouchers.filter(v => !v.campaign_id)
+       : vouchers.filter(v => v.campaign_id === campaignFilter);
+ 
    if (loading) {
      return (
        <div className="flex items-center justify-center p-8">
@@ -280,12 +314,38 @@
              <CardTitle>Voucher Management</CardTitle>
              <CardDescription>Create and manage discount vouchers</CardDescription>
            </div>
-           <Button onClick={() => { setEditingVoucher(null); setDialogOpen(true); }}>
-             <Plus className="h-4 w-4 mr-2" />
-             Create Voucher
-           </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setBulkDialogOpen(true)}>
+                <Package className="h-4 w-4 mr-2" />
+                Bulk Generate
+              </Button>
+              <Button onClick={() => { setEditingVoucher(null); setDialogOpen(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Voucher
+              </Button>
+            </div>
          </CardHeader>
          <CardContent>
+            {/* Campaign Filter */}
+            {campaigns.length > 0 && (
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-sm text-muted-foreground">Filter by Campaign:</span>
+                <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue placeholder="All Campaigns" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Campaigns</SelectItem>
+                    <SelectItem value="single">Single Vouchers</SelectItem>
+                    {campaigns.map(campaign => (
+                      <SelectItem key={campaign} value={campaign}>
+                        {campaign.replace(/_/g, " ")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
            <div className="overflow-x-auto">
              <Table>
                <TableHeader>
@@ -301,14 +361,14 @@
                  </TableRow>
                </TableHeader>
                <TableBody>
-                 {vouchers.length === 0 ? (
+                  {filteredVouchers.length === 0 ? (
                    <TableRow>
                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                        No vouchers created yet. Create your first voucher!
                      </TableCell>
                    </TableRow>
                  ) : (
-                   vouchers.map((voucher) => {
+                    filteredVouchers.map((voucher) => {
                      const status = getVoucherStatus(voucher);
                      return (
                        <TableRow key={voucher.id}>
@@ -410,6 +470,17 @@
          voucher={editingVoucher}
          onSave={handleSaveVoucher}
        />
+        
+        {/* Bulk Generator Dialog */}
+        <BulkVoucherGeneratorDialog
+          open={bulkDialogOpen}
+          onOpenChange={setBulkDialogOpen}
+          onComplete={() => {
+            fetchVouchers();
+            fetchStats();
+            fetchCampaigns();
+          }}
+        />
      </div>
    );
  };
