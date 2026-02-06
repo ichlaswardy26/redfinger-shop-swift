@@ -15,8 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { ShoppingCart, Wallet, CreditCard, Loader2, QrCode } from "lucide-react";
 import { usePaymentGateway, QRPaymentData } from "@/hooks/usePaymentGateway";
 import { QRPaymentDialog } from "@/components/QRPaymentDialog";
- import { VoucherInput } from "@/components/VoucherInput";
- import { ValidatedVoucher } from "@/hooks/useVoucher";
+import { VoucherInput } from "@/components/VoucherInput";
+import { ValidatedVoucher } from "@/hooks/useVoucher";
+import { t } from "@/lib/translations";
 
 interface Product {
   id: string;
@@ -112,29 +113,29 @@ export const OrderConfirmationDialog = ({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
-              Confirm Your Order
+              {t.checkout.title}
             </DialogTitle>
             <DialogDescription>
-              Review your order details before proceeding to payment
+              {t.additional.reviewDetails}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Product:</span>
+                <span className="text-muted-foreground">{t.checkout.product}:</span>
                 <span className="font-medium">{product.name}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Duration:</span>
-                <span className="font-medium">{product.duration_days} days</span>
+                <span className="text-muted-foreground">{t.products.duration}:</span>
+                <span className="font-medium">{product.duration_days} {t.products.days}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Quantity:</span>
+                <span className="text-muted-foreground">{t.checkout.quantity}:</span>
                 <span className="font-medium">{quantity}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Price per item:</span>
+                <span className="text-muted-foreground">{t.checkout.unitPrice}:</span>
                 <span className="font-medium">Rp {product.price.toLocaleString()}</span>
               </div>
             </div>
@@ -155,18 +156,18 @@ export const OrderConfirmationDialog = ({
              {/* Price Summary */}
              <div className="space-y-2">
                <div className="flex justify-between">
-                 <span className="text-muted-foreground">Subtotal:</span>
+                 <span className="text-muted-foreground">{t.checkout.subtotal}:</span>
                  <span className="font-medium">Rp {totalPrice.toLocaleString()}</span>
                </div>
                {discountAmount > 0 && (
                  <div className="flex justify-between text-primary">
-                   <span>Discount ({appliedVoucher?.code}):</span>
+                   <span>{t.checkout.discount} ({appliedVoucher?.code}):</span>
                    <span className="font-medium">-Rp {discountAmount.toLocaleString()}</span>
                  </div>
                )}
                <Separator />
                <div className="flex justify-between text-lg font-bold">
-                 <span>Total:</span>
+                 <span>{t.checkout.total}:</span>
                  <span className="text-primary">Rp {finalPrice.toLocaleString()}</span>
                </div>
              </div>
@@ -175,7 +176,7 @@ export const OrderConfirmationDialog = ({
 
             {/* Payment Method Selection */}
             <div className="space-y-3">
-              <Label className="text-base font-semibold">Payment Method</Label>
+              <Label className="text-base font-semibold">{t.checkout.paymentMethod}</Label>
               <RadioGroup
                 value={paymentMethod}
                 onValueChange={(val) => setPaymentMethod(val as "manual" | "qris")}
@@ -187,10 +188,10 @@ export const OrderConfirmationDialog = ({
                   <Label htmlFor="manual" className="flex-1 cursor-pointer">
                     <div className="flex items-center gap-2">
                       <CreditCard className="h-4 w-4" />
-                      <span className="font-medium">Bank Transfer (Manual)</span>
+                      <span className="font-medium">{t.additional.bankTransfer}</span>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      Transfer and upload payment proof for verification
+                      {t.additional.bankTransferDesc}
                     </p>
                   </Label>
                 </div>
@@ -202,11 +203,11 @@ export const OrderConfirmationDialog = ({
                     <Label htmlFor="qris" className="flex-1 cursor-pointer">
                       <div className="flex items-center gap-2">
                         <QrCode className="h-4 w-4" />
-                        <span className="font-medium">QRIS (Instant)</span>
-                        <Badge variant="secondary" className="text-xs">Recommended</Badge>
+                        <span className="font-medium">{t.additional.qrisInstant}</span>
+                        <Badge variant="secondary" className="text-xs">{t.additional.recommended}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
-                        Pay with any e-wallet (GoPay, OVO, DANA, etc.)
+                        {t.additional.qrisDesc}
                       </p>
                     </Label>
                   </div>
@@ -218,23 +219,23 @@ export const OrderConfirmationDialog = ({
             <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
               {paymentMethod === "manual" ? (
                 <>
-                  <p className="font-medium mb-1">Next Steps:</p>
+                  <p className="font-medium mb-1">{t.additional.nextSteps}:</p>
                   <ol className="list-decimal list-inside space-y-1">
-                    <li>Confirm your order</li>
-                    <li>Transfer to our bank account</li>
-                    <li>Upload payment proof in My Transactions</li>
-                    <li>Wait for admin verification</li>
-                    <li>Receive your redeem codes</li>
+                    <li>Konfirmasi pesanan Anda</li>
+                    <li>Transfer ke rekening bank kami</li>
+                    <li>Unggah bukti pembayaran di Pesanan Saya</li>
+                    <li>Tunggu verifikasi admin</li>
+                    <li>Terima kode redeem Anda</li>
                   </ol>
                 </>
               ) : (
                 <>
-                  <p className="font-medium mb-1">Next Steps:</p>
+                  <p className="font-medium mb-1">{t.additional.nextSteps}:</p>
                   <ol className="list-decimal list-inside space-y-1">
-                    <li>Confirm your order</li>
-                    <li>Scan QR code with your e-wallet</li>
-                    <li>Complete payment instantly</li>
-                    <li>Receive your redeem codes automatically</li>
+                    <li>Konfirmasi pesanan Anda</li>
+                    <li>Pindai kode QR dengan e-wallet Anda</li>
+                    <li>Selesaikan pembayaran secara instan</li>
+                    <li>Terima kode redeem Anda secara otomatis</li>
                   </ol>
                 </>
               )}
@@ -247,7 +248,7 @@ export const OrderConfirmationDialog = ({
               onClick={() => onOpenChange(false)}
               disabled={isLoading || isCreatingPayment}
             >
-              Cancel
+              {t.actions.cancel}
             </Button>
             <Button 
               onClick={handleConfirm} 
@@ -256,15 +257,15 @@ export const OrderConfirmationDialog = ({
               {isLoading || isCreatingPayment ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Creating Order...
+                  {t.checkout.creatingOrder}
                 </>
               ) : paymentMethod === "qris" ? (
                 <>
                   <QrCode className="h-4 w-4 mr-2" />
-                   Pay Rp {finalPrice.toLocaleString()}
+                  {t.additional.payNow} Rp {finalPrice.toLocaleString()}
                 </>
               ) : (
-                 `Confirm Order - Rp ${finalPrice.toLocaleString()}`
+                 `${t.additional.confirmOrderAmount} - Rp ${finalPrice.toLocaleString()}`
               )}
             </Button>
           </DialogFooter>
