@@ -18,6 +18,7 @@ import { QRPaymentDialog } from "@/components/QRPaymentDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { useInView } from "framer-motion";
 import { useRef } from "react";
+import { t } from "@/lib/translations";
 
 interface Category {
   id: string;
@@ -235,8 +236,8 @@ const Store = () => {
   const handlePurchase = async (productId: string) => {
     if (!user) {
       toast({
-        title: "Authentication required",
-        description: "Please sign in to purchase",
+        title: t.additional.authRequired,
+        description: t.additional.pleaseSignIn,
         variant: "destructive",
       });
       navigate("/auth/signin");
@@ -252,8 +253,8 @@ const Store = () => {
 
     if (error || !latestProduct) {
       toast({
-        title: "Error",
-        description: "Product not found",
+        title: t.toasts.error,
+        description: t.store.noProductsFound,
         variant: "destructive",
       });
       return;
@@ -263,8 +264,8 @@ const Store = () => {
     
     if (latestProduct.stock < quantity) {
       toast({
-        title: "Insufficient stock",
-        description: `Only ${latestProduct.stock} items available. Quantity has been adjusted.`,
+        title: t.status.lowStock,
+        description: `${t.products.onlyLeft} ${latestProduct.stock} ${t.products.inStock}`,
         variant: "destructive",
       });
       setQuantities({ ...quantities, [productId]: Math.max(1, latestProduct.stock) });
@@ -275,8 +276,8 @@ const Store = () => {
 
     if (latestProduct.stock === 0) {
       toast({
-        title: "Out of stock",
-        description: "This product is currently out of stock",
+        title: t.status.outOfStock,
+        description: t.products.outOfStock,
         variant: "destructive",
       });
       fetchProducts();
@@ -287,34 +288,34 @@ const Store = () => {
     setConfirmDialogOpen(true);
   };
 
- const handleConfirmOrder = async (paymentMethod: "manual" | "qris" = "manual", voucherId?: string, discountAmount?: number) => {
-    if (!selectedProduct || !user) return;
+  const handleConfirmOrder = async (paymentMethod: "manual" | "qris" = "manual", voucherId?: string, discountAmount?: number) => {
+     if (!selectedProduct || !user) return;
 
-    setIsCreatingOrder(true);
-    try {
-      const quantity = quantities[selectedProduct.id] || 1;
+     setIsCreatingOrder(true);
+     try {
+       const quantity = quantities[selectedProduct.id] || 1;
 
-      // Double-check stock before creating order
-      const { data: currentProduct, error: checkError } = await supabase
-        .from("products")
-        .select("stock")
-        .eq("id", selectedProduct.id)
-        .single();
+       // Double-check stock before creating order
+       const { data: currentProduct, error: checkError } = await supabase
+         .from("products")
+         .select("stock")
+         .eq("id", selectedProduct.id)
+         .single();
 
-      if (checkError || !currentProduct) {
-        throw new Error("Failed to verify product availability");
-      }
+       if (checkError || !currentProduct) {
+         throw new Error(t.toasts.error);
+       }
 
-      if (currentProduct.stock < quantity) {
-        toast({
-          title: "Stock changed",
-          description: `Only ${currentProduct.stock} items available now. Please adjust your quantity.`,
-          variant: "destructive",
-        });
-        setConfirmDialogOpen(false);
-        fetchProducts();
-        return;
-      }
+       if (currentProduct.stock < quantity) {
+         toast({
+           title: t.status.lowStock,
+           description: `${t.products.onlyLeft} ${currentProduct.stock} ${t.products.inStock}`,
+           variant: "destructive",
+         });
+         setConfirmDialogOpen(false);
+         fetchProducts();
+         return;
+       }
 
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + selectedProduct.duration_days);
@@ -368,8 +369,8 @@ const Store = () => {
       } else {
         // Manual payment flow
         toast({
-          title: "Order created successfully!",
-          description: "Please upload your payment proof in My Transactions to complete the order.",
+          title: t.checkout.orderCreated,
+          description: t.checkout.orderCreatedDesc,
         });
 
         setQuantities({ ...quantities, [selectedProduct.id]: 1 });
@@ -399,8 +400,8 @@ const Store = () => {
     fetchProducts();
     
     toast({
-      title: "Payment Successful!",
-      description: "Your order has been verified. Check your transactions for redeem codes.",
+      title: t.checkout.paymentVerified,
+      description: t.checkout.orderCreatedDesc,
     });
     
     navigate("/transactions");
@@ -573,10 +574,8 @@ const Store = () => {
                 transition={{ delay: 0.3, duration: 0.5 }}
                 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight"
               >
-                Discover Our{" "}
+                {t.store.title}{" "}
                 <span className="gradient-text">Premium</span>
-                <br className="sm:hidden" />
-                {" "}Collection
               </motion.h1>
               <motion.p 
                 initial={{ opacity: 0, y: 10 }}
@@ -584,7 +583,7 @@ const Store = () => {
                 transition={{ delay: 0.4, duration: 0.5 }}
                 className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto"
               >
-                Curated cloud phone services with instant delivery
+                {t.products.instantDelivery}
               </motion.p>
             </div>
 
@@ -611,7 +610,7 @@ const Store = () => {
                       <AnimatedCounter value={products.length} />
                     </p>
                   </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">Products</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">{t.store.products}</p>
                 </div>
               </motion.div>
 
@@ -631,7 +630,7 @@ const Store = () => {
                       <AnimatedCounter value={parentCategories.length} />
                     </p>
                   </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">Categories</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">{t.store.stats.categories}</p>
                 </div>
               </motion.div>
 
@@ -651,7 +650,7 @@ const Store = () => {
                       <AnimatedCounter value={products.filter(p => p.stock > 0).length} />
                     </p>
                   </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">In Stock</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground font-medium">{t.status.available}</p>
                 </div>
               </motion.div>
             </motion.div>
@@ -682,7 +681,7 @@ const Store = () => {
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
                   )}
-                  All
+                  {t.ui.all}
                   <span className={`text-xs px-2 py-0.5 rounded-full ${
                     selectedCategory === null 
                       ? "bg-primary-foreground/20 text-primary-foreground" 
@@ -756,7 +755,7 @@ const Store = () => {
                           : "hover:bg-muted"
                       }`}
                     >
-                      All {categories.find(c => c.id === selectedParentId)?.name}
+                      {t.ui.all} {categories.find(c => c.id === selectedParentId)?.name}
                     </motion.button>
                     {getChildCategories(selectedParentId).map((child) => (
                       <motion.button
@@ -795,7 +794,7 @@ const Store = () => {
                   className="flex items-center gap-1.5 text-muted-foreground text-xs font-medium h-7 px-3 rounded-full hover:text-destructive hover:bg-destructive/10 transition-all duration-200"
                 >
                   <X className="h-3.5 w-3.5" />
-                  Clear filter
+                  {t.table.reset}
                 </motion.button>
               </motion.div>
             )}
@@ -846,11 +845,12 @@ const Store = () => {
               <Package className="h-14 w-14 text-muted-foreground" />
             </motion.div>
             <div>
-              <h3 className="text-2xl font-black mb-3">No Products Found</h3>
+              <h3 className="text-2xl font-black mb-3">{t.store.noProductsFound}</h3>
               <p className="text-muted-foreground max-w-sm mx-auto">
+                {t.ui.noResults}
                 {selectedCategory 
-                  ? "No products in this category yet. Try selecting a different category."
-                  : "No products available at the moment. Check back soon!"}
+                  ? t.store.noProductsFound
+                  : t.store.noProductsFound}
               </p>
             </div>
             {selectedCategory && (
@@ -861,7 +861,7 @@ const Store = () => {
               >
                 <Button variant="default" onClick={() => setSelectedCategory(null)} className="gap-2 shadow-brutal">
                 <Layers className="h-4 w-4" />
-                View All Products
+                {t.store.allProducts}
               </Button>
               </motion.div>
             )}
@@ -874,8 +874,8 @@ const Store = () => {
               animate={{ opacity: 1 }}
               className="text-sm text-muted-foreground mb-8 text-center font-medium"
             >
-              Showing <span className="text-foreground font-bold">{displayedProducts.length}</span> of{" "}
-              <span className="text-foreground font-bold">{filteredProducts.length}</span> products
+              {t.store.showing} <span className="text-foreground font-bold">{displayedProducts.length}</span> {t.store.of}{" "}
+              <span className="text-foreground font-bold">{filteredProducts.length}</span> {t.store.products}
             </motion.p>
 
             {/* Products Grid */}
@@ -937,7 +937,7 @@ const Store = () => {
                     >
                       <TrendingUp className="h-5 w-5" />
                     </motion.span>
-                    Load More
+                    {t.store.loadMore}
                     <span className="px-2 py-0.5 bg-primary-foreground/20 rounded-full text-sm">
                       {remainingCount}
                     </span>

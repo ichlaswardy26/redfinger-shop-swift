@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { t } from "@/lib/translations";
 import { MotionPage, MotionContainer, motion } from "@/components/ui/motion";
 
 interface Order {
@@ -247,7 +248,7 @@ const Transactions = () => {
           animate={{ opacity: 1, y: 0 }}
           className="text-3xl font-bold mb-8"
         >
-          My Dashboard
+          {t.transactions.myDashboard}
         </motion.h1>
         
         {/* Support Tickets Section */}
@@ -256,9 +257,9 @@ const Transactions = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
-                My Support Tickets
+                {t.tickets.myTickets}
               </CardTitle>
-              <CardDescription>View and track your support requests</CardDescription>
+              <CardDescription>{t.tickets.viewTrack}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -283,8 +284,8 @@ const Transactions = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span>Created: {new Date(ticket.created_at).toLocaleDateString()}</span>
-                      {ticket.resolved_at && <span>Resolved: {new Date(ticket.resolved_at).toLocaleDateString()}</span>}
+                      <span>{t.tickets.created}: {new Date(ticket.created_at).toLocaleDateString()}</span>
+                      {ticket.resolved_at && <span>{t.tickets.resolved}: {new Date(ticket.resolved_at).toLocaleDateString()}</span>}
                     </div>
                   </div>
                 ))}
@@ -292,7 +293,7 @@ const Transactions = () => {
               
               {totalTicketPages > 1 && (
                 <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                  <p className="text-sm text-muted-foreground">Page {ticketPage} of {totalTicketPages} ({tickets.length} tickets)</p>
+                  <p className="text-sm text-muted-foreground">{t.ui.page} {ticketPage} {t.ui.ofPages} {totalTicketPages} ({tickets.length} {t.tickets.title.toLowerCase()})</p>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => setTicketPage(p => Math.max(1, p - 1))} disabled={ticketPage === 1}>
                       <ChevronLeft className="h-4 w-4" />
@@ -309,15 +310,15 @@ const Transactions = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>My Orders</CardTitle>
-            <CardDescription>View and manage your orders</CardDescription>
+            <CardTitle>{t.transactions.title}</CardTitle>
+            <CardDescription>{t.transactions.subtitle}</CardDescription>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-4">
               <div className="flex items-center gap-2 flex-1">
                 <Search className="h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search by product or status..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="max-w-sm" />
+                <Input placeholder={t.transactions.searchPlaceholder} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="max-w-sm" />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Show:</span>
+                <span className="text-sm text-muted-foreground">{t.transactions.show}:</span>
                 <Select value={ordersPerPage.toString()} onValueChange={(val) => { setOrdersPerPage(Number(val)); setOrderPage(1); }}>
                   <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -331,9 +332,9 @@ const Transactions = () => {
           </CardHeader>
           <CardContent>
             {orders.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">No orders yet. Visit the store to make your first purchase!</p>
+              <p className="text-center text-muted-foreground py-12">{t.transactions.noOrdersDesc}</p>
             ) : filteredOrders.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12">No orders match your search.</p>
+              <p className="text-center text-muted-foreground py-12">{t.transactions.noOrdersMatch}</p>
             ) : (
               <>
                 <MotionContainer className="grid md:grid-cols-2 gap-4">
@@ -363,18 +364,18 @@ const Transactions = () => {
                 {totalOrderPages > 1 && (
                   <div className="flex flex-col sm:flex-row items-center justify-between mt-6 pt-4 border-t gap-4">
                     <p className="text-sm text-muted-foreground">
-                      Showing {((orderPage - 1) * ordersPerPage) + 1} - {Math.min(orderPage * ordersPerPage, filteredOrders.length)} of {filteredOrders.length} orders
+                      {t.table.showing} {((orderPage - 1) * ordersPerPage) + 1} - {Math.min(orderPage * ordersPerPage, filteredOrders.length)} {t.table.of} {filteredOrders.length} {t.transactions.title.toLowerCase()}
                     </p>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => setOrderPage(1)} disabled={orderPage === 1}>First</Button>
+                      <Button variant="outline" size="sm" onClick={() => setOrderPage(1)} disabled={orderPage === 1}>{t.table.first}</Button>
                       <Button variant="outline" size="sm" onClick={() => setOrderPage(p => Math.max(1, p - 1))} disabled={orderPage === 1}>
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <span className="text-sm px-2">Page {orderPage} of {totalOrderPages}</span>
+                      <span className="text-sm px-2">{t.ui.page} {orderPage} {t.ui.ofPages} {totalOrderPages}</span>
                       <Button variant="outline" size="sm" onClick={() => setOrderPage(p => Math.min(totalOrderPages, p + 1))} disabled={orderPage === totalOrderPages}>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => setOrderPage(totalOrderPages)} disabled={orderPage === totalOrderPages}>Last</Button>
+                      <Button variant="outline" size="sm" onClick={() => setOrderPage(totalOrderPages)} disabled={orderPage === totalOrderPages}>{t.table.last}</Button>
                     </div>
                   </div>
                 )}
@@ -388,15 +389,15 @@ const Transactions = () => {
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Upload Payment Proof</DialogTitle>
-            <DialogDescription>Upload a screenshot or photo of your payment (JPG/PNG only, max 5MB)</DialogDescription>
+            <DialogTitle>{t.transactions.uploadPaymentProof}</DialogTitle>
+            <DialogDescription>{t.transactions.uploadProofDesc}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="proof">Payment Proof Image</Label>
+              <Label htmlFor="proof">{t.transactions.paymentProofImage}</Label>
               <Input id="proof" type="file" accept="image/jpeg,image/jpg,image/png" onChange={(e) => setUploadingFile(e.target.files?.[0] || null)} />
             </div>
-            <Button onClick={handleUploadProof} disabled={!uploadingFile} className="w-full">Upload Proof</Button>
+            <Button onClick={handleUploadProof} disabled={!uploadingFile} className="w-full">{t.transactions.uploadProofButton}</Button>
           </div>
         </DialogContent>
       </Dialog>

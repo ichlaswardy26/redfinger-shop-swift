@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Clock, Package, Minus, Plus, TrendingUp, Sparkles, AlertTriangle, Percent, Zap, Shield, ArrowRight } from "lucide-react";
+import { t } from "@/lib/translations";
 
 interface ProductCardProps {
   id: string;
@@ -84,7 +85,7 @@ const ProductCard = ({
             >
               <Badge className="bg-gradient-to-r from-accent to-accent/80 text-accent-foreground shadow-brutal-sm text-[10px] sm:text-xs px-1.5 sm:px-2.5 py-0.5 sm:py-1 animate-float">
                 <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                <span className="hidden sm:inline">Best Seller</span>
+                <span className="hidden sm:inline">{t.products.bestSeller}</span>
                 <span className="sm:hidden">Top</span>
               </Badge>
             </motion.div>
@@ -97,7 +98,7 @@ const ProductCard = ({
             >
               <Badge className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground shadow-brutal-sm text-[10px] sm:text-xs px-1.5 sm:px-2.5 py-0.5 sm:py-1">
                 <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                New
+                {t.products.new}
               </Badge>
             </motion.div>
           )}
@@ -109,7 +110,7 @@ const ProductCard = ({
             >
               <Badge className="bg-gradient-to-r from-green-600 to-green-500 text-white shadow-brutal-sm text-[10px] sm:text-xs px-1.5 sm:px-2.5 py-0.5 sm:py-1">
                 <Percent className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                <span className="hidden sm:inline">Save</span> {savingsPercent}%
+                <span className="hidden sm:inline">{t.products.savePercent}</span> {savingsPercent}%
               </Badge>
             </motion.div>
           )}
@@ -122,8 +123,8 @@ const ProductCard = ({
               variant={stock > 0 ? (stockUrgency === "critical" ? "destructive" : "default") : "destructive"}
               className={`text-[10px] sm:text-xs shrink-0 transition-all duration-200 ${stockUrgency === "low" ? "bg-yellow-600 hover:bg-yellow-700" : ""}`}
             >
-              {stock === 0 ? "Out" : `${stock}`}
-              <span className="hidden sm:inline ml-1">{stock === 0 ? "of Stock" : "Available"}</span>
+              {stock === 0 ? t.status.outOfStock.split(' ')[0] : `${stock}`}
+              <span className="hidden sm:inline ml-1">{stock === 0 ? t.status.outOfStock.split(' ').slice(1).join(' ') : t.status.available}</span>
             </Badge>
           </div>
           <CardDescription className="text-xs sm:text-sm md:text-base line-clamp-2">{description}</CardDescription>
@@ -136,13 +137,13 @@ const ProductCard = ({
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
                 <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
               </div>
-              <span className="font-medium text-xs sm:text-sm">{duration_days} days validity</span>
+              <span className="font-medium text-xs sm:text-sm">{duration_days} {t.products.daysValidity}</span>
             </div>
             <div className="flex items-center gap-2 sm:gap-2.5 text-muted-foreground group-hover:text-foreground transition-colors">
               <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-accent/10 flex items-center justify-center shrink-0 group-hover:bg-accent/20 transition-colors">
                 <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent" />
               </div>
-              <span className="font-medium text-xs sm:text-sm">Digital Redeem Code</span>
+              <span className="font-medium text-xs sm:text-sm">{t.products.digitalRedeemCode}</span>
             </div>
             
             {/* Hidden features that reveal on hover */}
@@ -155,7 +156,7 @@ const ProductCard = ({
                 <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-green-500/10 flex items-center justify-center shrink-0">
                   <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
                 </div>
-                <span className="font-medium text-xs sm:text-sm">Instant Delivery</span>
+                <span className="font-medium text-xs sm:text-sm">{t.products.instantDelivery}</span>
               </motion.div>
             </div>
             
@@ -168,13 +169,13 @@ const ProductCard = ({
                 className="flex items-center gap-1.5 sm:gap-2 text-destructive bg-destructive/10 p-1.5 sm:p-2 rounded-lg border border-destructive/20"
               >
                 <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                <span className="text-xs sm:text-sm font-medium">Only {stock} left!</span>
+                <span className="text-xs sm:text-sm font-medium">{t.products.onlyLeft} {stock}!</span>
               </motion.div>
             )}
             {stockUrgency === "low" && (
               <div className="flex items-center gap-1.5 sm:gap-2 text-yellow-700 dark:text-yellow-500 bg-yellow-500/10 p-1.5 sm:p-2 rounded-lg border border-yellow-500/20">
                 <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
-                <span className="text-xs sm:text-sm font-medium">Low stock - {stock} remaining</span>
+                <span className="text-xs sm:text-sm font-medium">{t.status.lowStock} - {stock} {t.stockManagement.inStock}</span>
               </div>
             )}
           </div>
@@ -196,7 +197,7 @@ const ProductCard = ({
               )}
               {/* Per day price - shows on hover */}
               <div className="text-[10px] sm:text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                Rp {Math.round(price / duration_days).toLocaleString('id-ID')}/day
+                Rp {Math.round(price / duration_days).toLocaleString('id-ID')}/{t.products.perDay}
               </div>
             </div>
             {isAuthenticated && stock > 0 && (
@@ -240,12 +241,12 @@ const ProductCard = ({
               onClick={() => onPurchase(id)}
             >
               {!isAuthenticated ? (
-                "Sign In to Purchase"
+                t.products.signInToPurchase
               ) : stock === 0 ? (
-                "Out of Stock"
+                t.products.outOfStock
               ) : (
                 <>
-                  Purchase {quantity > 1 ? `(x${quantity})` : "Now"}
+                  {t.products.purchaseNow} {quantity > 1 ? `(x${quantity})` : ""}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
                 </>
               )}

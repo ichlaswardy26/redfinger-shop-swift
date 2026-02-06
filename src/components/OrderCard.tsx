@@ -8,6 +8,7 @@ import CopyButton from "./CopyButton";
 import { MotionCard } from "@/components/ui/motion";
 import { QRPaymentDialog } from "@/components/QRPaymentDialog";
 import { usePaymentGateway, QRPaymentData } from "@/hooks/usePaymentGateway";
+import { t } from "@/lib/translations";
 
 interface OrderCardProps {
   order: {
@@ -139,7 +140,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
           <div>
             <h3 className="font-bold text-lg">{order.product.name}</h3>
             <p className="text-sm text-muted-foreground">
-              Quantity: {order.quantity} × {order.product.duration_days} days
+              {t.orders.quantity}: {order.quantity} × {order.product.duration_days} {t.products.days}
             </p>
           </div>
           <Badge variant={getStatusColor(order.payment_status)}>
@@ -151,11 +152,11 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
       <CardContent className="pt-4 space-y-3">
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
-            <p className="text-muted-foreground">Order Date</p>
+            <p className="text-muted-foreground">{t.orders.orderCreated}</p>
             <p className="font-medium">{format(new Date(order.created_at), 'PP')}</p>
           </div>
           <div>
-            <p className="text-muted-foreground">Expires</p>
+            <p className="text-muted-foreground">{t.status.expired}</p>
             <p className="font-medium">{format(new Date(order.expires_at), 'PP')}</p>
           </div>
         </div>
@@ -163,11 +164,11 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
         {order.payment_status === 'verified' && order.redeem_codes && order.redeem_codes.length > 0 && (
           <div className="bg-muted/50 rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">Redeem Codes:</p>
+              <p className="text-sm font-medium">{t.orders.redeemCodes}:</p>
               {order.redeem_codes.length > 1 && (
                 <Button variant="ghost" size="sm" onClick={downloadRedeemCodes}>
                   <Download className="h-4 w-4 mr-1" />
-                  Download TXT
+                  {t.actions.download} TXT
                 </Button>
               )}
             </div>
@@ -180,7 +181,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
               </div>
             ) : (
               <div className="text-sm text-muted-foreground">
-                {order.redeem_codes.length} codes available - click download to get all codes
+                {order.redeem_codes.length} {t.additional.codesAvailable} - {t.actions.download.toLowerCase()}
               </div>
             )}
           </div>
@@ -188,7 +189,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
 
         {order.payment_status === 'rejected' && order.admin_notes && (
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-            <p className="text-sm font-medium text-destructive">Rejection Reason:</p>
+            <p className="text-sm font-medium text-destructive">{t.orders.rejectionReason}:</p>
             <p className="text-sm text-muted-foreground mt-1">{order.admin_notes}</p>
           </div>
         )}
@@ -197,7 +198,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
           <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                Support Ticket
+                {t.tickets.title}
               </p>
               <Badge variant={getTicketStatusColor(order.ticket.status)}>
                 {order.ticket.status.replace("_", " ")}
@@ -213,12 +214,12 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
               <div className="flex items-center gap-2">
                 <QrCode className="h-4 w-4" />
                 <p className="text-sm font-medium">
-                  {isQRISExpired ? 'QRIS Expired' : 'Waiting for QRIS Payment'}
+                  {isQRISExpired ? t.additional.orderQrisExpired : t.additional.waitingQrisPayment}
                 </p>
               </div>
               {!isQRISExpired && order.gateway_expired_at && (
                 <Badge variant="secondary" className="text-xs">
-                  Expires {format(new Date(order.gateway_expired_at), 'HH:mm')}
+                  {t.status.expired} {format(new Date(order.gateway_expired_at), 'HH:mm')}
                 </Badge>
               )}
             </div>
@@ -236,7 +237,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
               className="flex-1 min-w-0"
             >
               <Star className="h-4 w-4 mr-1 flex-shrink-0" />
-              <span className="truncate">Rate</span>
+              <span className="truncate">{t.ratings.rateProduct}</span>
             </Button>
             <Button 
               size="sm" 
@@ -259,7 +260,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
               className="flex-1 min-w-0"
             >
               <Upload className="h-4 w-4 mr-1 flex-shrink-0" />
-              <span className="truncate">Upload</span>
+              <span className="truncate">{t.actions.upload}</span>
             </Button>
             <Button 
               size="sm" 
@@ -268,7 +269,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
               className="flex-1 min-w-0"
             >
               <X className="h-4 w-4 mr-1 flex-shrink-0" />
-              <span className="truncate">Cancel</span>
+              <span className="truncate">{t.actions.cancel}</span>
             </Button>
           </>
         )}
@@ -285,7 +286,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
                   className="flex-1 min-w-0"
                 >
                   <QrCode className="h-4 w-4 mr-1 flex-shrink-0" />
-                  <span className="truncate">Pay Now</span>
+                  <span className="truncate">{t.additional.payNow}</span>
                 </Button>
                 <Button 
                   size="sm" 
@@ -299,7 +300,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
                   ) : (
                     <>
                       <RefreshCw className="h-4 w-4 mr-1 flex-shrink-0" />
-                      <span className="truncate">Check</span>
+                      <span className="truncate">{t.additional.checkStatus}</span>
                     </>
                   )}
                 </Button>
@@ -318,7 +319,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
                   ) : (
                     <>
                       <QrCode className="h-4 w-4 mr-1 flex-shrink-0" />
-                      <span className="truncate">New QR</span>
+                      <span className="truncate">{t.additional.newQr}</span>
                     </>
                   )}
                 </Button>
@@ -329,7 +330,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
                   className="flex-1 min-w-0"
                 >
                   <X className="h-4 w-4 mr-1 flex-shrink-0" />
-                  <span className="truncate">Cancel</span>
+                  <span className="truncate">{t.actions.cancel}</span>
                 </Button>
               </>
             )}
@@ -344,7 +345,7 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
             className="w-full min-w-0"
           >
             <MessageSquare className="h-4 w-4 mr-1 flex-shrink-0" />
-            <span className="truncate">Create Ticket</span>
+            <span className="truncate">{t.tickets.createTicket}</span>
           </Button>
         )}
       </CardFooter>
