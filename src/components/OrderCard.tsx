@@ -103,30 +103,30 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
     if (!order.redeem_codes || order.redeem_codes.length === 0) return;
     
     const content = [
-      `Redeem Codes for ${order.product.name}`,
-      `Order Date: ${format(new Date(order.created_at), 'PPP')}`,
-      `Quantity: ${order.quantity}`,
-      `Duration: ${order.product.duration_days} days`,
-      `Expires: ${format(new Date(order.expires_at), 'PPP')}`,
+      `Kode Redeem untuk ${order.product.name}`,
+      `Tanggal Pesanan: ${format(new Date(order.created_at), 'PPP')}`,
+      `Jumlah: ${order.quantity}`,
+      `Durasi: ${order.product.duration_days} hari`,
+      `Kedaluwarsa: ${format(new Date(order.expires_at), 'PPP')}`,
       '',
-      '--- REDEEM CODES ---',
+      '--- KODE REDEEM ---',
       '',
       ...order.redeem_codes.map((code, i) => `${i + 1}. ${code}`),
       '',
-      '--- HOW TO REDEEM ---',
-      '1. Go to https://www.redfinger.com',
-      '2. Login to your account or create new one',
-      '3. Navigate to "Redeem Code" section',
-      '4. Enter each code one by one',
+      '--- CARA REDEEM ---',
+      '1. Kunjungi https://www.redfinger.com',
+      '2. Login ke akun Anda atau buat akun baru',
+      '3. Navigasi ke bagian "Redeem Code"',
+      '4. Masukkan setiap kode satu per satu',
       '',
-      'Thank you for your purchase!'
+      'Terima kasih atas pembelian Anda!'
     ].join('\n');
 
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `redeem-codes-${order.id.slice(0, 8)}.txt`;
+    a.download = `kode-redeem-${order.id.slice(0, 8)}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -144,7 +144,9 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
             </p>
           </div>
           <Badge variant={getStatusColor(order.payment_status)}>
-            {order.payment_status}
+            {order.payment_status === 'verified' ? t.status.verified : 
+             order.payment_status === 'pending' ? t.status.pending : 
+             order.payment_status === 'rejected' ? t.status.rejected : order.payment_status}
           </Badge>
         </div>
       </CardHeader>
@@ -201,7 +203,10 @@ export const OrderCard = ({ order, onUploadProof, onCancelOrder, onRate, onCreat
                 {t.tickets.title}
               </p>
               <Badge variant={getTicketStatusColor(order.ticket.status)}>
-                {order.ticket.status.replace("_", " ")}
+                {order.ticket.status === 'open' ? t.status.open :
+                 order.ticket.status === 'in_progress' ? t.status.inProgress :
+                 order.ticket.status === 'resolved' ? t.status.resolved :
+                 order.ticket.status === 'closed' ? t.status.closed : order.ticket.status}
               </Badge>
             </div>
           </div>
