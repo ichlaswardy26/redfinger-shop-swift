@@ -14,6 +14,7 @@ import Autoplay from "embla-carousel-autoplay";
 import heroImage from "@/assets/hero-cloud-phone.jpg";
 import { Smartphone, Cloud, Shield, Zap, Star, Quote, TrendingUp, Mail, Phone, MessageCircle, Facebook, Instagram, Twitter, ArrowRight, CheckCircle, Layers, Clock, Headphones, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { t } from "@/lib/translations";
 interface Category {
   id: string;
   name: string;
@@ -99,43 +100,43 @@ const defaultSettings: WebSettings = {
   site: {
     name: "Cloud Phone Store",
     tagline: "Cloud Phone Services",
-    description: "Premium cloud phone and app automation services"
+    description: "Layanan cloud phone dan otomatisasi aplikasi premium"
   },
   hero: {
-    title: "Premium Cloud Phone Services",
-    subtitle: "Experience seamless cloud phone and app automation with our reliable subscriptions",
-    buttonText: "Browse Store",
-    secondaryButtonText: "Sign In",
-    trustedText: "Trusted by 10,000+ customers",
-    badges: ["Instant Delivery", "24/7 Support", "Secure Payment"]
+    title: "Layanan Cloud Phone Premium",
+    subtitle: "Nikmati cloud phone dan otomatisasi aplikasi yang andal dengan langganan kami",
+    buttonText: "Lihat Toko",
+    secondaryButtonText: "Masuk",
+    trustedText: "Dipercaya 10.000+ pelanggan",
+    badges: ["Pengiriman Instan", "Dukungan 24/7", "Pembayaran Aman"]
   },
   features: {
-    title: "Why Choose Us?",
-    subtitle: "Premium features for the best cloud phone experience",
+    title: "Mengapa Memilih Kami?",
+    subtitle: "Fitur premium untuk pengalaman cloud phone terbaik",
     items: [
-      { icon: "smartphone", title: "Multiple Devices", description: "Run multiple cloud phones simultaneously" },
-      { icon: "cloud", title: "24/7 Uptime", description: "Always-on cloud infrastructure" },
-      { icon: "shield", title: "Secure & Reliable", description: "Enterprise-grade security standards" },
-      { icon: "zap", title: "High Performance", description: "Optimized for speed and efficiency" },
+      { icon: "smartphone", title: "Multi Perangkat", description: "Jalankan beberapa cloud phone secara bersamaan" },
+      { icon: "cloud", title: "Uptime 24/7", description: "Infrastruktur cloud yang selalu aktif" },
+      { icon: "shield", title: "Aman & Andal", description: "Standar keamanan tingkat enterprise" },
+      { icon: "zap", title: "Performa Tinggi", description: "Dioptimalkan untuk kecepatan dan efisiensi" },
     ]
   },
   products: {
-    title: "Our Plans",
-    subtitle: "Choose the perfect plan for your needs",
+    title: "Paket Kami",
+    subtitle: "Pilih paket yang sesuai dengan kebutuhan Anda",
     showCategories: true
   },
   testimonials: {
-    title: "Customer Testimonials",
-    subtitle: "See what our customers are saying"
+    title: "Testimoni Pelanggan",
+    subtitle: "Lihat apa kata pelanggan kami"
   },
   cta: {
-    title: "Ready to Get Started?",
-    subtitle: "Join thousands of satisfied customers using our premium cloud phone services",
-    buttonText: "View Plans & Pricing"
+    title: "Siap Untuk Memulai?",
+    subtitle: "Bergabung dengan ribuan pelanggan puas yang menggunakan layanan cloud phone premium kami",
+    buttonText: "Lihat Paket & Harga"
   },
   contact: { email: "support@store.com", phone: "+62812345678", whatsapp: "+62812345678" },
   social: { facebook: "", instagram: "", twitter: "" },
-  footer: { copyrightText: "© 2024 Cloud Phone Store. All rights reserved." }
+  footer: { copyrightText: "© 2024 Cloud Phone Store. Hak cipta dilindungi." }
 };
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -404,7 +405,7 @@ const Index = () => {
                         {/* Best Seller Ribbon */}
                         {bestSellerId === product.id && (
                           <div className="absolute -right-8 top-4 rotate-45 bg-accent text-accent-foreground px-8 py-1 text-[10px] sm:text-xs font-bold shadow-lg z-10">
-                            BEST
+                            {t.products.bestSeller.toUpperCase()}
                           </div>
                         )}
                         
@@ -419,7 +420,7 @@ const Index = () => {
                             <h4 className="text-base sm:text-lg md:text-xl font-bold mb-1 sm:mb-2">{product.name}</h4>
                             <Badge variant="outline" className="text-[10px] sm:text-xs">
                               <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
-                              {product.duration_days} Days
+                              {product.duration_days} {t.products.days}
                             </Badge>
                           </div>
                           
@@ -429,7 +430,7 @@ const Index = () => {
                               Rp {product.price.toLocaleString('id-ID')}
                             </div>
                             <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                              ~Rp {Math.round(product.price / product.duration_days).toLocaleString('id-ID')}/day
+                              ~Rp {Math.round(product.price / product.duration_days).toLocaleString('id-ID')}/{t.products.perDay}
                             </p>
                           </div>
                           
@@ -437,24 +438,24 @@ const Index = () => {
                           <ul className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4 text-[10px] sm:text-xs md:text-sm">
                             <li className="flex items-center gap-1.5 sm:gap-2">
                               <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
-                              <span>Instant Digital Delivery</span>
+                              <span>{t.products.instantDelivery}</span>
                             </li>
                             <li className="flex items-center gap-1.5 sm:gap-2">
                               <Headphones className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                              <span>24/7 Customer Support</span>
+                              <span>{t.trust.support24_7}</span>
                             </li>
                             <li className="flex items-center gap-1.5 sm:gap-2">
                               <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                              <span>Secure Payment</span>
+                              <span>{t.trust.securePayment}</span>
                             </li>
                           </ul>
                           
                           {/* Stock & CTA */}
                           <Badge variant={product.stock > 0 ? "default" : "secondary"} className="w-full justify-center text-[10px] sm:text-xs py-1 mb-2 sm:mb-3">
-                            {product.stock > 0 ? `${product.stock} Available` : "Out of Stock"}
+                            {product.stock > 0 ? `${product.stock} ${t.status.available}` : t.status.outOfStock}
                           </Badge>
                           <Button className="w-full text-xs sm:text-sm h-9 sm:h-10" onClick={() => navigate("/store")} disabled={product.stock === 0}>
-                            {product.stock > 0 ? "Order Now" : "Out of Stock"}
+                            {product.stock > 0 ? t.landing.orderNow : t.status.outOfStock}
                             {product.stock > 0 && <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />}
                           </Button>
                         </CardContent>
@@ -465,7 +466,7 @@ const Index = () => {
                   {categoryProducts.length > 3 && (
                     <div className="text-center mt-6">
                       <Button variant="outline" onClick={() => navigate("/store")} className="gap-2">
-                        View All {category.name} Products ({categoryProducts.length})
+                        {t.landing.viewAllProducts} {category.name} ({categoryProducts.length})
                         <ArrowRight className="h-4 w-4" />
                       </Button>
                     </div>
@@ -482,7 +483,7 @@ const Index = () => {
                     <Layers className="h-6 w-6 text-secondary-foreground" />
                   </div>
                   <div>
-                    <h3 className="text-2xl font-black">Other Products</h3>
+                    <h3 className="text-2xl font-black">{t.landing.otherProducts}</h3>
                   </div>
                 </div>
                 
@@ -495,7 +496,7 @@ const Index = () => {
                       {/* Best Seller Ribbon */}
                       {bestSellerId === product.id && (
                         <div className="absolute -right-8 top-4 rotate-45 bg-accent text-accent-foreground px-8 py-1 text-[10px] sm:text-xs font-bold shadow-lg z-10">
-                          BEST
+                          {t.products.bestSeller.toUpperCase()}
                         </div>
                       )}
                       
@@ -510,7 +511,7 @@ const Index = () => {
                           <h4 className="text-base sm:text-lg md:text-xl font-bold mb-1 sm:mb-2">{product.name}</h4>
                           <Badge variant="outline" className="text-[10px] sm:text-xs">
                             <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
-                            {product.duration_days} Days
+                            {product.duration_days} {t.products.days}
                           </Badge>
                         </div>
                         
@@ -520,7 +521,7 @@ const Index = () => {
                             Rp {product.price.toLocaleString('id-ID')}
                           </div>
                           <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                            ~Rp {Math.round(product.price / product.duration_days).toLocaleString('id-ID')}/day
+                            ~Rp {Math.round(product.price / product.duration_days).toLocaleString('id-ID')}/{t.products.perDay}
                           </p>
                         </div>
                         
@@ -528,24 +529,24 @@ const Index = () => {
                         <ul className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4 text-[10px] sm:text-xs md:text-sm">
                           <li className="flex items-center gap-1.5 sm:gap-2">
                             <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
-                            <span>Instant Digital Delivery</span>
+                            <span>{t.products.instantDelivery}</span>
                           </li>
                           <li className="flex items-center gap-1.5 sm:gap-2">
                             <Headphones className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span>24/7 Customer Support</span>
+                            <span>{t.trust.support24_7}</span>
                           </li>
                           <li className="flex items-center gap-1.5 sm:gap-2">
                             <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                            <span>Secure Payment</span>
+                            <span>{t.trust.securePayment}</span>
                           </li>
                         </ul>
                         
                         {/* Stock & CTA */}
                         <Badge variant={product.stock > 0 ? "default" : "secondary"} className="w-full justify-center text-[10px] sm:text-xs py-1 mb-2 sm:mb-3">
-                          {product.stock > 0 ? `${product.stock} Available` : "Out of Stock"}
+                          {product.stock > 0 ? `${product.stock} ${t.status.available}` : t.status.outOfStock}
                         </Badge>
                         <Button className="w-full text-xs sm:text-sm h-9 sm:h-10" onClick={() => navigate("/store")} disabled={product.stock === 0}>
-                          {product.stock > 0 ? "Order Now" : "Out of Stock"}
+                          {product.stock > 0 ? t.landing.orderNow : t.status.outOfStock}
                           {product.stock > 0 && <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />}
                         </Button>
                       </CardContent>
@@ -557,7 +558,7 @@ const Index = () => {
           </div>
 
           <div className="text-center mt-12">
-            <Button size="lg" variant="outline" onClick={() => navigate("/store")}>View All Products</Button>
+            <Button size="lg" variant="outline" onClick={() => navigate("/store")}>{t.landing.viewAllProducts}</Button>
           </div>
         </section>
       )}
@@ -579,7 +580,7 @@ const Index = () => {
                 {/* Best Seller Ribbon */}
                 {bestSellerId === product.id && (
                   <div className="absolute -right-8 top-4 rotate-45 bg-accent text-accent-foreground px-8 py-1 text-[10px] sm:text-xs font-bold shadow-lg z-10">
-                    BEST
+                    {t.products.bestSeller.toUpperCase()}
                   </div>
                 )}
                 
@@ -594,7 +595,7 @@ const Index = () => {
                     <h3 className="text-base sm:text-lg md:text-xl font-bold mb-1 sm:mb-2">{product.name}</h3>
                     <Badge variant="outline" className="text-[10px] sm:text-xs">
                       <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
-                      {product.duration_days} Days
+                      {product.duration_days} {t.products.days}
                     </Badge>
                   </div>
                   
@@ -604,7 +605,7 @@ const Index = () => {
                       Rp {product.price.toLocaleString('id-ID')}
                     </div>
                     <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-                      ~Rp {Math.round(product.price / product.duration_days).toLocaleString('id-ID')}/day
+                      ~Rp {Math.round(product.price / product.duration_days).toLocaleString('id-ID')}/{t.products.perDay}
                     </p>
                   </div>
                   
@@ -612,24 +613,24 @@ const Index = () => {
                   <ul className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4 text-[10px] sm:text-xs md:text-sm">
                     <li className="flex items-center gap-1.5 sm:gap-2">
                       <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 text-green-500 flex-shrink-0" />
-                      <span>Instant Digital Delivery</span>
+                      <span>{t.products.instantDelivery}</span>
                     </li>
                     <li className="flex items-center gap-1.5 sm:gap-2">
                       <Headphones className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                      <span>24/7 Customer Support</span>
+                      <span>{t.trust.support24_7}</span>
                     </li>
                     <li className="flex items-center gap-1.5 sm:gap-2">
                       <CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-primary flex-shrink-0" />
-                      <span>Secure Payment</span>
+                      <span>{t.trust.securePayment}</span>
                     </li>
                   </ul>
                   
                   {/* Stock & CTA */}
                   <Badge variant={product.stock > 0 ? "default" : "secondary"} className="w-full justify-center text-[10px] sm:text-xs py-1 mb-2 sm:mb-3">
-                    {product.stock > 0 ? `${product.stock} Available` : "Out of Stock"}
+                    {product.stock > 0 ? `${product.stock} ${t.status.available}` : t.status.outOfStock}
                   </Badge>
                   <Button className="w-full text-xs sm:text-sm h-9 sm:h-10" onClick={() => navigate("/store")} disabled={product.stock === 0}>
-                    {product.stock > 0 ? "Order Now" : "Out of Stock"}
+                    {product.stock > 0 ? t.landing.orderNow : t.status.outOfStock}
                     {product.stock > 0 && <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 ml-1" />}
                   </Button>
                 </CardContent>
@@ -638,7 +639,7 @@ const Index = () => {
           </div>
 
           <div className="text-center mt-8">
-            <Button size="lg" variant="outline" onClick={() => navigate("/store")}>View All Products</Button>
+            <Button size="lg" variant="outline" onClick={() => navigate("/store")}>{t.landing.viewAllProducts}</Button>
           </div>
         </section>
       )}
@@ -677,7 +678,7 @@ const Index = () => {
                         </div>
                         {rating.review && <p className="text-sm text-muted-foreground line-clamp-4 flex-grow">"{rating.review}"</p>}
                         <div className="pt-4 border-t-2 border-border mt-auto">
-                          <p className="font-bold text-sm">{rating.profiles.full_name || "Anonymous"}</p>
+                          <p className="font-bold text-sm">{rating.profiles.full_name || t.landing.anonymous}</p>
                           <p className="text-xs text-muted-foreground">{rating.products.name}</p>
                         </div>
                       </CardContent>
@@ -742,7 +743,7 @@ const Index = () => {
               <div className="w-14 h-14 bg-primary border-2 border-border shadow-brutal-sm flex items-center justify-center mx-auto">
                 <Mail className="h-6 w-6 text-primary-foreground" />
               </div>
-              <h3 className="font-bold">Email</h3>
+              <h3 className="font-bold">{t.contact.email}</h3>
               <a href={`mailto:${settings.contact?.email || defaultSettings.contact.email}`} className="text-muted-foreground hover:text-primary transition-colors font-medium">
                 {settings.contact?.email || defaultSettings.contact.email}
               </a>
@@ -753,7 +754,7 @@ const Index = () => {
               <div className="w-14 h-14 bg-accent border-2 border-border shadow-brutal-sm flex items-center justify-center mx-auto">
                 <Phone className="h-6 w-6 text-accent-foreground" />
               </div>
-              <h3 className="font-bold">Phone</h3>
+              <h3 className="font-bold">{t.contact.phone}</h3>
               <a href={`tel:${settings.contact?.phone || defaultSettings.contact.phone}`} className="text-muted-foreground hover:text-primary transition-colors font-medium">
                 {settings.contact?.phone || defaultSettings.contact.phone}
               </a>
@@ -764,14 +765,14 @@ const Index = () => {
               <div className="w-14 h-14 bg-secondary border-2 border-border shadow-brutal-sm flex items-center justify-center mx-auto">
                 <MessageCircle className="h-6 w-6 text-secondary-foreground" />
               </div>
-              <h3 className="font-bold">WhatsApp</h3>
+              <h3 className="font-bold">{t.contact.whatsapp}</h3>
               <a 
                 href={`https://wa.me/${(settings.contact?.whatsapp || defaultSettings.contact.whatsapp).replace(/[^0-9]/g, '')}`} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="text-muted-foreground hover:text-primary transition-colors font-medium"
               >
-                Chat with us
+                {t.landing.chatWithUs}
               </a>
             </div>
           )}
