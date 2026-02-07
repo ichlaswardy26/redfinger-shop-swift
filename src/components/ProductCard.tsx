@@ -85,8 +85,7 @@ const ProductCard = ({
             >
               <Badge className="bg-gradient-to-r from-accent to-accent/80 text-accent-foreground shadow-brutal-sm text-[10px] sm:text-xs px-1.5 sm:px-2.5 py-0.5 sm:py-1 animate-float">
                 <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                <span className="hidden sm:inline">{t.products.bestSeller}</span>
-                <span className="sm:hidden">Top</span>
+                {t.products.bestSeller}
               </Badge>
             </motion.div>
           )}
