@@ -697,11 +697,27 @@
  
    // Stock Management
    stockManagement: {
-     title: "Manajemen Stok",
-     subtitle: "Kelola inventaris produk",
-     activity: "Aktivitas",
-     inStock: "tersedia",
-   },
+    title: "Manajemen Stok",
+    subtitle: "Kelola inventaris produk",
+    activity: "Aktivitas",
+    inStock: "tersedia",
+  },
+
+  // Landing page translations
+  landing: {
+    orderNow: "Pesan Sekarang",
+    viewAllProducts: "Lihat Semua Produk",
+    otherProducts: "Produk Lainnya",
+    chatWithUs: "Hubungi Kami",
+    anonymous: "Anonim",
+  },
+
+  // Contact section
+  contact: {
+    email: "Email",
+    phone: "Telepon",
+    whatsapp: "WhatsApp",
+  },
  
    // Additional translations for remaining components
    additional: {
