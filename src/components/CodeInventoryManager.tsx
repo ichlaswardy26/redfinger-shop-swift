@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Upload, Trash2, Loader2, Package, Key, CheckCircle, XCircle } from "lucide-react";
+import { t } from "@/lib/translations";
 
 interface Product {
   id: string;
@@ -93,7 +94,7 @@ export const CodeInventoryManager = () => {
       setCodeStats(stats);
     } catch (error) {
       console.error("Error fetching data:", error);
-      toast({ title: "Error loading data", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal memuat data", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -101,7 +102,7 @@ export const CodeInventoryManager = () => {
 
   const handleUploadCodes = async () => {
     if (!selectedProduct || !newCodes.trim()) {
-      toast({ title: "Please select a product and enter codes", variant: "destructive" });
+      toast({ title: t.codeInventory.enterCodesAndProduct, variant: "destructive" });
       return;
     }
 
@@ -116,7 +117,7 @@ export const CodeInventoryManager = () => {
         .filter((code) => code.length > 0);
 
       if (codes.length === 0) {
-        toast({ title: "No valid codes found", variant: "destructive" });
+        toast({ title: t.codeInventory.noValidCodes, variant: "destructive" });
         return;
       }
 
@@ -132,8 +133,8 @@ export const CodeInventoryManager = () => {
 
       if (uniqueCodes.length === 0) {
         toast({
-          title: "All codes already exist",
-          description: `${codes.length} code(s) are already in the inventory`,
+          title: t.codeInventory.allCodesDuplicate,
+          description: `${codes.length} ${t.codeInventory.codesExist}`,
           variant: "destructive",
         });
         return;
@@ -152,8 +153,8 @@ export const CodeInventoryManager = () => {
 
       const duplicateCount = codes.length - uniqueCodes.length;
       toast({
-        title: "Codes uploaded successfully",
-        description: `${uniqueCodes.length} code(s) added${duplicateCount > 0 ? `, ${duplicateCount} duplicate(s) skipped` : ""}`,
+        title: t.codeInventory.codesUploaded,
+        description: `${uniqueCodes.length} kode ditambahkan${duplicateCount > 0 ? `, ${duplicateCount} ${t.codeInventory.duplicatesSkipped}` : ""}`,
       });
 
       setNewCodes("");
@@ -161,8 +162,8 @@ export const CodeInventoryManager = () => {
       fetchData();
     } catch (error) {
       toast({
-        title: "Error uploading codes",
-        description: error instanceof Error ? error.message : "Unknown error",
+        title: t.toasts.error,
+        description: error instanceof Error ? error.message : "Gagal mengunggah kode",
         variant: "destructive",
       });
     } finally {
@@ -180,16 +181,16 @@ export const CodeInventoryManager = () => {
       if (error) throw error;
 
       toast({
-        title: enabled ? "Auto-delivery enabled" : "Auto-delivery disabled",
+        title: enabled ? t.codeInventory.autoDeliveryEnabled : t.codeInventory.autoDeliveryDisabled,
       });
       fetchData();
     } catch (error) {
-      toast({ title: "Error updating product", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal memperbarui produk", variant: "destructive" });
     }
   };
 
   const handleDeleteUnusedCodes = async (productId: string) => {
-    if (!confirm("Are you sure you want to delete all unused codes for this product?")) return;
+    if (!confirm(t.codeInventory.confirmDeleteUnused)) return;
 
     try {
       const { error } = await supabase
@@ -200,10 +201,10 @@ export const CodeInventoryManager = () => {
 
       if (error) throw error;
 
-      toast({ title: "Unused codes deleted" });
+      toast({ title: t.codeInventory.unusedCodesDeleted });
       fetchData();
     } catch (error) {
-      toast({ title: "Error deleting codes", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal menghapus kode", variant: "destructive" });
     }
   };
 
@@ -220,31 +221,31 @@ export const CodeInventoryManager = () => {
       {/* Header with Add button */}
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-bold">Code Inventory</h3>
+          <h3 className="text-lg font-bold">{t.codeInventory.title}</h3>
           <p className="text-sm text-muted-foreground">
-            Manage pre-uploaded redemption codes for auto-delivery
+            {t.codeInventory.manageDescription}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Add Codes
+              {t.codeInventory.addCodes}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg">
             <DialogHeader>
-              <DialogTitle>Upload Redemption Codes</DialogTitle>
+              <DialogTitle>{t.codeInventory.uploadDialogTitle}</DialogTitle>
               <DialogDescription>
-                Add new codes to the inventory. Enter one code per line.
+                {t.codeInventory.uploadDialogDesc}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 pt-4">
               <div>
-                <Label>Product</Label>
+                <Label>{t.products.category}</Label>
                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a product" />
+                    <SelectValue placeholder={t.codeInventory.selectProduct} />
                   </SelectTrigger>
                   <SelectContent>
                     {products.map((product) => (
@@ -256,7 +257,7 @@ export const CodeInventoryManager = () => {
                 </Select>
               </div>
               <div>
-                <Label>Redemption Codes (one per line)</Label>
+                <Label>{t.codeInventory.codesPlaceholder}</Label>
                 <Textarea
                   value={newCodes}
                   onChange={(e) => setNewCodes(e.target.value)}
@@ -265,7 +266,7 @@ export const CodeInventoryManager = () => {
                   className="font-mono text-sm"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  {newCodes.split("\n").filter((c) => c.trim()).length} code(s) entered
+                  {newCodes.split("\n").filter((c) => c.trim()).length} {t.codeInventory.codesEntered}
                 </p>
               </div>
               <Button onClick={handleUploadCodes} disabled={uploading} className="w-full">
@@ -274,7 +275,7 @@ export const CodeInventoryManager = () => {
                 ) : (
                   <Upload className="h-4 w-4 mr-2" />
                 )}
-                Upload Codes
+                {t.codeInventory.uploadCodes}
               </Button>
             </div>
           </DialogContent>
@@ -293,7 +294,7 @@ export const CodeInventoryManager = () => {
                 <p className="text-2xl font-bold">
                   {codeStats.reduce((sum, s) => sum + s.total, 0)}
                 </p>
-                <p className="text-sm text-muted-foreground">Total Codes</p>
+                <p className="text-sm text-muted-foreground">{t.codeInventory.totalCodes}</p>
               </div>
             </div>
           </CardContent>
@@ -308,7 +309,7 @@ export const CodeInventoryManager = () => {
                 <p className="text-2xl font-bold">
                   {codeStats.reduce((sum, s) => sum + s.available, 0)}
                 </p>
-                <p className="text-sm text-muted-foreground">Available</p>
+                <p className="text-sm text-muted-foreground">{t.codeInventory.available}</p>
               </div>
             </div>
           </CardContent>
@@ -323,7 +324,7 @@ export const CodeInventoryManager = () => {
                 <p className="text-2xl font-bold">
                   {codeStats.reduce((sum, s) => sum + s.used, 0)}
                 </p>
-                <p className="text-sm text-muted-foreground">Used</p>
+                <p className="text-sm text-muted-foreground">{t.codeInventory.used}</p>
               </div>
             </div>
           </CardContent>
@@ -333,9 +334,9 @@ export const CodeInventoryManager = () => {
       {/* Products Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Products & Inventory</CardTitle>
+          <CardTitle>{t.codeInventory.productsInventory}</CardTitle>
           <CardDescription>
-            Manage code inventory and auto-delivery settings per product
+            {t.codeInventory.productsInventoryDesc}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -343,19 +344,19 @@ export const CodeInventoryManager = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead className="text-center">Total Codes</TableHead>
-                  <TableHead className="text-center">Available</TableHead>
-                  <TableHead className="text-center">Used</TableHead>
-                  <TableHead className="text-center">Auto-Delivery</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead>{t.codeInventory.product}</TableHead>
+                  <TableHead className="text-center">{t.codeInventory.totalCodes}</TableHead>
+                  <TableHead className="text-center">{t.codeInventory.available}</TableHead>
+                  <TableHead className="text-center">{t.codeInventory.used}</TableHead>
+                  <TableHead className="text-center">{t.codeInventory.autoDelivery}</TableHead>
+                  <TableHead className="text-right">{t.table.actions}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {codeStats.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      No products found
+                      {t.codeInventory.noProductsFound}
                     </TableCell>
                   </TableRow>
                 ) : (
