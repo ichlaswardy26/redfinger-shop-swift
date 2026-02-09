@@ -21,8 +21,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
  import { VoucherFormDialog, VoucherFormData } from "@/components/VoucherFormDialog";
  import { BulkVoucherGeneratorDialog } from "@/components/BulkVoucherGeneratorDialog";
 import { VoucherAnalytics } from "@/components/VoucherAnalytics";
- import {
-   Select,
+import { t } from "@/lib/translations";
+import {
+    Select,
    SelectContent,
    SelectItem,
    SelectTrigger,
@@ -91,11 +92,11 @@ import { VoucherAnalytics } from "@/components/VoucherAnalytics";
        setVouchers((data || []) as Voucher[]);
      } catch (error) {
        console.error("Error fetching vouchers:", error);
-       toast({ title: "Error", description: "Failed to load vouchers", variant: "destructive" });
-     } finally {
-       setLoading(false);
-     }
-   };
+        toast({ title: t.toasts.error, description: "Gagal memuat voucher", variant: "destructive" });
+      } finally {
+        setLoading(false);
+      }
+    };
  
    const fetchCampaigns = async () => {
      try {
@@ -164,31 +165,31 @@ import { VoucherAnalytics } from "@/components/VoucherAnalytics";
            .eq("id", editingVoucher.id);
          
          if (error) throw error;
-         toast({ title: "Voucher updated successfully" });
+         toast({ title: t.vouchers.voucherUpdated });
        } else {
          const { error } = await supabase
            .from("vouchers")
            .insert([voucherData]);
          
-         if (error) {
-           if (error.code === "23505") {
-             throw new Error("A voucher with this code already exists");
-           }
-           throw error;
-         }
-         toast({ title: "Voucher created successfully" });
+          if (error) {
+            if (error.code === "23505") {
+              throw new Error(t.vouchers.codeExists);
+            }
+            throw error;
+          }
+          toast({ title: t.vouchers.voucherCreated });
        }
  
        setDialogOpen(false);
        setEditingVoucher(null);
        fetchVouchers();
        fetchStats();
-     } catch (error) {
-       toast({ 
-         title: "Error", 
-         description: error instanceof Error ? error.message : "Failed to save voucher", 
-         variant: "destructive" 
-       });
+      } catch (error) {
+        toast({ 
+          title: t.toasts.error, 
+          description: error instanceof Error ? error.message : "Gagal menyimpan voucher", 
+          variant: "destructive" 
+        });
      }
    };
  
@@ -200,51 +201,51 @@ import { VoucherAnalytics } from "@/components/VoucherAnalytics";
          .eq("id", voucher.id);
        
        if (error) throw error;
-       toast({ title: `Voucher ${!voucher.is_active ? "activated" : "deactivated"}` });
-       fetchVouchers();
-       fetchStats();
-     } catch (error) {
-       toast({ title: "Error", description: "Failed to update voucher", variant: "destructive" });
-     }
+        toast({ title: !voucher.is_active ? t.vouchers.voucherActivated : t.vouchers.voucherDeactivated });
+        fetchVouchers();
+        fetchStats();
+      } catch (error) {
+        toast({ title: t.toasts.error, description: "Gagal memperbarui voucher", variant: "destructive" });
+      }
    };
  
-   const handleDeleteVoucher = async (voucherId: string) => {
-     if (!confirm("Are you sure you want to delete this voucher?")) return;
-     
-     try {
-       const { error } = await supabase
-         .from("vouchers")
-         .delete()
-         .eq("id", voucherId);
-       
-       if (error) throw error;
-       toast({ title: "Voucher deleted successfully" });
-       fetchVouchers();
-       fetchStats();
-     } catch (error) {
-       toast({ title: "Error", description: "Failed to delete voucher", variant: "destructive" });
-     }
-   };
+    const handleDeleteVoucher = async (voucherId: string) => {
+      if (!confirm(t.vouchers.confirmDelete)) return;
+      
+      try {
+        const { error } = await supabase
+          .from("vouchers")
+          .delete()
+          .eq("id", voucherId);
+        
+        if (error) throw error;
+        toast({ title: t.vouchers.voucherDeleted });
+        fetchVouchers();
+        fetchStats();
+      } catch (error) {
+        toast({ title: t.toasts.error, description: "Gagal menghapus voucher", variant: "destructive" });
+      }
+    };
  
-   const handleCopyCode = (code: string) => {
-     navigator.clipboard.writeText(code);
-     setCopiedCode(code);
-     setTimeout(() => setCopiedCode(null), 2000);
-     toast({ title: "Code copied to clipboard" });
-   };
+  const handleCopyCode = (code: string) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(code);
+    setTimeout(() => setCopiedCode(null), 2000);
+    toast({ title: t.vouchers.codeCopied });
+  };
  
-   const getVoucherStatus = (voucher: Voucher) => {
-     const now = new Date();
-     const validFrom = new Date(voucher.valid_from);
-     const validUntil = new Date(voucher.valid_until);
-     
-     if (!voucher.is_active) return { label: "Disabled", variant: "secondary" as const };
-     if (now < validFrom) return { label: "Scheduled", variant: "outline" as const };
-     if (now > validUntil) return { label: "Expired", variant: "destructive" as const };
-     if (voucher.usage_limit && voucher.usage_count >= voucher.usage_limit) return { label: "Depleted", variant: "destructive" as const };
-     return { label: "Active", variant: "default" as const };
-   };
- 
+  const getVoucherStatus = (voucher: Voucher) => {
+    const now = new Date();
+    const validFrom = new Date(voucher.valid_from);
+    const validUntil = new Date(voucher.valid_until);
+    
+    if (!voucher.is_active) return { label: t.vouchers.statusLabels.disabled, variant: "secondary" as const };
+    if (now < validFrom) return { label: t.vouchers.statusLabels.scheduled, variant: "outline" as const };
+    if (now > validUntil) return { label: t.vouchers.statusLabels.expired, variant: "destructive" as const };
+    if (voucher.usage_limit && voucher.usage_count >= voucher.usage_limit) return { label: t.vouchers.statusLabels.depleted, variant: "destructive" as const };
+    return { label: t.vouchers.statusLabels.active, variant: "default" as const };
+  };
+
    const filteredVouchers = campaignFilter === "all" 
      ? vouchers 
      : campaignFilter === "single"
@@ -259,129 +260,129 @@ import { VoucherAnalytics } from "@/components/VoucherAnalytics";
      );
    }
  
-   return (
+  return (
     <Tabs defaultValue="management" className="space-y-6">
-      <TabsList>
-        <TabsTrigger value="management" className="gap-2">
-          <Tag className="h-4 w-4" />
-          Management
-        </TabsTrigger>
-        <TabsTrigger value="analytics" className="gap-2">
-          <BarChart3 className="h-4 w-4" />
-          Analytics
-        </TabsTrigger>
-      </TabsList>
+       <TabsList>
+         <TabsTrigger value="management" className="gap-2">
+           <Tag className="h-4 w-4" />
+           {t.vouchers.management}
+         </TabsTrigger>
+         <TabsTrigger value="analytics" className="gap-2">
+           <BarChart3 className="h-4 w-4" />
+           {t.vouchers.analytics}
+         </TabsTrigger>
+       </TabsList>
 
       <TabsContent value="management" className="space-y-6">
        {/* Stats */}
        <MotionContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-         <MotionStatCard>
-           <div className="flex items-center justify-between">
-             <div>
-               <p className="text-sm text-muted-foreground">Active Vouchers</p>
-               <p className="text-2xl font-bold">{stats.totalActive}</p>
-             </div>
-             <div className="p-2 bg-primary/10 rounded-lg">
-               <Tag className="h-5 w-5 text-primary" />
-             </div>
-           </div>
-         </MotionStatCard>
-         <MotionStatCard>
-           <div className="flex items-center justify-between">
-             <div>
-               <p className="text-sm text-muted-foreground">Expired</p>
-               <p className="text-2xl font-bold">{stats.totalExpired}</p>
-             </div>
-             <div className="p-2 bg-destructive/10 rounded-lg">
-               <Calendar className="h-5 w-5 text-destructive" />
-             </div>
-           </div>
-         </MotionStatCard>
-         <MotionStatCard>
-           <div className="flex items-center justify-between">
-             <div>
-               <p className="text-sm text-muted-foreground">Total Usage</p>
-               <p className="text-2xl font-bold">{stats.totalUsage}</p>
-             </div>
-             <div className="p-2 bg-accent/20 rounded-lg">
-               <Users className="h-5 w-5" />
-             </div>
-           </div>
-         </MotionStatCard>
-         <MotionStatCard>
-           <div className="flex items-center justify-between">
-             <div>
-               <p className="text-sm text-muted-foreground">Total Savings</p>
-               <p className="text-2xl font-bold">Rp {stats.totalSavings.toLocaleString()}</p>
-             </div>
-             <div className="p-2 bg-primary/10 rounded-lg">
-               <TrendingUp className="h-5 w-5 text-primary" />
-             </div>
-           </div>
-         </MotionStatCard>
-       </MotionContainer>
+          <MotionStatCard>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">{t.vouchers.activeVouchers}</p>
+                <p className="text-2xl font-bold">{stats.totalActive}</p>
+              </div>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Tag className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+          </MotionStatCard>
+          <MotionStatCard>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">{t.vouchers.expiredVouchers}</p>
+                <p className="text-2xl font-bold">{stats.totalExpired}</p>
+              </div>
+              <div className="p-2 bg-destructive/10 rounded-lg">
+                <Calendar className="h-5 w-5 text-destructive" />
+              </div>
+            </div>
+          </MotionStatCard>
+          <MotionStatCard>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">{t.vouchers.totalUsage}</p>
+                <p className="text-2xl font-bold">{stats.totalUsage}</p>
+              </div>
+              <div className="p-2 bg-accent/20 rounded-lg">
+                <Users className="h-5 w-5" />
+              </div>
+            </div>
+          </MotionStatCard>
+          <MotionStatCard>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">{t.vouchers.totalSavings}</p>
+                <p className="text-2xl font-bold">Rp {stats.totalSavings.toLocaleString()}</p>
+              </div>
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <TrendingUp className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+          </MotionStatCard>
+        </MotionContainer>
  
        {/* Vouchers Table */}
-       <Card>
-         <CardHeader className="flex flex-row items-center justify-between">
-           <div>
-             <CardTitle>Voucher Management</CardTitle>
-             <CardDescription>Create and manage discount vouchers</CardDescription>
-           </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setBulkDialogOpen(true)}>
-                <Package className="h-4 w-4 mr-2" />
-                Bulk Generate
-              </Button>
-              <Button onClick={() => { setEditingVoucher(null); setDialogOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Voucher
-              </Button>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>{t.vouchers.title}</CardTitle>
+              <CardDescription>{t.vouchers.subtitle}</CardDescription>
             </div>
-         </CardHeader>
-         <CardContent>
-            {/* Campaign Filter */}
-            {campaigns.length > 0 && (
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm text-muted-foreground">Filter by Campaign:</span>
-                <Select value={campaignFilter} onValueChange={setCampaignFilter}>
-                  <SelectTrigger className="w-[220px]">
-                    <SelectValue placeholder="All Campaigns" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Campaigns</SelectItem>
-                    <SelectItem value="single">Single Vouchers</SelectItem>
-                    {campaigns.map(campaign => (
-                      <SelectItem key={campaign} value={campaign}>
-                        {campaign.replace(/_/g, " ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-           <div className="overflow-x-auto">
-             <Table>
-               <TableHeader>
-                 <TableRow>
-                   <TableHead>Code</TableHead>
-                   <TableHead>Name</TableHead>
-                   <TableHead>Discount</TableHead>
-                   <TableHead>Usage</TableHead>
-                   <TableHead>Valid Until</TableHead>
-                   <TableHead>Status</TableHead>
-                   <TableHead>Active</TableHead>
-                   <TableHead className="w-[50px]"></TableHead>
-                 </TableRow>
-               </TableHeader>
-               <TableBody>
-                  {filteredVouchers.length === 0 ? (
-                   <TableRow>
-                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                       No vouchers created yet. Create your first voucher!
-                     </TableCell>
-                   </TableRow>
-                 ) : (
+             <div className="flex items-center gap-2">
+               <Button variant="outline" onClick={() => setBulkDialogOpen(true)}>
+                 <Package className="h-4 w-4 mr-2" />
+                 {t.vouchers.bulkGenerate}
+               </Button>
+               <Button onClick={() => { setEditingVoucher(null); setDialogOpen(true); }}>
+                 <Plus className="h-4 w-4 mr-2" />
+                 {t.vouchers.createVoucher}
+               </Button>
+             </div>
+          </CardHeader>
+          <CardContent>
+             {/* Campaign Filter */}
+             {campaigns.length > 0 && (
+               <div className="flex items-center gap-2 mb-4">
+                 <span className="text-sm text-muted-foreground">{t.vouchers.filterByCampaign}</span>
+                 <Select value={campaignFilter} onValueChange={setCampaignFilter}>
+                   <SelectTrigger className="w-[220px]">
+                     <SelectValue placeholder={t.vouchers.allCampaigns} />
+                   </SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="all">{t.vouchers.allCampaigns}</SelectItem>
+                     <SelectItem value="single">{t.vouchers.singleVouchers}</SelectItem>
+                     {campaigns.map(campaign => (
+                       <SelectItem key={campaign} value={campaign}>
+                         {campaign.replace(/_/g, " ")}
+                       </SelectItem>
+                     ))}
+                   </SelectContent>
+                 </Select>
+               </div>
+             )}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t.vouchers.code}</TableHead>
+                    <TableHead>{t.vouchers.name}</TableHead>
+                    <TableHead>{t.vouchers.discount}</TableHead>
+                    <TableHead>{t.vouchers.usage}</TableHead>
+                    <TableHead>{t.vouchers.validUntil}</TableHead>
+                    <TableHead>{t.vouchers.status}</TableHead>
+                    <TableHead>{t.vouchers.active}</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                   {filteredVouchers.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        {t.vouchers.noVouchersCreated}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
                     filteredVouchers.map((voucher) => {
                      const status = getVoucherStatus(voucher);
                      return (
@@ -405,11 +406,11 @@ import { VoucherAnalytics } from "@/components/VoucherAnalytics";
                              </Button>
                            </div>
                          </TableCell>
-                         <TableCell>
-                           <div>
-                             <p className="font-medium">{voucher.name}</p>
-                             {voucher.first_order_only && (
-                               <Badge variant="outline" className="text-xs mt-1">First order only</Badge>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{voucher.name}</p>
+                              {voucher.first_order_only && (
+                                <Badge variant="outline" className="text-xs mt-1">{t.vouchers.firstOrderOnly}</Badge>
                              )}
                            </div>
                          </TableCell>
@@ -452,19 +453,19 @@ import { VoucherAnalytics } from "@/components/VoucherAnalytics";
                                  <MoreHorizontal className="h-4 w-4" />
                                </Button>
                              </DropdownMenuTrigger>
-                             <DropdownMenuContent align="end">
-                               <DropdownMenuItem onClick={() => { setEditingVoucher(voucher); setDialogOpen(true); }}>
-                                 <Pencil className="h-4 w-4 mr-2" />
-                                 Edit
-                               </DropdownMenuItem>
-                               <DropdownMenuItem 
-                                 onClick={() => handleDeleteVoucher(voucher.id)}
-                                 className="text-destructive"
-                               >
-                                 <Trash2 className="h-4 w-4 mr-2" />
-                                 Delete
-                               </DropdownMenuItem>
-                             </DropdownMenuContent>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => { setEditingVoucher(voucher); setDialogOpen(true); }}>
+                                  <Pencil className="h-4 w-4 mr-2" />
+                                  {t.actions.edit}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteVoucher(voucher.id)}
+                                  className="text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  {t.actions.delete}
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
                            </DropdownMenu>
                          </TableCell>
                        </TableRow>
@@ -501,5 +502,7 @@ import { VoucherAnalytics } from "@/components/VoucherAnalytics";
         <VoucherAnalytics />
       </TabsContent>
     </Tabs>
-   );
- };
+  );
+};
+
+export default VoucherManager;
