@@ -207,13 +207,13 @@ const Admin = () => {
       }
       const { data, error } = await supabase.functions.invoke('verify-admin');
       if (error || !data?.isAdmin) {
-        toast({ title: "Access denied", description: "You don't have permission to access this page", variant: "destructive" });
+        toast({ title: t.admin.accessDenied, description: t.admin.noPermission, variant: "destructive" });
         navigate("/");
         return;
       }
       await Promise.all([fetchProducts(), fetchCategories(), fetchOrders(), fetchUsers(), fetchStats(), fetchTickets(), fetchRatings()]);
     } catch (error) {
-      toast({ title: "Error", description: "Failed to verify admin access", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal memverifikasi akses admin", variant: "destructive" });
       navigate("/");
     } finally {
       setLoading(false);
@@ -227,10 +227,10 @@ const Admin = () => {
       const lowStockProducts = data.filter(p => p.stock < 10 && p.stock > 0);
       const outOfStockProducts = data.filter(p => p.stock === 0);
       if (lowStockProducts.length > 0) {
-        toast({ title: "Low Stock Alert", description: `${lowStockProducts.length} product(s) have low stock`, variant: "destructive" });
+        toast({ title: t.products.lowStockAlert, description: `${lowStockProducts.length} ${t.products.productsLowStock}`, variant: "destructive" });
       }
       if (outOfStockProducts.length > 0) {
-        toast({ title: "Out of Stock Alert", description: `${outOfStockProducts.length} product(s) are out of stock`, variant: "destructive" });
+        toast({ title: t.products.outOfStockAlert, description: `${outOfStockProducts.length} ${t.products.productsOutOfStock}`, variant: "destructive" });
       }
     }
   };
@@ -317,7 +317,7 @@ const Admin = () => {
         category_id: productForm.category_id || null,
       });
       if (!validationResult.success) {
-        toast({ title: "Validation Error", description: validationResult.error.errors[0].message, variant: "destructive" });
+      toast({ title: "Validation Error", description: validationResult.error.errors[0].message, variant: "destructive" });
         return;
       }
       const productData = validationResult.data;
@@ -330,7 +330,7 @@ const Admin = () => {
           category_id: productData.category_id,
         }).eq("id", editingProduct.id);
         if (error) throw error;
-        toast({ title: "Product updated successfully" });
+        toast({ title: t.products.productUpdated });
       } else {
         const { error } = await supabase.from("products").insert([{ 
           name: productData.name, 
@@ -341,14 +341,14 @@ const Admin = () => {
           stock: 0 
         }]);
         if (error) throw error;
-        toast({ title: "Product created successfully" });
+        toast({ title: t.products.productCreated });
       }
       setProductForm({ name: "", description: "", price: "", duration_days: "", category_id: "" });
       setEditingProduct(null);
       setShowProductDialog(false);
       fetchProducts();
     } catch (error) {
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to save product", variant: "destructive" });
+      toast({ title: t.toasts.error, description: error instanceof Error ? error.message : "Gagal menyimpan produk", variant: "destructive" });
     }
   };
 
@@ -360,10 +360,10 @@ const Admin = () => {
       } else {
         await supabase.from("user_roles").insert({ user_id: userId, role: role as any });
       }
-      toast({ title: `Role ${hasRole ? "removed" : "added"} successfully` });
+      toast({ title: t.users.roleAdded });
       fetchUsers();
     } catch (error) {
-      toast({ title: "Error", description: "Failed to update role", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal memperbarui peran", variant: "destructive" });
     }
   };
 
@@ -371,24 +371,24 @@ const Admin = () => {
     try {
       const { error } = await supabase.from("profiles").update({ is_active: !currentStatus }).eq("id", userId);
       if (error) throw error;
-      toast({ title: `User ${!currentStatus ? "activated" : "deactivated"} successfully` });
+      toast({ title: !currentStatus ? t.users.userActivated : t.users.userDeactivated });
       fetchUsers();
     } catch (error) {
-      toast({ title: "Error", description: "Failed to update user status", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal memperbarui status pengguna", variant: "destructive" });
     }
   };
 
   const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
+    if (!confirm(t.users.confirmDelete)) return;
     try {
       await supabase.from("orders").delete().eq("user_id", userId);
       await supabase.from("user_roles").delete().eq("user_id", userId);
       const { error } = await supabase.from("profiles").delete().eq("id", userId);
       if (error) throw error;
-      toast({ title: "User deleted successfully" });
+      toast({ title: t.users.userDeleted });
       fetchUsers();
     } catch (error) {
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to delete user", variant: "destructive" });
+      toast({ title: t.toasts.error, description: error instanceof Error ? error.message : "Gagal menghapus pengguna", variant: "destructive" });
     }
   };
 
@@ -400,10 +400,10 @@ const Admin = () => {
       }
       const { error } = await supabase.from("support_tickets").update(updateData).eq("id", ticketId);
       if (error) throw error;
-      toast({ title: "Ticket status updated" });
+      toast({ title: t.toasts.updated });
       fetchTickets();
     } catch (error) {
-      toast({ title: "Error updating ticket", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal memperbarui tiket", variant: "destructive" });
     }
   };
 
@@ -411,10 +411,10 @@ const Admin = () => {
     try {
       const { error } = await supabase.from("product_ratings").update({ is_visible: !isVisible }).eq("id", ratingId);
       if (error) throw error;
-      toast({ title: "Rating visibility updated" });
+      toast({ title: t.toasts.updated });
       fetchRatings();
     } catch (error) {
-      toast({ title: "Error updating rating", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal memperbarui ulasan", variant: "destructive" });
     }
   };
 
@@ -804,7 +804,7 @@ const Admin = () => {
               <MotionStatCard>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
+                    <p className="text-sm font-medium text-muted-foreground">{t.admin.stats.totalOrders}</p>
                     <p className="text-3xl font-bold">{stats.totalOrders}</p>
                   </div>
                   <div className="p-3 bg-primary/10 rounded-lg border-2 border-border">
@@ -815,7 +815,7 @@ const Admin = () => {
               <MotionStatCard>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Pending Payments</p>
+                    <p className="text-sm font-medium text-muted-foreground">{t.admin.stats.pendingPayments}</p>
                     <p className="text-3xl font-bold">{stats.pendingPayments}</p>
                   </div>
                   <div className="p-3 bg-accent/20 rounded-lg border-2 border-border">
@@ -826,7 +826,7 @@ const Admin = () => {
               <MotionStatCard>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Verified Orders</p>
+                    <p className="text-sm font-medium text-muted-foreground">{t.admin.stats.verifiedOrders}</p>
                     <p className="text-3xl font-bold">{stats.totalRevenue}</p>
                   </div>
                   <div className="p-3 bg-primary/10 rounded-lg border-2 border-border">
@@ -837,7 +837,7 @@ const Admin = () => {
               <MotionStatCard>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">Total Users</p>
+                    <p className="text-sm font-medium text-muted-foreground">{t.admin.stats.totalUsers}</p>
                     <p className="text-3xl font-bold">{stats.totalUsers}</p>
                   </div>
                   <div className="p-3 bg-secondary/50 rounded-lg border-2 border-border">
@@ -847,11 +847,11 @@ const Admin = () => {
               </MotionStatCard>
             </MotionContainer>
             <Card>
-              <CardHeader><CardTitle>Recent Activity</CardTitle><CardDescription>Latest orders</CardDescription></CardHeader>
+              <CardHeader><CardTitle>{t.admin.recentActivity}</CardTitle><CardDescription>{t.admin.latestOrders}</CardDescription></CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
                   <Table>
-                    <TableHeader><TableRow><TableHead>Customer</TableHead><TableHead>Product</TableHead><TableHead>Status</TableHead><TableHead>Date</TableHead></TableRow></TableHeader>
+                    <TableHeader><TableRow><TableHead>{t.table.customer}</TableHead><TableHead>{t.table.product}</TableHead><TableHead>{t.table.status}</TableHead><TableHead>{t.table.date}</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {orders.slice(0, 5).map((order) => (
                         <TableRow key={order.id}>
