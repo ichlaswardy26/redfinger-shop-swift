@@ -123,7 +123,7 @@ const Staff = () => {
     if (!user) { navigate("/auth/signin"); return; }
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
     if (!roles?.some(r => r.role === 'staff' || r.role === 'admin')) {
-      navigate("/"); toast({ title: "Access denied", variant: "destructive" }); return;
+      navigate("/"); toast({ title: t.admin.accessDenied, variant: "destructive" }); return;
     }
     fetchData();
   };
@@ -147,14 +147,14 @@ const Staff = () => {
       setOrders((ordersRes.data || []).map(o => ({ ...o, profiles: profileMap.get(o.user_id) || null })) as any);
       setRatings((ratingsRes.data || []).map(r => ({ ...r, profiles: profileMap.get(r.user_id) || null })) as any);
       setProducts(productsRes.data || []);
-    } catch { toast({ title: "Error loading data", variant: "destructive" }); }
+    } catch { toast({ title: t.toasts.error, description: "Gagal memuat data", variant: "destructive" }); }
     finally { setLoading(false); }
   };
 
   const handleUpdateTicketStatus = async (ticketId: string, status: string) => {
     const { error } = await supabase.from("support_tickets").update({ status }).eq("id", ticketId);
-    if (error) { toast({ title: "Error updating ticket", variant: "destructive" }); return; }
-    toast({ title: "Ticket updated" }); fetchData();
+    if (error) { toast({ title: t.toasts.error, description: "Gagal memperbarui tiket", variant: "destructive" }); return; }
+    toast({ title: t.toasts.updated }); fetchData();
   };
 
   const handleVerifyOrder = async (orderId: string, redeemCodes: string[], adminNotes: string) => {
@@ -185,7 +185,7 @@ const Staff = () => {
     const { error } = await supabase.from("orders").update({
       payment_status: "verified", status: "active", redeem_codes: redeemCodes, admin_notes: adminNotes, verified_at: new Date().toISOString()
     }).eq("id", orderId);
-    if (error) { toast({ title: "Error verifying", variant: "destructive" }); return; }
+    if (error) { toast({ title: t.toasts.error, description: "Gagal memverifikasi", variant: "destructive" }); return; }
     if (product) {
       await supabase.from("products").update({ stock: Math.max(0, product.stock - order.quantity) }).eq("id", product.id);
     }
@@ -199,14 +199,14 @@ const Staff = () => {
       console.error("Failed to send notification:", err);
     }
     
-    toast({ title: "Order verified" }); fetchData();
+    toast({ title: t.orderVerification.orderVerified }); fetchData();
   };
 
   const handleRejectOrder = async (orderId: string, reason: string) => {
     const { error } = await supabase.from("orders").update({
       payment_status: "rejected", status: "rejected", admin_notes: reason
     }).eq("id", orderId);
-    if (error) { toast({ title: "Error rejecting", variant: "destructive" }); return; }
+    if (error) { toast({ title: t.toasts.error, description: "Gagal menolak", variant: "destructive" }); return; }
     
     // Send email notification
     try {
@@ -217,13 +217,13 @@ const Staff = () => {
       console.error("Failed to send notification:", err);
     }
     
-    toast({ title: "Order rejected" }); fetchData();
+    toast({ title: t.orderVerification.orderRejected }); fetchData();
   };
 
   const handleToggleRatingVisibility = async (ratingId: string, isVisible: boolean) => {
     const { error } = await supabase.from("product_ratings").update({ is_visible: !isVisible }).eq("id", ratingId);
-    if (error) { toast({ title: "Error updating rating", variant: "destructive" }); return; }
-    toast({ title: "Rating visibility updated" }); fetchData();
+    if (error) { toast({ title: t.toasts.error, description: "Gagal memperbarui ulasan", variant: "destructive" }); return; }
+    toast({ title: t.toasts.updated }); fetchData();
   };
 
   // Filtered data
@@ -309,56 +309,56 @@ const Staff = () => {
   };
 
   const ticketColumns: ColumnDef<TicketRow>[] = useMemo(() => [
-    { accessorKey: "subject", header: "Subject", cell: ({ row }) => (
+    { accessorKey: "subject", header: t.tickets.subject, cell: ({ row }) => (
       <div className="cursor-pointer hover:text-primary" onClick={() => { setSelectedTicket(row.original); setTicketDialogOpen(true); }}>
         <p className="font-medium">{row.original.subject}</p>
         <p className="text-xs text-muted-foreground line-clamp-1">{row.original.description}</p>
       </div>
     )},
-    { id: "user", header: "User", cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-" },
-    { accessorKey: "status", header: "Status", cell: ({ row }) => (
+    { id: "user", header: t.users.fullName, cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-" },
+    { accessorKey: "status", header: t.tickets.status, cell: ({ row }) => (
       <Badge className={getTicketStatusColor(row.original.status)}>{row.original.status.replace("_", " ")}</Badge>
     )},
-    { accessorKey: "created_at", header: "Created", cell: ({ row }) => format(new Date(row.original.created_at), 'PP') },
-    { id: "attachment", header: "Attachment", cell: ({ row }) => 
+    { accessorKey: "created_at", header: t.table.createdAt, cell: ({ row }) => format(new Date(row.original.created_at), 'PP') },
+    { id: "attachment", header: t.tickets.attachment, cell: ({ row }) => 
       row.original.image_proof ? <PaymentProofLink filePath={row.original.image_proof} /> : "-" 
     },
-    { id: "actions", header: "Action", cell: ({ row }) => (
+    { id: "actions", header: t.table.actions, cell: ({ row }) => (
       <Select value={row.original.status} onValueChange={(val) => handleUpdateTicketStatus(row.original.id, val)}>
         <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="open">Open</SelectItem>
-          <SelectItem value="in_progress">In Progress</SelectItem>
-          <SelectItem value="resolved">Resolved</SelectItem>
-          <SelectItem value="closed">Closed</SelectItem>
+          <SelectItem value="open">{t.tickets.statuses.open}</SelectItem>
+          <SelectItem value="in_progress">{t.tickets.statuses.in_progress}</SelectItem>
+          <SelectItem value="resolved">{t.tickets.statuses.resolved}</SelectItem>
+          <SelectItem value="closed">{t.tickets.statuses.closed}</SelectItem>
         </SelectContent>
       </Select>
     )},
   ], []);
 
   const orderColumns: ColumnDef<OrderRow>[] = useMemo(() => [
-    { id: "user", header: "User", cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-" },
-    { id: "product", header: "Product", cell: ({ row }) => row.original.products?.name || "-" },
-    { accessorKey: "quantity", header: "Qty" },
-    { accessorKey: "payment_status", header: "Status", cell: ({ row }) => (
+    { id: "user", header: t.users.fullName, cell: ({ row }) => row.original.profiles?.full_name || row.original.profiles?.email || "-" },
+    { id: "product", header: t.table.product, cell: ({ row }) => row.original.products?.name || "-" },
+    { accessorKey: "quantity", header: t.orders.quantity },
+    { accessorKey: "payment_status", header: t.orders.status, cell: ({ row }) => (
       <Badge variant={row.original.payment_status === 'verified' ? 'default' : row.original.payment_status === 'rejected' ? 'destructive' : 'secondary'}>{row.original.payment_status}</Badge>
     )},
-    { accessorKey: "created_at", header: "Date", cell: ({ row }) => format(new Date(row.original.created_at), 'PP') },
-    { id: "proof", header: "Proof", cell: ({ row }) => 
+    { accessorKey: "created_at", header: t.table.date, cell: ({ row }) => format(new Date(row.original.created_at), 'PP') },
+    { id: "proof", header: t.orders.paymentProof, cell: ({ row }) => 
       row.original.payment_proof ? <PaymentProofLink filePath={row.original.payment_proof} /> : "-" 
     },
-    { id: "actions", header: "Action", cell: ({ row }) => row.original.payment_status === 'pending' && (
-      <Button size="sm" onClick={() => { setVerifyingOrder(row.original); setVerifyDialogOpen(true); }}>Verify</Button>
+    { id: "actions", header: t.table.actions, cell: ({ row }) => row.original.payment_status === 'pending' && (
+      <Button size="sm" onClick={() => { setVerifyingOrder(row.original); setVerifyDialogOpen(true); }}>{t.actions.verify}</Button>
     )},
   ], []);
 
   const ratingColumns: ColumnDef<RatingRow>[] = useMemo(() => [
-    { id: "product", header: "Product", cell: ({ row }) => row.original.products?.name || "-" },
-    { id: "user", header: "User", cell: ({ row }) => row.original.profiles?.full_name || "-" },
-    { accessorKey: "rating", header: "Rating", cell: ({ row }) => <div className="flex items-center gap-1"><Star className="h-4 w-4 fill-yellow-400 text-yellow-400" /><span>{row.original.rating}</span></div> },
-    { accessorKey: "review", header: "Review", cell: ({ row }) => <span className="max-w-xs truncate block">{row.original.review || "-"}</span> },
-    { accessorKey: "is_visible", header: "Visible", cell: ({ row }) => <Badge variant={row.original.is_visible ? 'default' : 'secondary'}>{row.original.is_visible ? 'Yes' : 'No'}</Badge> },
-    { id: "actions", header: "Action", cell: ({ row }) => <Button size="sm" variant="outline" onClick={() => handleToggleRatingVisibility(row.original.id, row.original.is_visible)}>Toggle</Button> },
+    { id: "product", header: t.table.product, cell: ({ row }) => row.original.products?.name || "-" },
+    { id: "user", header: t.users.fullName, cell: ({ row }) => row.original.profiles?.full_name || "-" },
+    { accessorKey: "rating", header: t.ratings.rating, cell: ({ row }) => <div className="flex items-center gap-1"><Star className="h-4 w-4 fill-yellow-400 text-yellow-400" /><span>{row.original.rating}</span></div> },
+    { accessorKey: "review", header: t.ratings.review, cell: ({ row }) => <span className="max-w-xs truncate block">{row.original.review || "-"}</span> },
+    { accessorKey: "is_visible", header: t.ratings.visible, cell: ({ row }) => <Badge variant={row.original.is_visible ? 'default' : 'secondary'}>{row.original.is_visible ? t.ui.yes : t.ui.no}</Badge> },
+    { id: "actions", header: t.table.actions, cell: ({ row }) => <Button size="sm" variant="outline" onClick={() => handleToggleRatingVisibility(row.original.id, row.original.is_visible)}>{t.ratings.toggleVisibility}</Button> },
   ], []);
 
   const ticketTable = useReactTable({ data: filteredTickets, columns: ticketColumns, getCoreRowModel: getCoreRowModel(), getPaginationRowModel: getPaginationRowModel(), getSortedRowModel: getSortedRowModel(), state: { sorting: ticketSorting }, onSortingChange: setTicketSorting, initialState: { pagination: { pageSize: 10 } } });

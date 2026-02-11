@@ -8,6 +8,7 @@ import { SEOHead } from "@/components/SEOHead";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { t } from "@/lib/translations";
 import { z } from "zod";
 
 const signInSchema = z.object({
@@ -46,21 +47,21 @@ const SignIn = () => {
       if (error) throw error;
 
       toast({
-        title: "Welcome back!",
-        description: "You have successfully signed in.",
+        title: t.auth.welcomeBack,
+        description: t.auth.signInSuccess,
       });
       navigate("/");
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
-          title: "Validation Error",
+          title: t.auth.errors.validationError,
           description: error.errors[0].message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to sign in",
+          title: t.toasts.error,
+          description: error instanceof Error ? error.message : t.auth.errors.invalidCredentials,
           variant: "destructive",
         });
       }
@@ -89,13 +90,13 @@ const SignIn = () => {
             </span>
           </CardTitle>
           <CardDescription className="text-center pt-4 font-medium">
-            Welcome back! Sign in to your account to continue.
+            {t.auth.signInDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="font-bold">Email</Label>
+              <Label htmlFor="email" className="font-bold">{t.auth.email}</Label>
               <Input
                 id="email"
                 type="email"
@@ -106,7 +107,7 @@ const SignIn = () => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="font-bold">Password</Label>
+              <Label htmlFor="password" className="font-bold">{t.auth.password}</Label>
               <Input
                 id="password"
                 type="password"
@@ -118,21 +119,21 @@ const SignIn = () => {
             </div>
             <div className="flex items-center justify-end">
               <Link to="/auth/forgot-password" className="text-sm text-primary hover:underline font-medium">
-                Forgot password?
+                {t.auth.forgotPassword}
               </Link>
             </div>
             <Button type="submit" className="w-full" disabled={loading} variant="hero">
-              {loading ? "Signing in..." : "Sign In"}
+              {loading ? t.auth.signingIn : t.auth.signIn}
             </Button>
             <div className="text-center text-sm text-muted-foreground">
-              Don't have an account?{" "}
+              {t.auth.noAccount}{" "}
               <Link to="/auth/signup" className="text-primary hover:underline font-medium">
-                Sign up
+                {t.auth.signUp}
               </Link>
             </div>
             <div className="text-center">
               <Link to="/" className="text-sm text-muted-foreground hover:text-primary">
-                Back to store
+                {t.auth.backToStore}
               </Link>
             </div>
           </form>

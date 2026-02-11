@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { Eye, EyeOff, CheckCircle, XCircle, Lock } from "lucide-react";
+import { t } from "@/lib/translations";
 import { z } from "zod";
 
 const passwordSchema = z.string()
@@ -49,17 +50,17 @@ const ResetPassword = () => {
     return "bg-green-500";
   };
   const getStrengthLabel = () => {
-    if (passwordStrength < 40) return "Weak";
-    if (passwordStrength < 70) return "Medium";
-    return "Strong";
+    if (passwordStrength < 40) return t.auth.weak;
+    if (passwordStrength < 70) return t.auth.medium;
+    return t.auth.strong;
   };
 
   // Password requirements checks
   const requirements = [
-    { label: "At least 6 characters", met: password.length >= 6 },
-    { label: "One uppercase letter", met: /[A-Z]/.test(password) },
-    { label: "One lowercase letter", met: /[a-z]/.test(password) },
-    { label: "One number", met: /[0-9]/.test(password) },
+    { label: t.auth.passwordRequirements.length, met: password.length >= 6 },
+    { label: t.auth.passwordRequirements.uppercase, met: /[A-Z]/.test(password) },
+    { label: t.auth.passwordRequirements.lowercase, met: /[a-z]/.test(password) },
+    { label: t.auth.passwordRequirements.number, met: /[0-9]/.test(password) },
   ];
 
   useEffect(() => {
@@ -79,8 +80,8 @@ const ResetPassword = () => {
         setIsValidSession(true);
       } else {
         toast({
-          title: "Invalid or expired link",
-          description: "Please request a new password reset link.",
+          title: t.auth.invalidResetLink,
+          description: t.auth.invalidResetLinkDesc,
           variant: "destructive",
         });
       }
@@ -95,8 +96,8 @@ const ResetPassword = () => {
     
     if (password !== confirmPassword) {
       toast({
-        title: "Passwords don't match",
-        description: "Please make sure both passwords are the same.",
+        title: t.auth.errors.passwordMismatch,
+        description: t.auth.errors.passwordMismatch,
         variant: "destructive",
       });
       return;
@@ -114,24 +115,23 @@ const ResetPassword = () => {
       if (error) throw error;
 
       toast({
-        title: "Password updated!",
-        description: "Your password has been successfully reset.",
+        title: t.auth.passwordUpdated,
+        description: t.auth.passwordUpdatedDesc,
       });
       
-      // Sign out and redirect to sign in
       await supabase.auth.signOut();
       navigate("/auth/signin");
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
-          title: "Invalid password",
+          title: t.auth.errors.validationError,
           description: error.errors[0].message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to reset password",
+          title: t.toasts.error,
+          description: error instanceof Error ? error.message : "Gagal mengatur ulang kata sandi",
           variant: "destructive",
         });
       }
@@ -143,7 +143,7 @@ const ResetPassword = () => {
   if (checkingSession) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <p className="text-muted-foreground">Verifying reset link...</p>
+        <p className="text-muted-foreground">{t.auth.verifyingLink}</p>
       </div>
     );
   }
@@ -156,13 +156,13 @@ const ResetPassword = () => {
             <div className="w-16 h-16 bg-destructive/10 border-2 border-destructive/20 flex items-center justify-center mx-auto rounded-lg">
               <XCircle className="h-8 w-8 text-destructive" />
             </div>
-            <h2 className="text-xl font-bold">Invalid Reset Link</h2>
+            <h2 className="text-xl font-bold">{t.auth.invalidResetLink}</h2>
             <p className="text-muted-foreground">
-              This password reset link is invalid or has expired.
+              {t.auth.invalidResetLinkDesc}
             </p>
             <Link to="/auth/forgot-password">
               <Button variant="hero" className="w-full">
-                Request New Link
+                {t.auth.requestNewLink}
               </Button>
             </Link>
           </CardContent>
@@ -187,17 +187,17 @@ const ResetPassword = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-black text-center">
             <span className="bg-primary text-primary-foreground px-3 py-1 inline-block border-2 border-border shadow-brutal-sm">
-              New Password
+              {t.auth.newPassword}
             </span>
           </CardTitle>
           <CardDescription className="text-center pt-4 font-medium">
-            Choose a strong password for your account
+            {t.auth.chooseStrongPassword}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password" className="font-bold">New Password</Label>
+              <Label htmlFor="password" className="font-bold">{t.auth.newPassword}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -222,7 +222,7 @@ const ResetPassword = () => {
               {password && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Password strength</span>
+                    <span className="text-muted-foreground">{t.auth.passwordStrength}</span>
                     <span className={`font-medium ${passwordStrength >= 70 ? 'text-green-600' : passwordStrength >= 40 ? 'text-yellow-600' : 'text-destructive'}`}>
                       {getStrengthLabel()}
                     </span>
@@ -249,7 +249,7 @@ const ResetPassword = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="font-bold">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="font-bold">{t.auth.confirmPassword}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -270,11 +270,11 @@ const ResetPassword = () => {
                 </button>
               </div>
               {confirmPassword && password !== confirmPassword && (
-                <p className="text-xs text-destructive">Passwords don't match</p>
+                <p className="text-xs text-destructive">{t.auth.errors.passwordMismatch}</p>
               )}
               {confirmPassword && password === confirmPassword && (
                 <p className="text-xs text-green-600 flex items-center gap-1">
-                  <CheckCircle className="h-3 w-3" /> Passwords match
+                  <CheckCircle className="h-3 w-3" /> {t.auth.passwordsMatch}
                 </p>
               )}
             </div>
@@ -285,7 +285,7 @@ const ResetPassword = () => {
               disabled={loading || password !== confirmPassword || passwordStrength < 40} 
               variant="hero"
             >
-              {loading ? "Updating..." : "Update Password"}
+              {loading ? t.auth.updating : t.auth.updatePassword}
             </Button>
           </form>
         </CardContent>

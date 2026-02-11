@@ -129,7 +129,7 @@ const Transactions = () => {
       setTickets(data || []);
     } catch (error) {
       console.error("Error fetching tickets:", error);
-      toast({ title: "Error", description: "Failed to load support tickets", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal memuat tiket dukungan", variant: "destructive" });
     }
   };
 
@@ -153,7 +153,7 @@ const Transactions = () => {
 
       setOrders(ordersData);
     } catch (error) {
-      toast({ title: "Error", description: "Failed to load orders", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal memuat pesanan", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -165,7 +165,7 @@ const Transactions = () => {
     try {
       const validationError = await validatePaymentProofFile(uploadingFile);
       if (validationError) {
-        toast({ title: "Invalid File", description: validationError, variant: "destructive" });
+        toast({ title: t.toasts.invalidFile, description: validationError, variant: "destructive" });
         return;
       }
 
@@ -181,26 +181,26 @@ const Transactions = () => {
       const { error: updateError } = await supabase.from("orders").update({ payment_proof: fileName }).eq("id", selectedOrderId);
       if (updateError) throw updateError;
 
-      toast({ title: "Success", description: "Payment proof uploaded successfully" });
+      toast({ title: t.transactions.success, description: t.transactions.proofUploadedSuccess });
       setUploadDialogOpen(false);
       setUploadingFile(null);
       setSelectedOrderId(null);
       fetchOrders();
     } catch (error) {
-      toast({ title: "Error", description: error instanceof Error ? error.message : "Failed to upload proof", variant: "destructive" });
+      toast({ title: t.toasts.error, description: error instanceof Error ? error.message : "Gagal mengunggah bukti", variant: "destructive" });
     }
   };
 
   const handleCancelOrder = async (orderId: string) => {
-    if (!confirm("Are you sure you want to cancel this order?")) return;
+    if (!confirm(t.transactions.confirmCancelOrder)) return;
 
     try {
       const { error } = await supabase.from("orders").update({ status: "cancelled", payment_status: "rejected" }).eq("id", orderId);
       if (error) throw error;
-      toast({ title: "Order cancelled", description: "Your order has been cancelled successfully" });
+      toast({ title: t.transactions.orderCancelled, description: t.transactions.orderCancelledDesc });
       fetchOrders();
     } catch (error) {
-      toast({ title: "Error", description: "Failed to cancel order", variant: "destructive" });
+      toast({ title: t.toasts.error, description: "Gagal membatalkan pesanan", variant: "destructive" });
     }
   };
 
@@ -232,7 +232,7 @@ const Transactions = () => {
       <div className="min-h-screen bg-background">
         <Navbar />
         <div className="container mx-auto px-4 py-8">
-          <p className="text-center text-muted-foreground">Loading...</p>
+          <p className="text-center text-muted-foreground">{t.ui.loading}</p>
         </div>
       </div>
     );

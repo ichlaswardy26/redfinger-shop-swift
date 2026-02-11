@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import { t } from "@/lib/translations";
 import { z } from "zod";
 
 const emailSchema = z.string().email("Please enter a valid email address");
@@ -35,20 +36,20 @@ const ForgotPassword = () => {
 
       setEmailSent(true);
       toast({
-        title: "Reset link sent!",
-        description: "Check your email for the password reset link.",
+        title: t.auth.resetLinkSent,
+        description: t.auth.checkEmail,
       });
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
-          title: "Invalid email",
+          title: t.auth.errors.invalidEmail,
           description: error.errors[0].message,
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to send reset link",
+          title: t.toasts.error,
+          description: error instanceof Error ? error.message : "Gagal mengirim link reset",
           variant: "destructive",
         });
       }
@@ -73,13 +74,13 @@ const ForgotPassword = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-3xl font-black text-center">
             <span className="bg-primary text-primary-foreground px-3 py-1 inline-block border-2 border-border shadow-brutal-sm">
-              Reset Password
+              {t.auth.resetPassword}
             </span>
           </CardTitle>
           <CardDescription className="text-center pt-4 font-medium">
             {emailSent 
-              ? "Check your email for the reset link" 
-              : "Enter your email to receive a password reset link"}
+              ? t.auth.checkEmail 
+              : "Masukkan email Anda untuk menerima link reset kata sandi"}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -90,30 +91,30 @@ const ForgotPassword = () => {
               </div>
               <div className="space-y-2">
                 <p className="text-muted-foreground">
-                  We've sent a password reset link to:
+                  Kami telah mengirim link reset kata sandi ke:
                 </p>
                 <p className="font-bold">{email}</p>
               </div>
               <p className="text-sm text-muted-foreground">
-                Didn't receive the email? Check your spam folder or{" "}
+                {t.auth.didntReceive}{" "}
                 <button 
                   onClick={() => setEmailSent(false)} 
                   className="text-primary hover:underline font-medium"
                 >
-                  try again
+                  {t.auth.tryAgain}
                 </button>
               </p>
               <Link to="/auth/signin">
                 <Button variant="outline" className="w-full gap-2">
                   <ArrowLeft className="h-4 w-4" />
-                  Back to Sign In
+                  {t.actions.back} {t.auth.signIn}
                 </Button>
               </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email" className="font-bold">Email Address</Label>
+                <Label htmlFor="email" className="font-bold">{t.auth.email}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -128,12 +129,12 @@ const ForgotPassword = () => {
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={loading} variant="hero">
-                {loading ? "Sending..." : "Send Reset Link"}
+                {loading ? t.auth.sending : t.auth.sendResetLink}
               </Button>
               <div className="text-center">
                 <Link to="/auth/signin" className="text-sm text-muted-foreground hover:text-primary inline-flex items-center gap-1">
                   <ArrowLeft className="h-4 w-4" />
-                  Back to Sign In
+                  {t.actions.back} {t.auth.signIn}
                 </Link>
               </div>
             </form>
